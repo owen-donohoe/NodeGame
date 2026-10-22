@@ -7,9 +7,8 @@ using UnityEditor;
 namespace NodeWar.Backend
 {
     /// <summary>
-    /// The one place a caller gets a backend service. Each service has a UGS
-    /// implementation and a local fake; builds always use UGS, and the Editor
-    /// can switch to the fakes (Tools > Node War > Backend) to work offline.
+    /// The one place a caller gets a backend service. Established services use
+    /// UGS in builds; the Editor can select local fakes. Social stays local.
     /// </summary>
     public static class BackendServices
     {
@@ -33,6 +32,26 @@ namespace NodeWar.Backend
         private static IMatchHistoryService matchHistory;
         private static IRankedQueueService rankedQueue;
         private static IRankedMatchService rankedMatch;
+        private static ISocialService social;
+        private static IProfileService profiles;
+        private static IGuildService guild;
+        private static GuildBrowseCache guildBrowse;
+        // No UGS guild implementation exists yet; use the local stub in every build.
+        public static IGuildService Guild => guild ?? (guild = new LocalGuildService(() => new PlayerCard
+        {
+            PlayerId = Account.Current?.PlayerId ?? "self", Name = LastKnownState?.Profile?.Name ?? "Player",
+            Tag = LastKnownState?.Profile?.Tag ?? "", RR = LastKnownState?.Rank?.RR ?? 0,
+            Arena = LastKnownState?.Rank?.Arena ?? 0, Presence = PlayerPresence.Online
+        }));
+        public static GuildBrowseCache GuildBrowse => guildBrowse ?? (guildBrowse = new GuildBrowseCache());
+
+        // Social stays local until its UGS implementation exists.
+        public static ISocialService Social => social ?? (social = new LocalSocialService());
+        public static IProfileService Profiles => profiles ?? (profiles = UseLocalFakes ? (IProfileService)new LocalProfileService(
+            () => Account.Current?.PlayerId, () => LastKnownState, MatchHistory,
+            // Chosen slots are local; accepted handle and rank come from LastKnownState.
+            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.suitIDs,
+            () => NodeWar.Lobby.PlayerProfile.Instance?.Loadout.districtIDs) : new UgsProfileService());
 
         /// <summary>
         /// The last player state any backend call returned this session, or null
@@ -64,7 +83,7 @@ namespace NodeWar.Backend
         /// </summary>
         internal static void Remember(PlayerState state, string requestedFor)
         {
-            if (state == null) return;
+            if (!RememberGuard.HasInventoryState(state)) return;
             if (!RememberGuard.ShouldRemember(requestedFor, Account.Current?.PlayerId)) return;
             lastKnown = state;
             lastKnownFor = requestedFor;
@@ -82,6 +101,10 @@ namespace NodeWar.Backend
             matchHistory = null;
             rankedQueue = null;
             rankedMatch = null;
+            social = null;
+            profiles = null;
+            guild = null;
+            guildBrowse = null;
             lastKnown = null;
             lastKnownFor = null;
             StateChanged = null;

@@ -1,0 +1,8 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <ui:Style src="PlayEntry.uss" />
+    <ui:Label text="Recent opponents" class="lb-entry-heading" />
+    <ui:VisualElement name="recent-opponents" />
+    <ui:TextField name="player-search" label="Name#TAG" max-length="32" class="lb-no-swipe" />
+    <lobby:PaperButton name="player-search-go" text="Search" />
+    <lobby:PaperButton name="search-code" text="Use a join code instead" />
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

@@ -36,7 +36,106 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Backend/Shared/RememberGuard.cs" Link="Backend/RememberGuard.cs" />
+    <Compile Include="LoadoutPresetBrowseTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutPresets.cs" Link="Lobby/LoadoutPresets.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LoadoutBrowse.cs" Link="Lobby/LoadoutBrowse.cs" />
+    <Compile Include="SegmentedSwitchMathTests.cs" />
+    <Compile Include="HistoryOpponentNamesTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/HistoryOpponentNames.cs" Link="Lobby/HistoryOpponentNames.cs" />
+    <Compile Include="../../Assets/UI/Scripts/SegmentedSwitchMath.cs" Link="Lobby/SegmentedSwitchMath.cs" />
+    <Compile Include="PaperMathTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/PaperMath.cs" Link="Lobby/PaperMath.cs" />
+    <Compile Include="GuildTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/GuildService.cs" Link="Backend/GuildService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/GuildPolicies.cs" Link="Backend/GuildPolicies.cs" />
+    <Compile Include="QueueSearchPolicyTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/QueueSearchPolicy.cs" Link="Lobby/QueueSearchPolicy.cs" />
+    <Compile Include="TeammateInviteTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/TeammateInviteRoster.cs" Link="Lobby/TeammateInviteRoster.cs" />
+    <Compile Include="SocialProfileTests.cs" />
+    <Compile Include="PlayerPanelPolicyTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/PlayerPanelPolicy.cs" Link="Lobby/PlayerPanelPolicy.cs" />
+    <Compile Include="PlayerStatsRulesTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/PlayerStatsRules.cs" Link="Backend/PlayerStatsRules.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/SocialService.cs" Link="Backend/SocialService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/ProfileService.cs" Link="Backend/ProfileService.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/MatchHistoryService.cs" Link="Backend/MatchHistoryService.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ProfileStatsFormat.cs" Link="Lobby/ProfileStatsFormat.cs" />
+    <Compile Include="../../Assets/UI/Scripts/FriendPresenceOrder.cs" Link="Lobby/FriendPresenceOrder.cs" />
+    <Compile Include="CrateOpeningSequenceTests.cs" />
+    <Compile Include="OverlayBackHandlerTests.cs" />
+    <Compile Include="../../Assets/Scripts/Backend/Shared/CrateInventory.cs" Link="Backend/CrateInventory.cs" />
+    <Compile Include="ShopModelsTests.cs" />
+    <Compile Include="ShopWalkTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/ShopMarketFraming.cs" Link="Lobby/Stage/ShopMarketFraming.cs" />
+    <Compile Include="PaperRasterizerTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/PaperRasterizer.cs" Link="Lobby/Stage/PaperRasterizer.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopProjection.cs" Link="Lobby/ShopProjection.cs" />
+    <Compile Include="../../Assets/UI/Scripts/CrateOpeningSequence.cs" Link="Lobby/CrateOpeningSequence.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopResets.cs" Link="Lobby/ShopResets.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopCountdown.cs" Link="Lobby/ShopCountdown.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ShopSnap.cs" Link="Lobby/ShopSnap.cs" />
+    <Compile Include="WorkshopLayoutTests.cs" />
+    <Compile Include="SuitReplacementMotionTests.cs" />
+    <Compile Include="StageArtTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/SuitReplacementMotion.cs" Link="Lobby/Stage/SuitReplacementMotion.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageArt.cs" Link="Lobby/Stage/StageArt.cs" />
+    <Compile Include="../../Assets/UI/Scripts/WorkshopLayout.cs" Link="Lobby/WorkshopLayout.cs" />
+    <Compile Include="StageClusterFramingTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageClusterFraming.cs" Link="Lobby/Stage/StageClusterFraming.cs" />
+    <Compile Include="StageSlotsTests.cs" />
+    <Compile Include="StageLoadoutTypesTests.cs" />
+    <Compile Include="LocalCrateInventoryTests.cs" />
+    <Compile Include="HomeModeDisplayTests.cs" />
+    <Compile Include="LobbyModeTests.cs" />
+    <Compile Include="LobbyModeCategoryTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyModeCategory.cs" Link="Lobby/LobbyModeCategory.cs" />
+    <Compile Include="LobbyToggleMathTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyToggleMath.cs" Link="Lobby/LobbyToggleMath.cs" />
+    <Compile Include="LanRoomTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LanRoomState.cs" Link="Lobby/LanRoomState.cs" />
+    <Compile Include="PrivateLobbyTests.cs" />
+    <Compile Include="AttemptGateTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Network/AttemptGate.cs" Link="Network/AttemptGate.cs" />
+    <Compile Include="../../Assets/UI/Scripts/PrivateLobbyModel.cs" Link="Lobby/PrivateLobbyModel.cs" />
+    <Compile Include="PartyWaitModelTests.cs" />
+    <Compile Include="WorkshopStageTests.cs" />
+    <Compile Include="WorkshopRegressionTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StagePick.cs" Link="Lobby/StagePick.cs" />
+    <Compile Include="../../Assets/UI/Scripts/StageSlotMap.cs" Link="Lobby/StageSlotMap.cs" />
+    <Compile Include="../../Assets/UI/Scripts/PartyWaitModel.cs" Link="Lobby/PartyWaitModel.cs" />
+    <Compile Include="RecentOpponentListTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/RecentOpponentList.cs" Link="Lobby/RecentOpponentList.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyMode.cs" Link="Lobby/LobbyMode.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LocalCrateInventory.cs" Link="Lobby/LocalCrateInventory.cs" />
+    <Compile Include="../../Assets/UI/Scripts/HomeModeDisplay.cs" Link="Lobby/HomeModeDisplay.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyIconKind.cs" Link="Lobby/LobbyIconKind.cs" />
+    <Compile Include="../../Assets/UI/Scripts/StageLoadoutTypes.cs" Link="Lobby/StageLoadoutTypes.cs" />
+    <Compile Include="DistrictClusterTests.cs" />
+    <Compile Include="StageShotsTests.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageSlots.cs" Link="Lobby/Stage/StageSlots.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/DistrictCluster.cs" Link="Lobby/Stage/DistrictCluster.cs" />
+    <Compile Include="../../Assets/Scripts/Lobby/Stage/StageShots.cs" Link="Lobby/Stage/StageShots.cs" />
     <Compile Include="BankActionTests.cs" />
+    <Compile Include="LobbyRouteTests.cs" />
+    <Compile Include="LobbyMotionTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyMotion.cs" Link="Lobby/LobbyMotion.cs" />
+    <Compile Include="LobbyOverlayRouterTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyOverlayRouter.cs" Link="Lobby/LobbyOverlayRouter.cs" />
+    <Compile Include="LobbyStateTests.cs" />
+    <Compile Include="ClaimRequestTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyCurrencyNames.cs" Link="Lobby/LobbyCurrencyNames.cs" />
+    <Compile Include="SwipeDecisionTests.cs" />
+    <Compile Include="LobbyDragMathTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyDragMath.cs" Link="Lobby/LobbyDragMath.cs" />
+    <Compile Include="../../Assets/UI/Scripts/SwipeDecision.cs" Link="Lobby/SwipeDecision.cs" />
+    <Compile Include="../../Assets/UI/Scripts/ClaimRequest.cs" Link="Lobby/ClaimRequest.cs" />
+    <Compile Include="../../Assets/UI/Scripts/BadgeBoard.cs" Link="Lobby/BadgeBoard.cs" />
+    <Compile Include="../../Assets/UI/Scripts/AsyncState.cs" Link="Lobby/AsyncState.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyPageID.cs" Link="Lobby/LobbyPageID.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyRouteStack.cs" Link="Lobby/LobbyRouteStack.cs" />
+    <Compile Include="../../Assets/UI/Scripts/LobbyDeepLink.cs" Link="Lobby/LobbyDeepLink.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/StructurePresentation.cs" Link="View/StructurePresentation.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/ViewSide.cs" Link="View/ViewSide.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/BankActionModel.cs" Link="Gameplay/BankActionModel.cs" />
@@ -60,11 +159,11 @@
     <Compile Include="EraChipsTests.cs" />
     <Compile Include="UnlockStateTests.cs" />
     <Compile Include="LoadoutChoicesTests.cs" />
-    <Compile Include="SkinBandMathTests.cs" />
-    <Compile Include="../../Assets/UI/Scripts/SkinBandMath.cs" Link="Lobby/SkinBandMath.cs" />
     <Compile Include="../../Assets/UI/Scripts/UnlockState.cs" Link="Lobby/UnlockState.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutChoices.cs" Link="Lobby/LoadoutChoices.cs" />
     <Compile Include="LoadoutInfoModelTests.cs" />
+    <Compile Include="StatHistogramTests.cs" />
+    <Compile Include="../../Assets/UI/Scripts/StatHistogram.cs" Link="Lobby/StatHistogram.cs" />
     <Compile Include="DistrictInfoFactsTests.cs" />
     <Compile Include="../../Assets/UI/Scripts/LoadoutInfoModel.cs" Link="Lobby/LoadoutInfoModel.cs" />
     <Compile Include="../../Assets/UI/Scripts/Gameplay/DistrictInfoFacts.cs" Link="Gameplay/DistrictInfoFacts.cs" />
@@ -82,7 +181,6 @@
     <Compile Include="EmotePacketTests.cs" />
     <Compile Include="HandshakePacketTests.cs" />
     <Compile Include="PacketRobustnessTests.cs" />
-    <Compile Include="MatchHistoryRowTests.cs" />
     <Compile Include="RankedQueuePresenterTests.cs" />
     <Compile Include="RankedRendezvousTests.cs" />
     <Compile Include="RankedResultTrackerTests.cs" />
@@ -146,8 +244,6 @@
              Link="Lobby/EraChips.cs" />
     <Compile Include="../../Assets/UI/Scripts/RankDisplay.cs"
              Link="Lobby/RankDisplay.cs" />
-    <Compile Include="../../Assets/UI/Scripts/MatchHistoryRow.cs"
-             Link="Lobby/MatchHistoryRow.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/RankTable.cs"
              Link="Backend/RankTable.cs" />
     <Compile Include="../../Assets/Scripts/Backend/Shared/MatchReportTypes.cs"
@@ -210,3 +306,4 @@
   </ItemGroup>
 
 </Project>
+

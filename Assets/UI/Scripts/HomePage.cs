@@ -1,226 +1,143 @@
-using System.Collections.Generic;
+using System;
+using NodeWar.Backend;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>
-    /// The lobby's landing page, after lobby-prototype.html: boxes, a quiet
-    /// loadout preview, the villager, BATTLE and the next-box meter.
-    ///
-    /// Identity and trophies are not here any more - they live in the
-    /// persistent chrome (<see cref="LobbyChrome"/>), which every page shares.
-    ///
-    /// Reads PlayerProfile on show. Every control does something or says why it
-    /// cannot yet, through the toast.
-    /// </summary>
+    /// <summary>Home's bottom controls leave the equipped 3D stage visible.</summary>
     public class HomePage : LobbyPage
     {
-        // Villager bob: the prototype's 3.4s keyframe loop, as a class that
-        // flips every half cycle and a transition that eases between.
-        private const long BobHalfCycleMs = 1700;
-
         private readonly LobbyToast toast;
-        private readonly LobbyContextMenu menu;
+        private readonly LobbyToast loadoutToast;
         private readonly LoadoutCatalog catalog;
         private readonly AccountLinkPrompt accountLinkPrompt;
-
-        private readonly Label victoryBadge;
-        private readonly VisualElement boxMeterFill;
-        private readonly VisualElement[] nodeChips = new VisualElement[LoadoutData.DistrictSlots];
-        private readonly VisualElement[] suitChips = new VisualElement[LoadoutData.SuitSlots];
-        private readonly VisualElement villager;
-        private IVisualElementScheduledItem bob;
-
-        /// <summary>Raised when BATTLE is pressed. The shell opens the sheet.</summary>
-        public event System.Action PlayRequested;
-
-        /// <summary>Raised when the loadout preview is pressed.</summary>
-        public event System.Action LoadoutRequested;
+        private readonly ICrateInventory crates;
+        private readonly Label smallCount;
+        private readonly Label mediumCount;
+        private readonly VisualElement progressFill;
+        private readonly LobbyIcon nextIcon;
+        private readonly Label modeName;
+        private readonly LobbyIcon modeIcon;
+        public GameMode SelectedMode { get; private set; }
+        public event Action PlayRequested;
+        public event Action ModeRequested;
+        public event Action InviteTeammateRequested;
+        public event Action<CrateSize> CrateRequested;
 
         public HomePage(VisualTreeAsset layout, LobbyToast toast, LobbyContextMenu menu, LoadoutCatalog catalog,
-            AccountFlow accountFlow, System.Func<bool> canPrompt)
+            AccountFlow accountFlow, Func<bool> canPrompt, ICrateInventory crates = null)
             : base(LobbyPageID.Home, Build(layout))
         {
             this.toast = toast;
-            this.menu = menu;
-            this.catalog = catalog != null ? catalog : new LoadoutCatalog(null, null);
+            loadoutToast = new LobbyToast(Root.Q<Label>("home-toast"), 2500);
+            this.catalog = catalog ?? new LoadoutCatalog(null, null);
+            this.crates = crates;
             accountLinkPrompt = new AccountLinkPrompt(accountFlow, canPrompt, Say);
-            Root.RegisterCallback<DetachFromPanelEvent>(_ => accountLinkPrompt.Hide());
-
-            victoryBadge = Root.Q<Label>("home-box-victory-badge");
-            boxMeterFill = Root.Q<VisualElement>("home-boxmeter-fill");
-            villager = Root.Q<VisualElement>("home-villager");
-
-            for (int i = 0; i < nodeChips.Length; i++)
-                nodeChips[i] = Root.Q<VisualElement>("home-loadout-node-" + i);
-            for (int i = 0; i < suitChips.Length; i++)
-                suitChips[i] = Root.Q<VisualElement>("home-loadout-suit-" + i);
-
+            smallCount = Root.Q<Label>("home-crate-small-count");
+            mediumCount = Root.Q<Label>("home-crate-medium-count");
+            progressFill = Root.Q<VisualElement>("home-boxmeter-fill");
+            nextIcon = Root.Q<LobbyIcon>("home-next-crate-icon");
+            modeName = Root.Q<Label>("home-mode-name");
+            modeIcon = Root.Q<LobbyIcon>("home-mode-icon");
+            Bind("home-invite-teammate", () => InviteTeammateRequested?.Invoke());
+            Bind("home-mode", () => ModeRequested?.Invoke());
+            Bind("home-crate-small", () => CrateRequested?.Invoke(CrateSize.Small));
+            Bind("home-crate-medium", () => CrateRequested?.Invoke(CrateSize.Medium));
             Bind("home-battle", () =>
             {
-                if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena))
+                if (!LoadoutRules.IsComplete(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena, BackendServices.LastKnownState))
                 {
-                    Say("Fill your loadout");
-                    LoadoutRequested?.Invoke();
+                    loadoutToast.Show(LoadoutRules.MissingMessage(this.catalog.CurrentLoadout().ToLoadout(), this.catalog.Arena, BackendServices.LastKnownState));
                     return;
                 }
                 PlayRequested?.Invoke();
             });
-            Bind("home-loadout", () => { if (LoadoutRequested != null) LoadoutRequested(); });
-
-            // TODO(boxes): nothing opens a box, and nothing writes boxProgress yet.
-            Bind("home-box-victory", () => Say("Opening boxes arrives in a later update"));
-            Bind("home-box-daily", () => Say("Daily boxes arrive in a later update"));
-            Bind("home-boxmeter", () => Say("Boxes fill by playing. Opening them arrives later"));
-
-            // TODO(villager): there is no appearance editor.
-            Bind("home-villager", () => Say("Villager customisation arrives in a later update"));
-
-            AttachMenus();
+            Root.RegisterCallback<DetachFromPanelEvent>(_ => OnHide());
+            SetMode(LobbyModeSelection.FromProfile(PlayerProfile.Instance != null ? PlayerProfile.Instance.data : default));
         }
 
-        /// <summary>The prototype's long-press menus on the boxes and the villager.</summary>
-        private void AttachMenus()
+        private static VisualElement Build(VisualTreeAsset fallback)
         {
-            if (menu == null) return;
-
-            System.Func<IList<LobbyMenuItem>> boxRows = () => new List<LobbyMenuItem>
-            {
-                new LobbyMenuItem("What is in a box", () => Say("Cosmetics, and rarely an unlock from your arena")),
-                new LobbyMenuItem("Open now", () => Say("Opening boxes arrives in a later update")),
-                new LobbyMenuItem("History", () => Say("Box history arrives in a later update")),
-            };
-
-            menu.Attach(Root.Q<Button>("home-box-victory"), boxRows);
-            menu.Attach(Root.Q<Button>("home-box-daily"), boxRows);
-
-            menu.Attach(Root.Q<Button>("home-villager"), () => new List<LobbyMenuItem>
-            {
-                new LobbyMenuItem("Change appearance", () => Say("Villager customisation arrives in a later update")),
-                new LobbyMenuItem("Go to Workshop", () => { if (LoadoutRequested != null) LoadoutRequested(); }),
-            });
-        }
-
-        private static VisualElement Build(VisualTreeAsset layout)
-        {
-            VisualElement root = new VisualElement();
-            root.name = "page-home";
+            var root = new VisualElement { name = "page-home", pickingMode = PickingMode.Ignore };
             root.AddToClassList("lb-page-flush");
-            root.pickingMode = PickingMode.Ignore;
-
+            var layout = Resources.Load<VisualTreeAsset>("Lobby/HomePage") ?? fallback;
             if (layout != null) layout.CloneTree(root);
-
             return root;
         }
 
-        private void Bind(string name, System.Action action)
+        private void Bind(string name, Action action)
         {
-            Button button = Root.Q<Button>(name);
+            var button = Root.Q<Button>(name);
             if (button != null) button.clicked += action;
         }
 
-        private void Say(string message)
+        private void Say(string message) { toast?.Show(message); }
+
+        public void SetMode(GameMode mode)
         {
-            if (toast != null) toast.Show(message);
-        }
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            if (mode == GameMode.Testing) mode = GameMode.Locked;
+#endif
+            SelectedMode = Enum.IsDefined(typeof(GameMode), mode) ? mode : GameMode.Locked;
+            var display = new HomeModeDisplay(SelectedMode);
+            if (modeName != null) modeName.text = display.Name;
+            if (modeIcon != null) modeIcon.Kind = display.Icon;
+            if (ColorUtility.TryParseHtmlString(display.Colour, out Color colour)) Root.Q("home-mode-dot").style.backgroundColor = colour;
+}
+
+        public void SetMode(LobbyModeSelection selection)
+        {
+            var teammate = Root.Q("home-invite-teammate");
+            if (teammate != null) teammate.style.display = !selection.IsPrivate && selection.Mode == LobbyMode.Team2v2 ? DisplayStyle.Flex : DisplayStyle.None;
+            var flag = Root.Q("home-private-flag");
+            if (flag != null) flag.style.display = selection.IsPrivate ? DisplayStyle.Flex : DisplayStyle.None;
+            SelectedMode = selection.LegacyMode;
+            var display = new HomeModeDisplay(selection);
+            if (modeName != null) modeName.text = display.Name;
+            if (modeIcon != null) modeIcon.Kind = display.Icon;
+}
 
         public override void OnShow()
         {
-            NodeWar.Backend.BackendServices.StateChanged += Refresh;
+            BackendServices.StateChanged -= Refresh;
+            BackendServices.StateChanged += Refresh;
+            if (crates != null) { crates.Changed -= Refresh; crates.Changed += Refresh; }
             Refresh();
             accountLinkPrompt.Show();
-
-            if (villager != null && bob == null)
-            {
-                bob = villager.schedule
-                    .Execute(() => villager.ToggleInClassList("lb-villager--up"))
-                    .Every(BobHalfCycleMs);
-            }
-            else if (bob != null)
-            {
-                bob.Resume();
-            }
+            if (!LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState))
+                loadoutToast.Show(LoadoutRules.MissingMessage(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState));
         }
 
         public override void OnHide()
         {
-            NodeWar.Backend.BackendServices.StateChanged -= Refresh;
+            BackendServices.StateChanged -= Refresh;
+            if (crates != null) crates.Changed -= Refresh;
             accountLinkPrompt.Hide();
-            if (bob != null) bob.Pause();
         }
 
         public void Refresh()
         {
-            PlayerProfile profile = PlayerProfile.Instance;
-
-            if (victoryBadge != null)
+            SetCount(smallCount, crates?.Count(CrateSize.Small) ?? 0);
+            SetCount(mediumCount, crates?.Count(CrateSize.Medium) ?? 0);
+            Root.Q("home-crate-small")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Small) ?? 0) == 0);
+            Root.Q("home-crate-medium")?.EnableInClassList("mk-crate--dim", (crates?.Count(CrateSize.Medium) ?? 0) == 0);
+            if (progressFill != null) progressFill.style.width = Length.Percent((crates?.NextProgress ?? 0f) * 100f);
+            if (nextIcon != null) nextIcon.Kind = crates?.NextSize == CrateSize.Medium ? LobbyIconKind.CrateMedium : LobbyIconKind.CrateSmall;
+            bool complete = LoadoutRules.IsComplete(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState);
+            var play = Root.Q<Button>("home-battle");
+            if (play != null)
             {
-                int boxes = profile != null ? profile.BoxesAvailable : 0;
-                victoryBadge.text = boxes.ToString();
-                victoryBadge.EnableInClassList("lb-badge--zero", boxes <= 0);
-            }
-
-            if (boxMeterFill != null)
-            {
-                float progress = profile != null ? Mathf.Clamp01(profile.BoxProgress) : 0f;
-                boxMeterFill.style.width = Length.Percent(progress * 100f);
-            }
-
-            // Every empty chosen slot blocks launch, regardless of ownership.
-            LoadoutEditor loadout = catalog.CurrentLoadout();
-            bool nodesShort = !loadout.DistrictSlotsFull;
-            bool suitsShort = !loadout.SuitSlotsFull;
-            bool complete = LoadoutRules.IsComplete(loadout.ToLoadout(), catalog.Arena);
-            Button battle = Root.Q<Button>("home-battle");
-            if (battle != null)
-            {
-                // Keep the recovery tap active while presenting the disabled state.
-                battle.style.opacity = complete ? 1f : 0.5f;
-                battle.tooltip = complete ? "" : "Fill your loadout";
-            }
-            Label reason = Root.Q<Label>("home-battle-reason");
-            if (reason != null) reason.style.display = complete ? DisplayStyle.None : DisplayStyle.Flex;
-
-            for (int i = 0; i < nodeChips.Length; i++)
-            {
-                if (nodeChips[i] != null) nodeChips[i].style.display = i < loadout.DistrictSlotCount ? DisplayStyle.Flex : DisplayStyle.None;
-                string id = loadout.DistrictAt(i);
-                SetChip(nodeChips[i], id, catalog.DistrictName(id), nodesShort);
-            }
-
-            for (int i = 0; i < suitChips.Length; i++)
-            {
-                if (suitChips[i] != null) suitChips[i].style.display = i < loadout.SuitSlotCount ? DisplayStyle.Flex : DisplayStyle.None;
-                string id = loadout.SuitAt(i);
-                SetChip(suitChips[i], id, catalog.SuitName(id), suitsShort);
+                play.SetEnabled(true); // A disabled button swallows the tap; the toast explains why BATTLE is off.
+                play.EnableInClassList("mk-battle--off", !complete);
+                play.tooltip = complete ? "Play" : LoadoutRules.MissingMessage(catalog.CurrentLoadout().ToLoadout(), catalog.Arena, BackendServices.LastKnownState);
             }
         }
-
-        /// <summary>
-        /// A filled chip is navy and shows the item's monogram. An empty chip is
-        /// orange when its side is short - fillable but not filled - and the
-        /// plain quiet chip otherwise. Colour never carries this alone: a filled
-        /// chip has a letter, an empty one has none.
-        /// TODO(art): the prototype shows each item's icon here; no icons exist yet.
-        /// </summary>
-        private static void SetChip(VisualElement chip, string id, string displayName, bool sideShort)
+        private static void SetCount(Label badge, int count)
         {
-            if (chip == null) return;
-
-            bool filled = !string.IsNullOrEmpty(id);
-            chip.EnableInClassList("lb-lpi--filled", filled);
-            chip.EnableInClassList("lb-lpi--short", !filled && sideShort);
-
-            chip.Clear();
-            if (!filled) return;
-
-            Label letter = new Label(ItemTint.MonogramFor(displayName, id));
-            letter.AddToClassList("lb-lpi__letter");
-            letter.AddToClassList("ui-w600");
-            letter.pickingMode = PickingMode.Ignore;
-            chip.Add(letter);
+            if (badge == null) return;
+            badge.text = count.ToString();
+            badge.style.display = count > 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
-
     }
 }

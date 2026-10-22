@@ -1,0 +1,43 @@
+﻿<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <ui:Style src="Chrome.uss" />
+    <ui:VisualElement name="top-bar" class="mk-topbar" picking-mode="Ignore">
+        <ui:Button name="purse-coin" class="ui-reset-button mk-purse" tooltip="Buy Coins">
+            <ui:VisualElement class="mk-purse__dot--coin" picking-mode="Ignore" />
+            <ui:Label class="mk-number" name="purse-coin-value" text="—" picking-mode="Ignore" />
+            <ui:Label text="+" picking-mode="Ignore" />
+        </ui:Button>
+        <ui:Button name="purse-leaf" class="ui-reset-button mk-purse" tooltip="Buy Laurels">
+            <ui:VisualElement class="mk-purse__dot--leaf" picking-mode="Ignore" />
+            <ui:Label name="purse-premium-name" style="display: none;" picking-mode="Ignore" />
+            <ui:Label class="mk-number" name="purse-leaf-value" text="—" picking-mode="Ignore" />
+            <ui:Label text="+" picking-mode="Ignore" />
+        </ui:Button>
+        <ui:VisualElement style="flex-grow: 1; margin-right: 0;" picking-mode="Ignore" />
+        <ui:Button name="gear" class="ui-reset-button mk-rbtn" tooltip="Menu">
+            <lobby:LobbyIcon kind="Gear" context="TopBar" picking-mode="Ignore" />
+        </ui:Button>
+        <ui:Button name="history" class="ui-reset-button mk-rbtn" tooltip="Notifications" style="margin-right: 0;">
+            <lobby:LobbyIcon kind="Bell" context="TopBar" picking-mode="Ignore" />
+        </ui:Button>
+    </ui:VisualElement>
+    <ui:VisualElement name="strip-wrap" class="mk-strip">
+        <ui:VisualElement name="trophy-strip" picking-mode="Ignore">
+            <ui:VisualElement class="mk-row" picking-mode="Ignore">
+                <ui:Button name="name-button" class="ui-reset-button mk-namelink" tooltip="Profile">
+                    <ui:Label class="mk-ellipsis" name="name-text" text="player" enable-rich-text="false" picking-mode="Ignore" />
+                    <ui:VisualElement class="mk-profile-caret" picking-mode="Ignore" />
+                </ui:Button>
+                <ui:VisualElement class="mk-trophy" picking-mode="Ignore">
+                    <ui:Label name="trophy-count" text="—" picking-mode="Ignore" />
+                    <ui:Label name="trophy-max" picking-mode="Ignore" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+            <ui:VisualElement class="mk-meter" picking-mode="Ignore">
+                <ui:VisualElement name="trophy-fill" picking-mode="Ignore" />
+            </ui:VisualElement>
+            <ui:VisualElement class="mk-spread">
+                <ui:Label name="arena-text" text="Era —" class="mk-cap mk-ellipsis" style="flex-grow: 1; flex-basis: 0;" picking-mode="Ignore" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

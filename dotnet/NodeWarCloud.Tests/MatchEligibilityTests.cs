@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using NodeWar.Backend;
 using NodeWar.MatchLog;
 using NodeWar.Simulation;
@@ -45,7 +46,7 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase(0)]
         [TestCase(1)]
-        public void LowArenaBasePoolVillageNeedsNoOwnershipButStillChecksEra(int lowSeat)
+        public void LowArenaChosenVillageRequiresOwnershipAndChecksEra(int lowSeat)
         {
             var (record, log) = Current(1 - lowSeat);
             var pool = lowSeat == 0 ? log.board.baseDraftDistrictsP0 : log.board.baseDraftDistrictsP1;
@@ -53,6 +54,8 @@ namespace NodeWar.Cloud.Tests
             record.players[lowSeat].OwnedVariants.Remove("district.village.e0");
             log.header.kind = MatchKind.Networked;
             log.draft = new[] { new DraftPlacement { playerID = lowSeat, districtType = DistrictType.Village } };
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
+            record.players[lowSeat].OwnedVariants.Add("district.village.e0");
             Assert.That(MatchEligibility.Check(record, log), Is.Null);
 
             log.loadouts[lowSeat].districtEras = new int[NodeWar.Lobby.LoadoutTypes.DistrictTypeCount];
@@ -83,7 +86,7 @@ namespace NodeWar.Cloud.Tests
         {
             var (record, log) = Current(1 - lowSeat);
             record.players[lowSeat].OwnedVariants.Remove("district.village.e0");
-            log.loadouts[lowSeat].districts[0] = (int)DistrictType.Village;
+            log.loadouts[lowSeat].districts[4] = (int)DistrictType.Village;
             log.draft = new[] { new DraftPlacement { playerID = lowSeat, districtType = DistrictType.Village } };
             Assert.That(MatchEligibility.Check(record, log), Does.Contain("not owned"));
         }
@@ -109,7 +112,7 @@ namespace NodeWar.Cloud.Tests
 
         [TestCase("districts")]
         [TestCase("suits")]
-        [TestCase("missingWarrior")]
+        [TestCase("missingFarm")]
         public void LowCapacityExpansion_Refused(string invalid)
         {
             var (record, log) = Current(1);
@@ -117,7 +120,7 @@ namespace NodeWar.Cloud.Tests
                 (int)DistrictType.Barracks, (int)DistrictType.Forge, (int)DistrictType.Town };
             if (invalid == "suits") log.loadouts[0].suits = new[] {
                 (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Scout, (int)SuitType.Medic };
-            if (invalid == "missingWarrior") log.loadouts[0].suits = new[] { (int)SuitType.Guardian };
+            if (invalid == "missingFarm") log.loadouts[0].districts = log.loadouts[0].districts.Where(t => t != (int)DistrictType.Farm).ToArray();
             Assert.That(MatchEligibility.Check(record, log), Is.Not.Null);
         }
 
@@ -162,6 +165,35 @@ namespace NodeWar.Cloud.Tests
             Assert.That(MatchEligibility.Check(record, log), Is.Null);
         }
 
+        [TestCase("suit.warrior", (int)SuitType.Warrior, false)]
+        [TestCase("suit.guardian", (int)SuitType.Guardian, false)]
+        [TestCase("district.farm", (int)DistrictType.Farm, true)]
+        public void CurrentRefereeAgreesWithClientUsability(string baseId, int type, bool district)
+        {
+            for (int era = 0; era < CatalogIds.EraCount; era++)
+            {
+                var (record, log) = Current(1);
+                log.draft = Array.Empty<DraftPlacement>();
+                var loadout = log.loadouts[1];
+                var eras = new int[district ? NodeWar.Lobby.LoadoutTypes.DistrictTypeCount : NodeWar.Lobby.LoadoutTypes.SuitTypeCount];
+                eras[type] = era;
+                if (district) { loadout.districts[0] = type; loadout.districtEras = eras; }
+                else { loadout.suits = new[] { type }; loadout.suitEras = eras; }
+                string id = CatalogIds.Variant(baseId, era);
+                record.players[1].OwnedVariants.Add(id);
+                bool client = LoadoutCapacityPolicy.IsVariantUsable(baseId, id, record.players[1].Rank.Arena);
+                Assert.That(MatchEligibility.Check(record, log) == null, Is.EqualTo(client), id);
+            }
+        }
+        [Test]
+        public void V7AcceptedAndV6Retired()
+        {
+            var (record, log) = Current(1);
+            Assert.That(record.protocol, Is.EqualTo(7));
+            Assert.That(MatchEligibility.Check(record, log), Is.Null);
+            record.protocol = log.header.protocol = 6;
+            Assert.That(MatchEligibility.Check(record, log), Does.Contain("Incompatible protocol"));
+        }
         internal static (MatchRecord record, Log log) Current(int highSeat)
         {
             var board = PremadeMaps.Hourglass01();
@@ -169,12 +201,12 @@ namespace NodeWar.Cloud.Tests
             var players = new[] { MatchRecordTests.Player(), MatchRecordTests.Player() };
             foreach (var player in players)
                 player.Inventory.OwnedVariants.AddRange(new[] { "suit.warrior.e0", "suit.guardian.e0",
-                    "suit.scout.e0", "suit.medic.e0", "district.farm.e0", "district.mine.e0",
+                    "suit.scout.e0", "suit.medic.e0", "suit.berserker.e0", "district.farm.e0", "district.mine.e0",
                     "district.village.e0", "district.barracks.e0", "district.forge.e0",
                     "district.town.e0", "district.fortress.e0", "district.workshop.e0" });
             players[highSeat].Rank.Arena = 2;
             players[1 - highSeat].Rank.Arena = 1;
-            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, 6,
+            var record = MatchRecords.Create("m", new[] { "p0", "p1" }, players, 1, ProtocolVersion.Current,
                 (ushort)SimulationVersion.Current, BalanceHasher.Hash(balance), PremadeMaps.Hourglass01Id, BoardHasher.Hash(board));
             var log = new Log {
                 header = new MatchLogHeader { matchId = "m", playerIds = record.playerIds,
@@ -188,9 +220,9 @@ namespace NodeWar.Cloud.Tests
             };
             log.loadouts[1 - highSeat] = new PlayerLoadout {
                 suits = new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Scout },
-                districts = new[] { (int)DistrictType.Barracks, (int)DistrictType.Forge } };
+                districts = new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town, (int)DistrictType.Barracks, (int)DistrictType.Village } };
             log.loadouts[highSeat] = new PlayerLoadout {
-                suits = new[] { (int)SuitType.Guardian, (int)SuitType.Scout, (int)SuitType.Medic },
+                suits = new[] { (int)SuitType.Guardian, (int)SuitType.Scout, (int)SuitType.Berserker },
                 districts = new[] { (int)DistrictType.Barracks, (int)DistrictType.Forge,
                     (int)DistrictType.Town, (int)DistrictType.Fortress, (int)DistrictType.Workshop } };
             return (record, log);

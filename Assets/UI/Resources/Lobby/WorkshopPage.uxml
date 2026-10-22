@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<engine:UXML xmlns:engine="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <engine:Style src="Workshop.uss" />
+    <engine:VisualElement name="workshop-page" class="lb-workshop ui-workshop" picking-mode="Ignore">
+        <engine:ScrollView name="workshop-grid" class="ws-scroll" mode="Vertical" horizontal-scroller-visibility="Hidden" vertical-scroller-visibility="Hidden">
+            <engine:VisualElement name="workshop-window" class="ws-stage-spacer" />
+            <engine:VisualElement name="workshop-panel1-space" class="ws-panel1-space" picking-mode="Ignore" />
+            <engine:VisualElement name="workshop-panel1" class="ws-panel1">
+                <engine:VisualElement class="mk-spread ws-presets">
+                    <engine:VisualElement class="mk-row ws-preset-tabs">
+                        <engine:Button name="workshop-preset-0" text="1" class="mk-btn ws-preset" />
+                        <engine:Button name="workshop-preset-1" text="2" class="mk-btn ws-preset" />
+                        <engine:Button name="workshop-preset-2" text="3" class="mk-btn ws-preset" />
+                    </engine:VisualElement>
+                    <engine:Label name="workshop-preset-label" class="mk-eyebrow ws-eyebrow" picking-mode="Ignore" />
+                    <engine:Button name="workshop-clear" class="mk-btn ws-clear" tooltip="Clear loadout" />
+                </engine:VisualElement>
+                <engine:VisualElement name="workshop-tabs"><engine:VisualElement>
+                    <engine:Button name="workshop-tab-districts" text="Districts" />
+                    <engine:Button name="workshop-tab-suits" text="Suits" />
+                </engine:VisualElement></engine:VisualElement>
+            </engine:VisualElement>
+            <engine:VisualElement name="workshop-panel2-space" class="ws-panel2-space" picking-mode="Ignore" />
+            <engine:VisualElement name="workshop-panel2-clip" class="ws-panel2-clip" picking-mode="Ignore">
+            <lobby:MkCard name="workshop-panel2" class="ws-panel2">
+                <engine:VisualElement name="workshop-browser">
+                    <engine:VisualElement name="workshop-toolbar" class="ui-filter-row">
+                        <engine:VisualElement name="workshop-ownership"><engine:VisualElement>
+                            <engine:Button name="workshop-owned" text="Owned" />
+                            <engine:Button name="workshop-all" text="All" />
+                        </engine:VisualElement></engine:VisualElement>
+                        <engine:Button name="workshop-sort" class="ui-reset-button ui-filter-hit ui-filter-sort"><engine:Label text="Sort: Arena" class="ui-filter-face" picking-mode="Ignore" /><engine:VisualElement class="ws-sort-caret" picking-mode="Ignore" /></engine:Button>
+                    </engine:VisualElement>
+                    <engine:VisualElement name="workshop-unlocked" class="mk-grid ws-cards" picking-mode="Ignore" />
+                </engine:VisualElement>
+                <engine:VisualElement name="workshop-replace-banner" class="mk-banner">
+                    <engine:Label text="Replace which one?" class="mk-h3" />
+                    <engine:Label name="workshop-replace-message" class="mk-muted" />
+                </engine:VisualElement>
+                <engine:VisualElement name="workshop-replace-actions" class="ws-actionbar">
+                    <engine:Button name="workshop-replace-cancel" text="Cancel" class="mk-btn" />
+                </engine:VisualElement>
+                <engine:Label name="workshop-era-message" class="mk-muted" picking-mode="Ignore" />
+            </lobby:MkCard>
+            </engine:VisualElement>
+        </engine:ScrollView>
+    </engine:VisualElement>
+</engine:UXML>

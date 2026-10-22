@@ -1,0 +1,9 @@
+/* Workshop components live in the shared Components.uss theme. */
+.lb-root #page-workshop .ws-clear { flex-direction: row; align-items: center; justify-content: center; flex-shrink: 0; width: 44px; height: 44px; margin: 0; padding: 0; }
+.lb-root .ws-clear > .lb-icon { width: 20px; height: 20px; margin: 0; flex-shrink: 0; -unity-background-image-tint-color: var(--mk-ink); }
+.lb-root .ws-presets > .ws-eyebrow { flex-basis: 0; -unity-text-align: middle-left; }
+.lb-root .ws-clear-confirmation .mk-h2 { font-size: 20px; }
+.lb-root .ws-clear-body { font-size: 16px; white-space: normal; color: var(--mk-ink); margin-bottom: 16px; }
+.lb-root .ws-clear-actions { flex-direction: row; }
+.lb-root .ws-clear-actions > Button { flex-grow: 1; flex-basis: 0; margin: 0; }
+.lb-root .ws-clear-actions > Button:first-child { margin-right: 8px; }

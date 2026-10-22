@@ -15,120 +15,181 @@ sources:
   - Assets/Scripts/Lobby/TrophyBarLogic.cs
   - Assets/UI/Layouts/HomePage.uxml
   - Assets/UI/Layouts/LobbyRoot.uxml
-  - Assets/UI/Layouts/MatchHistoryPage.uxml
   - Assets/UI/Layouts/PlayPopup.uxml
   - Assets/UI/Layouts/ProfilePage.uxml
   - Assets/UI/Layouts/SettingsPage.uxml
   - Assets/UI/Layouts/ShopPage.uxml
   - Assets/UI/Layouts/SocialPage.uxml
   - Assets/UI/Layouts/WorkshopPage.uxml
+  - Assets/UI/Resources/Lobby/
+  - Assets/UI/Scripts/AsyncState.cs
+  - Assets/UI/Scripts/AsyncStateView.cs
+  - Assets/UI/Scripts/BadgeBoard.cs
+  - Assets/UI/Scripts/ClaimPanel.cs
+  - Assets/UI/Scripts/ClaimRequest.cs
+  - Assets/UI/Scripts/CrateOpeningSequence.cs
+  - Assets/UI/Scripts/CrateScreen.cs
+  - Assets/UI/Scripts/ShopResets.cs
+  - Assets/UI/Scripts/ShopCountdown.cs
+  - Assets/UI/Scripts/ShopSnap.cs
+  - Assets/UI/Scripts/ShopProjection.cs
+  - Assets/UI/Scripts/GuildPage.cs
+  - Assets/UI/Scripts/GuildChatScreen.cs
+  - Assets/UI/Scripts/GuildDataView.cs
+  - Assets/UI/Scripts/GuildViews.cs
+  - Assets/UI/Scripts/GuildSheetHost.cs
+  - Assets/UI/Scripts/GuildReportScreen.cs
+  - Assets/UI/Scripts/LobbyScrollbars.cs
+  - Assets/UI/Scripts/LobbyMouseDrag.cs
+  - Assets/UI/Scripts/LobbyDragMath.cs
+  - Assets/UI/Scripts/LobbyDeepLink.cs
+  - Assets/UI/Scripts/LobbyOverlayRouter.cs
+  - Assets/UI/Scripts/LobbyPageID.cs
+  - Assets/UI/Scripts/LobbyRouteStack.cs
+  - Assets/UI/Scripts/LobbyMotion.cs
+  - Assets/UI/Scripts/LobbyElementMotion.cs
+  - Assets/UI/Scripts/SwipeDecision.cs
   - Assets/UI/Scripts/AccountFlow.cs
   - Assets/UI/Scripts/AccountLinkPrompt.cs
   - Assets/UI/Scripts/ControlsPanel.cs
   - Assets/UI/Scripts/ControlsViewModel.cs
   - Assets/UI/Scripts/EraChips.cs
   - Assets/UI/Scripts/HomePage.cs
+  - Assets/UI/Scripts/HomeModeDisplay.cs
+  - Assets/UI/Scripts/LobbyMode.cs
+  - Assets/UI/Scripts/LobbyModeCategory.cs
+  - Assets/UI/Scripts/LobbyModePicker.cs
+  - Assets/UI/Scripts/LobbyPlayFlow.cs
+  - Assets/UI/Scripts/LanRoomState.cs
+  - Assets/UI/Scripts/LanRoomSheet.cs
+  - Assets/UI/Scripts/RoomView.cs
+  - Assets/UI/Scripts/QueueSearchPolicy.cs
+  - Assets/UI/Scripts/TeammateInviteRoster.cs
+  - Assets/UI/Scripts/TeammateInviteSheet.cs
+  - Assets/UI/Scripts/PrivateLobbyModel.cs
+  - Assets/UI/Scripts/PrivateLobbyPanel.cs
+  - Assets/UI/Scripts/MatchLauncherPrivateLobby.cs
+  - Assets/UI/Scripts/PartyWaitModel.cs
+  - Assets/UI/Scripts/PartyWaitScreen.cs
+  - Assets/UI/Scripts/RecentOpponentList.cs
+  - Assets/UI/Scripts/StageSlotMap.cs
+  - Assets/UI/Scripts/WorkshopStageBinding.cs
+  - Assets/UI/Scripts/LobbyCurrencyNames.cs
+  - Assets/UI/Scripts/LobbyBadgeDot.cs
+  - Assets/UI/Scripts/LobbyOverlayPanel.cs
+  - Assets/UI/Scripts/LocalCrateInventory.cs
+  - Assets/UI/Scripts/StageLoadoutTypes.cs
+  - Assets/Scripts/Lobby/Stage/
   - Assets/UI/Scripts/LoadoutCatalog.cs
   - Assets/UI/Scripts/LoadoutChoices.cs
   - Assets/UI/Scripts/LoadoutEditor.cs
   - Assets/UI/Scripts/LoadoutInfoModel.cs
+  - Assets/UI/Scripts/StatHistogram.cs
   - Assets/UI/Scripts/LoadoutRules.cs
   - Assets/UI/Scripts/LoadoutScreenModel.cs
+  - Assets/UI/Scripts/LoadoutPresets.cs
+  - Assets/UI/Scripts/LoadoutBrowse.cs
   - Assets/UI/Scripts/LobbyBackdrop.cs
   - Assets/UI/Scripts/LobbyChrome.cs
   - Assets/UI/Scripts/LobbyContextMenu.cs
   - Assets/UI/Scripts/LobbyPage.cs
   - Assets/UI/Scripts/LobbyPushPage.cs
   - Assets/UI/Scripts/LobbySheet.cs
-  - Assets/UI/Scripts/LobbySwitch.cs
   - Assets/UI/Scripts/LobbyToast.cs
+  - Assets/UI/Scripts/LobbyToggle.cs
+  - Assets/UI/Scripts/LobbyToggleMath.cs
   - Assets/UI/Scripts/LobbyUIController.cs
   - Assets/UI/Scripts/LongPressManipulator.cs
-  - Assets/UI/Scripts/MatchHistoryPage.cs
-  - Assets/UI/Scripts/MatchHistoryRow.cs
   - Assets/UI/Scripts/MatchLauncher.cs
   - Assets/UI/Scripts/MatchLauncherConnection.cs
   - Assets/UI/Scripts/NavigationController.cs
   - Assets/UI/Scripts/PlaceholderPage.cs
   - Assets/UI/Scripts/PlayPopup.cs
+  - Assets/UI/Scripts/ProfileViews.cs
+  - Assets/UI/Scripts/PlayerPanelPolicy.cs
+  - Assets/UI/Scripts/SearchingScreen.cs
+  - Assets/UI/Scripts/MultiplayerSheet.cs
   - Assets/UI/Scripts/ProfilePage.cs
+  - Assets/UI/Scripts/ProfileStatsFormat.cs
+  - Assets/UI/Scripts/FriendPresenceOrder.cs
+  - Assets/UI/Scripts/PlayerCardViews.cs
   - Assets/UI/Scripts/RankDisplay.cs
   - Assets/UI/Scripts/RankedQueueViewElement.cs
   - Assets/UI/Scripts/SafeAreaBinder.cs
   - Assets/UI/Scripts/SceneTransition.cs
   - Assets/UI/Scripts/SettingsPage.cs
   - Assets/UI/Scripts/ShopPage.cs
-  - Assets/UI/Scripts/SkinBand.cs
-  - Assets/UI/Scripts/SkinBandMath.cs
   - Assets/UI/Scripts/SocialPage.cs
+  - Assets/UI/Scripts/HistoryOpponentNames.cs
+  - Assets/UI/Scripts/SegmentedSwitch.cs
+  - Assets/UI/Scripts/SegmentedSwitchMath.cs
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: cee1a628
+verified: 1da38209
 ---
 
 # Lobby UI
 
 ## Purpose
-The lobby lets players understand/edit their loadout, manage account/settings and enter matches. It presents server state without confusing local profile persistence, placeholder commerce or private play with authoritative ranked progression.
+Present account, loadout and match entry while separating local preferences from server progression.
 
 ## Interface
-`LobbyUIController` binds its `UIDocument` and serialized layouts/catalog assets, creates shared services/pages and exposes `Navigation`. `NavigationController.Register(LobbyPage)`, `BindNavButton`, `Show(LobbyPageID)`, `Has`, `CurrentPageID` and `PageShown` drive the sliding tab track. `LobbyPage.Root/ID/OnShow/OnHide` define tab lifetime. Shop, Home, Workshop and Social are tabs; `ProfilePage.Open(source)/Close` expands above chrome. `LobbyPushPage.Open/Close/Update` supports Settings and MatchHistory overlays.
+`LobbyUIController` exposes Navigation, Routes, Claims, Badges, Crates and ShowShot. `NavigationController` registers pages and drives five tabs; `LobbyPage` defines Root/ID/OnShow/OnHide. `LobbyStage` supplies shots and loadout picking. Fullscreen routes hide stage/pills; Searching preserves a visible, inert player/purse band and frames the full loadout through StageShot.Queue with shared pan timing.
 
-`LobbySheet.Open(content, large)/Close`, `IsShowing`, `Closed` and `Lift(pageRoot, contentName)` serve shared bottom-sheet content. `LobbyContextMenu.Attach/Show/Close` displays `LobbyMenuItem(label, action)` rows; `LobbyToast.Show(message)` supplies transient feedback. Pages receive the shell's shared instances. `SafeAreaBinder` applies screen-safe insets.
+`LobbyOverlayRouter` owns close callbacks through `LobbyRouteStack`. Back delegates to optional BackHandler, then closes the top, goes Home or confirms exit. `LobbySheet` shares MkSheet content. `LobbyContextMenu.ShowBubble` anchors player actions above rooms. Panels may confirm over sheets. Overlays and lb-no-swipe block navigation swipes.
 
-Pages:
-- `HomePage` exposes `PlayRequested`, `LoadoutRequested`, `Refresh`; chosen chips follow rank, and incomplete Battle opens Workshop with a reason.
-- `WorkshopPage` previews through `LoadoutScreenModel`, shows `LoadoutInfoModel`/`DistrictInfoFacts`, and uses `WorkshopInventorySession` to gate equipment requests against visit/selection changes.
-- `ShopPage` shows illustrative offers/details and placeholder box/commerce interactions; `SocialPage` presents the social surface without a live social backend.
-- `ProfilePage` renames through `BackendServices.Handles`, showing Name#TAG and the rename cost, plus server-backed arena progression; detailed match statistics remain placeholders.
-- `SettingsPage.Changed(GameSettingsData)` and `Flush` persist preferences; `ControlsPanel`/`ControlsViewModel` share bindings, warnings and Reset with match settings.
-- `MatchHistoryPage` uses `IMatchHistoryService` and `MatchHistoryRow` for recorded server outcomes; replay playback is unavailable.
+`LobbyMotion` supplies springs, progressive overscroll and critical return. `Reduced` snaps springs, clamps scrolling, fades panels 80ms, stills villagers and pans 150ms. `LobbyMouseDrag` bounds pointer/wheel lists; mode/shop snapping follows edge return. `NavigationController.Tick/MotionChanged` shares page motion with stage/pills and preserves retarget velocity. `LobbyRouteStack.HidesPills` aggregates fullscreen routes.
+Match entry:
+- `HomePage` exposes PlayRequested, ModeRequested, InviteTeammateRequested, CrateRequested, SetMode and Refresh. BATTLE gates incomplete loadouts with a toast; private selections open PrivateLobbyPanel, LAN opens LanRoomSheet, queued modes open SearchingScreen. Only non-private 2v2 shows Invite teammate.
+- `ModeDefinition` owns capabilities, queue keys, seat positions and colours. `LobbyModeSelection.FromProfile/Store` persists selection. Private converts Ranked to Unranked 1v1. `LobbyModePicker` fits 10:8 cards/empty slots into a half-height strip that snaps groups to centre.
+- `SearchingScreen.Open/Close/Update` owns a fullscreen queue attempt, loadout window, animated status, hour-aware timer, RR/Era cards and pinned Cancel. `QueueSearchPolicy` leaves 2v2/FFA searching forever without tickets; Ranked retains its real presenter/rendezvous. Every queued mode offers the real local bot fallback after the shared delay; ticket cancellation precedes launch. Retry resets timer/actions. Only 2v2 offers Invite. Back cancels Home; duplicate Open is ignored and other overlays are rejected.
+- `TeammateInviteSheet.Open` reads Social friends then Guild members into separate ledgers. `TeammateInviteRoster` maps presence, caps names while preserving tags and orders lobby/battle/offline then name/ID. Friends take precedence over shared guild members; offline invites are disabled. Logged requests show Invited until cancel/mode change; title/Done stay fixed while ledgers scroll; delivery/incoming invites are unavailable.
+- `PrivateLobbyPanel.Open/Join` owns Relay rooms. `RoomView` shares board/seats, team colours, host drag swaps and player bubbles with LAN. `PrivateLobbyModel` owns roster/revision/start authority. Start freezes the roster and waits for acknowledgement before releasing the handshake; only 1v1 launches.
+- `LanRoomSheet.Open/Update` presents Host/Join, IP entry, connection status and retryable errors. `LanRoomState` returns Leave/Kick to choice. Host switches 1v1/2v2/FFA using the same seat table; real peers occupy seats, remaining seats stay empty. Host Play launches 1v1; four-player Play shows a placeholder toast. Player bubbles offer profile and confirmed host-only Kick.
+- `MatchLauncher.HostLanRoom/JoinLanRoom/ChangeLanRoomMode` reuse DirectUDP and the existing private-room envelope without packet changes. `LobbyPlayFlow.OpenPrivateInvite` shares/copies private codes; invite delivery is stubbed.
 
-`PlayPopup.Show/Hide/Update/Dispose` hosts Ranked, private Relay/LAN, bot and testing entry. `RankedQueueViewElement` implements `IRankedQueueView`; `RankedQueuePresenter` owns queue attempts. `MatchLauncher.PrepareAsync(ranked)`, `LaunchLocalAsync(bot)`, `HostRelay/HostLan`, `JoinRelay/JoinLan`, `HostRanked/JoinRanked`, `Update/Cancel/Dispose` expose phase, join code, failure/recovery and `Changed`. `MatchLauncherConnection` adapts these to `IRankedConnection` for `RankedRendezvous`.
+Other surfaces:
+- `WorkshopPage` preserves camera/scroll while browsing; USE and Remove close the sheet and return to the top; equipped items show Remove instead of USE. `LoadoutScreenModel.Use` equips or begins replacement; `WorkshopStageBinding` maps editable picks. Locked taps preserve replacement.
+- `ShopPage.Bind` shares claims/badges; BindStage projects offers. `ClaimPanel` confirms purchases/claims; `CrateScreen` owns opening sequences. `LocalCrateInventory` tracks Small progress/stock; Big maps to Medium.
+- `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
+- `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.
+- `ProfilePage.Open/OpenFor/Close` presents self/other sheets through IProfileService. BindPanels wires reporting/confirmed Kick; InviteRequested opens Multiplayer. Null stats show dashes. Rename uses Handles.SetHandleAsync.
+- `SettingsPage.Changed/Flush` persists preferences; ControlsPanel shares match bindings. Match history lives on the Social page; Replay is still a stub. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
 
-`AccountFlow.EnsureAsync`, `LinkAsync(isActive)`, `SignInAsync(isActive)`, `SignOutAsync`, `CheckLinkPromptAsync(profile, isActive)`, `CloseDialog`, `Busy/BusyText/Message` and `Changed` coordinate account sheets. `AccountLinkPrompt`/`LinkPromptPolicy` avoid treating starter items as progress.
+`LoadoutCatalog.CurrentLoadout` resolves equipment/choices. `LoadoutRules` shares completeness and missing-item messages. LoadoutEditor protects locks; clearing confirms. Failed saves retain state with retry/backoff. `PlayerProfile` persists preferences/presets; `LoadoutData.Normalized` maintains 3/5 slots. LobbyChrome renders server handle, rank and balances; RankDisplay/RankTable supply progress. Premium displays as Laurels.
 
-`LoadoutCatalog` resolves definitions, arena-specific offers, usable base ownership and `CurrentLoadout(PlayerState)`. `LoadoutRules` supplies chosen/display counts, grant locks, completeness, offer checks and fallback rank. Pure `LoadoutEditor` owns slot fill/clear, duplicate/availability handling and `ToLoadout`; its default constructor preserves canonical source shape, arena overload explicitly resizes local edits.
-
-`LoadoutChoices.Variants/Skins` returns sorted `LoadoutChoice[]` with ID/base/label, unlock state, equipped/preview flags and Selectable. `UnlockStates.ForBase/ForVariant/ForSkin` supplies Owned/CanUnlock/CannotUnlock, unlock arena and CanUse; `ForBase(lobbyId, state)` reads server ownership of the base's era-0 variant (the starter kit before state arrives) and `ContentTable` debut eras. `LobbyChrome` shows the server handle (local username until a profile exists, requesting a first handle once per load) and the server wallet in the purses. Player-name labels disable rich text. `SkinBand.SetChoices/Stop`, `CenteredIndex` and `CenterChanged(int)` render a looping thirteen-tile strip through `SkinBandMath`.
-
-`PlayerProfile.Instance` stores `player_profile.json` under `Application.persistentDataPath`; `SetLoadout`, `SetSettings`, `Save/Load`, username and account-link prompt fields serve local persistence. `LoadoutData` has `suitIDs`, `districtIDs`, type-indexed `suitEras`/`districtEras`, `skinIDs`; `CreateEmpty/Normalized` have shape-preserving and explicit-arena forms. `LoadoutTypes.WithEquipment` overlays returned server equipment. `TrophyBarLogic` retains legacy sliding-window fill maths; arena displays use `RankDisplay`/`RankTable`.
-
-`SceneTransition.Load(sceneName)` guards duplicate requests and owns a persistent loading overlay through asynchronous scene loading, using `Resources/SceneTransition/LoadingSheet` and `Theme`.
+`UnlockStates.ForBase/ForVariant/ForSkin` supply ownership and CanUse; `LoadoutPresets` stores active-preset edits; `LoadoutTypes.WithEquipment` overlays server equipment.
 
 ## Connects to
-- `backend-client`: account, inventory/history services and ranked presenters return authoritative state; `StateChanged` refreshes pages.
-- `progression`: rank thresholds, tree eligibility, stable catalog IDs and capacity policy govern choices.
-- `match-flow`: launcher transfers frozen loadout and ordered ranked identity into `MatchConnection`.
-- `netcode`: Relay/LAN launch and `IRankedConnection` perform peer connection.
-- `draft`: normalized chosen loadouts determine grants/pools at match setup.
-- `match-ui`: shared settings/Controls and scene transition support match entry/return.
-- `input`: persisted bindings select intents; settings do not change simulation rules.
-- `ui-art`: `LobbyIcon`, district art, family/tint fallbacks and shared theme style pages.
-- `bots`: accepted queue fallback launches an unranked local bot match.
+- `backend-client`: account, inventory, social/guild, history and ranked services.
+- `progression`: rank, capacity, ownership and catalog eligibility.
+- `match-flow`: frozen loadout and ordered ranked identity enter MatchConnection.
+- `netcode`: Relay/LAN transport and ranked connection adapters.
+- `draft`: normalized human loadout pools.
+- `match-ui`: shared settings/Controls and scene transitions.
+- `input`: persisted bindings.
+- `ui-art`: shared icons, district art and theme.
+- `bots`: accepted fallback launches an unranked bot match.
 
 ## Invariants
-Rated rank/inventory belongs to backend state, not local trophies/unlock arrays. Local changes never resize an opponent's deck. Preserve frozen `LoadoutRecord.nodeIDs` storage identity. A preview click does not equip. Delayed equipment/account responses cannot redraw a different selection/account. Missing slots block player-side launch; simulation setup itself does not enforce completeness.
+Backend owns rank/inventory. Local changes never resize opponents' decks. Preserve frozen LoadoutRecord.nodeIDs identity. Preview never equips. Delayed account/equipment responses cannot redraw another account/selection. Launch gates share completeness; canonical arrays retain blanks. Placeholders never claim backend delivery or match success.
 
 ## How it works
-`LobbyManager` bootstraps profile and selects stacks through scene value `useUIToolkitLobby`; an unassigned Toolkit root warns and falls back. `UIToolkitLobbySetup.SetUp`, menu `Tools > Node War > Set Up UI Toolkit Lobby`, creates/wires Lobby root, layouts and separate LobbyPanelSettings through the Editor. `Assets/Legacy/` retains compiled, scene-referenced uGUI lobby panels; disabling the toggle can restore them.
-
-Low arenas choose two suits/two districts with display-only grant locks; arena index 2 onward chooses three/five without grants. Workshop keeps three/five display positions while Home shows four/eight chosen chips. Use fills the first empty slot; filled slots clear. Variants are only real tree suits; skins work for both item kinds. Local inventory sheets stay below the header/loadout rows; box purchase only toasts.
-
-Launch refreshes PlayerState; ranked requires returned rank, private/offline falls back to arena 1. It freezes rank, sanitized choices and equipment before connecting, then rechecks completeness against that frozen arena. Ranked rendezvous carries record ID/slot order; private host wait is open-ended. Confirmed local resizing persists; merely closing an unconfirmed fallback Workshop view cannot trim a saved high deck.
+LobbyManager selects Toolkit or legacy fallback; UIToolkitLobbySetup authors layouts/PanelSettings through Editor tools. Era locks constrain editable choices; missing ownership never trims choices. Launch refreshes/freezes state and rechecks completeness. Ranked requires returned rank; offline/private uses arena 1. Rendezvous supplies record/slot order. Only confirmed resizing persists.
 
 ## Decisions
-- Use shared navigation/sheet/menu instances rather than independent modal stacks per page.
-- Freeze launch data rather than let asynchronous rank updates reshape an in-flight match.
-- Keep legacy code compiling behind a scene toggle rather than delete the fallback during migration.
+- Share navigation, room views, sheet and menu components rather than duplicate presentation logic.
+- Freeze launch data rather than reshape in-flight matches after rank updates.
+- Preserve compiling legacy fallback during migration.
 
 ## Pressure points
-Local profile still carries legacy progression fields beside authoritative backend data. Shop, social, detailed statistics and box actions lack production backing. Runtime and legacy launch paths coexist. Placeholder item art, narrow layouts and long Controls lists need manual verification; hidden legacy dependencies prevent casual deletion.
+Local social/guild fakes and invite stubs remain. LAN rooms transport one real peer even with four-seat layouts. Interaction, animation, scene wiring and live peer handoff need manual verification.
 
 ## Change recipes
-- Add a page: implement lifecycle, register with navigation or overlay host, wire layout through Editor setup and preserve shared dismiss behavior.
-- Change loadouts: update pure editor/rules, shared capacity/ownership, persistence migration and frozen-launch tests together.
+- Add a page: implement lifecycle/register navigation; overlays register cleanup with router; layouts load from Resources/Lobby.
+- Change loadouts: update pure rules, capacity/ownership, migration and frozen-launch tests together.
+- Change room layouts: update ModeDefinition and shared model/view tests; preserve roster revisions and start gating.
 
 ## Tests
-`NodeWar.Lobby.Tests` guards loadout shapes/editor, unlock/choice ordering, settings migration and ranked presenters. Compile-check covers Unity pages/launchers. Real sign-in, transitions, phone layouts and serialized stack wiring require Editor/device verification.
+NodeWar.Lobby.Tests covers queue policy, invite ordering/presence, LAN leave/kick/layouts, private roster packets/start, loadouts, routes, claims and presentation maths. Compile-check covers Unity adapters. Editor/device verification covers rendering and real transport.

@@ -1,252 +1,496 @@
-using System.Collections.Generic;
+using System;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace NodeWar.Lobby
 {
-    /// <summary>
-    /// The Shop, after lobby-prototype.html: a stall with three wares beside
-    /// it, and a quiet list of bundles below.
-    ///
-    /// Layout pass. There is no economy - no coins, no gold leaf, no boxes to
-    /// open - so the catalogue below is the prototype's illustrative content,
-    /// kept in one place for the shop system to replace, and every purchase
-    /// says it is not available yet rather than pretending to work.
-    ///
-    /// Cosmetics and boxes only. Nothing here may change a match: no stat
-    /// upgrades, no purchasable districts or suits. A placeholder that models
-    /// pay-to-win is the thing that gets copied when the real system lands.
-    /// </summary>
+    /// <summary>Illustrative market stalls. Confirmations log; they never change a wallet.</summary>
     public class ShopPage : LobbyPage
     {
-        private struct Ware
+        private sealed class Offer
         {
-            public string Name;
-            public string Cost;
-            public LobbyIconKind Icon;
-
-            public Ware(string name, string cost, LobbyIconKind icon)
-            {
-                Name = name;
-                Cost = cost;
-                Icon = icon;
-            }
+            public ClaimRequest Request;
+            public Button Tile;
+            public bool FreeDaily;
         }
 
-        private struct Offer
+        private static readonly string[] StallNames = { "daily", "crates", "weekly", "bundle", "bank" };
+        private static readonly string[] Titles = { "Daily", "Crates", "Weekly skins", "Personalised bundle", "Bank" };
+        private static readonly string[] TopBands = { "top-bar", "strip-wrap", "guild-chrome-card" };
+        private static readonly string[] Odds =
         {
-            public string Section;
-            public string Title;
-            public string Subtitle;
-            public string Action;
-            public LobbyIconKind Icon;
-
-            public Offer(string section, string title, string subtitle, string action, LobbyIconKind icon)
-            {
-                Section = section;
-                Title = title;
-                Subtitle = subtitle;
-                Action = action;
-                Icon = icon;
-            }
-        }
-
-        // TODO(shop): illustrative catalogue from the prototype. Replace with
-        // the shop system's stock; keep it cosmetic.
-        private static readonly Ware[] Wares =
-        {
-            new Ware("Paper Banner", "200 coins", LobbyIconKind.CosmeticPaperBanner),
-            new Ware("Tin Roof", "350 coins", LobbyIconKind.CosmeticTinRoof),
-            new Ware("Straw Hat", "150 coins", LobbyIconKind.CosmeticStrawHat),
+            "Placeholder odds per reward kind; illustrative only.",
+            "Coins: 40%", LobbyCurrencyNames.Premium + ": 20%", "District: 15%", "Suit: 15%", "Skin: 10%"
         };
 
-        private static readonly Offer[] Offers =
-        {
-            new Offer("Bundles", "Three boxes", "Ancient pool only", "30 leaf", LobbyIconKind.ShopBundle),
-            new Offer("Bundles", "Ten boxes", "Ancient pool only", "90 leaf", LobbyIconKind.ShopBundle),
-            new Offer("Gold leaf", "Dissolve duplicates", "4 spare cosmetics → 20 leaf", "Dissolve", LobbyIconKind.GoldLeaf),
-        };
+        private readonly VisualElement host;
+        private readonly VisualElement[] stalls = new VisualElement[5];
+        private readonly VisualElement[] offers = new VisualElement[6];
+        private readonly Label[] countdowns = new Label[5];
+        private readonly DateTime[] resets = new DateTime[5];
+        private readonly float[] panelDistances = new float[5];
+        private readonly float[] panelHeights = new float[5];
+        private readonly int[] panelOrder = { 0, 1, 2, 3, 4 };
+        private bool orderReady;
+        private readonly LobbyMotion.Spring[] entrances = new LobbyMotion.Spring[5];
+        private readonly float[] elapsed = new float[5], exitElapsed = new float[5], exitAlpha = new float[5], exitScale = new float[5];
+        private readonly bool[] showing = new bool[5], exiting = new bool[5];
+        private readonly System.Collections.Generic.List<VisualElement>[] cards = new System.Collections.Generic.List<VisualElement>[5];
+        private readonly IVisualElementScheduledItem clock;
+        private readonly ShopSnap walk = new ShopSnap();
+        private LobbyStage stage;
+        private ClaimPanel claims;
+        private BadgeBoard badges;
+        private Offer pending;
+        private Offer dailyGift;
+        private LobbyBadgeDot dailyBadge;
+        private DateTime dailyDate;
+        private DateTime bundleStart;
+        private bool dailyClaimed;
 
-        private const string NotYet = "Purchasing arrives in a later update";
-
-        private readonly LobbySheet sheet;
-        private readonly LobbyToast toast;
-        private readonly LobbyContextMenu menu;
-
-        private readonly VisualElement itemContent;
-        private readonly Label itemTitle;
-        private readonly LobbyIcon itemIcon;
-        private readonly Button itemBuy;
-
+        private int pointer = -1;
+        private Vector2 dragStart;
+        private Vector2 dragPrevious;
+        private long dragTime;
+        private SwipeAxis axis;
+        private bool shown;
+        // Keep the shell's construction signature; the shared claim panel is bound after pages register.
         public ShopPage(VisualTreeAsset layout, LobbySheet sheet, LobbyToast toast, LobbyContextMenu menu)
-            : base(LobbyPageID.Shop, Build(layout))
+            : base(LobbyPageID.Shop, Build())
         {
-            this.sheet = sheet;
-            this.toast = toast;
-            this.menu = menu;
-
-            itemContent = LobbySheet.Lift(Root, "shop-item");
-            if (itemContent != null)
+            Root.userData = this;
+            host = Root.Q("shop-stalls");
+            dailyDate = DateTime.Now.Date;
+            bundleStart = DateTime.Now;
+            for (int i = 0; i < stalls.Length; i++)
             {
-                itemTitle = itemContent.Q<Label>("shop-item-title");
-                itemIcon = itemContent.Q<LobbyIcon>("shop-item-icon");
-                itemBuy = itemContent.Q<Button>("shop-item-buy");
-                if (itemBuy != null) itemBuy.clicked += () => Say(NotYet);
+                BuildStall(i);
+                stalls[i].style.display = DisplayStyle.Flex;
+                stalls[i].style.visibility = Visibility.Hidden;
+                stalls[i].style.opacity = 0f;
             }
+            // Bank contains two shelves, but is a single camera stop.
+            offers[5] = new VisualElement();
+            offers[5].AddToClassList("lb-market-offers");
+            var coinsTitle = new Label("Coins");
+            coinsTitle.AddToClassList("lb-market-shelf-title");
+            coinsTitle.AddToClassList("ui-w600");
+            stalls[4].Insert(2, coinsTitle);
+            var laurelsTitle = new Label(LobbyCurrencyNames.Premium);
+            laurelsTitle.AddToClassList("lb-market-shelf-title");
+            laurelsTitle.AddToClassList("ui-w600");
+            stalls[4].Add(laurelsTitle);
+            stalls[4].Add(offers[5]);
+            BuildOffers();
+            // Keep tall offer lists usable inside the chrome-safe viewport.
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                var list = new ScrollView { touchScrollBehavior = ScrollView.TouchScrollBehavior.Elastic };
+                list.style.minHeight = 0; list.style.flexShrink = 1;
+                var children = new System.Collections.Generic.List<VisualElement>(stalls[i].Children());
+                for (int c = 2; c < children.Count; c++) list.Add(children[c]);
+                stalls[i].Add(list); LobbyScrollbars.Hide(list);
+            }
+            RefreshCountdowns();
+            Root.RegisterCallback<PointerDownEvent>(BeginPointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerMoveEvent>(MovePointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerUpEvent>(EndPointer, TrickleDown.TrickleDown);
+            Root.RegisterCallback<PointerCancelEvent>(_ => CancelPointer());
+            Root.RegisterCallback<PointerCaptureOutEvent>(evt =>
+            {
+                if (evt.target == Root && evt.pointerId == pointer) CancelPointer();
+            });
+            Root.RegisterCallback<WheelEvent>(evt =>
+            {
+                for (var element = evt.target as VisualElement; element != null && element != Root; element = element.parent)
+                    if (element is ScrollView list && list.contentContainer.layout.height > list.contentViewport.layout.height + 1f)
+                        return;
+                if (Mathf.Abs(evt.delta.x) >= Mathf.Abs(evt.delta.y)) return;
+                walk.ScrollTo(ShopSnap.Target(walk.Position + Mathf.Sign(evt.delta.y) * 0.01f, evt.delta.y));
+                evt.StopPropagation();
+            });
 
-            BuildWares(Root.Q<VisualElement>("shop-wares"));
-            BuildOffers(Root.Q<VisualElement>("shop-tail"));
+            clock = Root.schedule.Execute(RefreshCountdowns).Every(1000);
+            clock.Pause();
+            Root.RegisterCallback<DetachFromPanelEvent>(evt =>
+            {
+                clock.Pause();
+                if (claims == null) return;
+                claims.Confirmed -= OnConfirmed;
+                claims.Cancelled -= OnCancelled;
+            });
         }
 
-        private static VisualElement Build(VisualTreeAsset layout)
+        private static VisualElement Build()
         {
-            VisualElement root = new VisualElement();
-            root.name = "page-shop";
+            var root = new VisualElement { name = "page-shop" };
             root.AddToClassList("lb-page-flush");
-            root.pickingMode = PickingMode.Ignore;
-
-            if (layout != null)
-            {
-                layout.CloneTree(root);
-            }
-            else
-            {
-                Label note = new Label("Shop layout missing - assign ShopPage.uxml");
-                note.AddToClassList("lb-stub__body");
-                root.Add(note);
-            }
-
+            root.AddToClassList("lb-market-page");
+            Resources.Load<VisualTreeAsset>("Lobby/ShopPage").CloneTree(root);
             return root;
         }
 
-        private void Say(string message)
+        public void Bind(ClaimPanel panel, BadgeBoard board)
         {
-            if (toast != null) toast.Show(message);
+            if (claims != null) { claims.Confirmed -= OnConfirmed; claims.Cancelled -= OnCancelled; }
+            claims = panel;
+            badges = board;
+            dailyBadge?.RemoveFromHierarchy();
+            dailyBadge = new LobbyBadgeDot(board, "shop.daily");
+            dailyGift.Tile.Add(dailyBadge);
+            claims.Confirmed += OnConfirmed;
+            claims.Cancelled += OnCancelled;
+            RefreshDailyBadge();
         }
 
-        private void BuildWares(VisualElement host)
+        private void BuildStall(int index)
         {
-            if (host == null) return;
-
-            for (int i = 0; i < Wares.Length; i++)
-            {
-                Ware ware = Wares[i];
-
-                VisualElement wrap = Sticker("lb-ware-wrap");
-                if (i == Wares.Length - 1) wrap.AddToClassList("lb-ware-wrap--last");
-
-                Button button = new Button();
-                button.AddToClassList("ui-reset-button");
-                button.AddToClassList("lb-ware");
-                button.Add(new LobbyIcon(ware.Icon, LobbyIconContext.ShopCard));
-
-                VisualElement text = new VisualElement();
-                text.pickingMode = PickingMode.Ignore;
-                text.Add(MakeLabel(ware.Name, "lb-ware__name", "ui-w600"));
-                text.Add(MakeLabel(ware.Cost, "lb-ware__cost", "ui-w500"));
-                button.Add(text);
-
-                button.clicked += () => OpenWare(ware);
-
-                wrap.Add(button);
-                host.Add(wrap);
-            }
+            var stall = new PaperCard { name = "stall-" + StallNames[index] };
+            stall.AddToClassList("lb-market-stall");
+            if (index == 4) stall.AddToClassList("lb-market-stall--bank");
+            var title = new Label(Titles[index]);
+            title.AddToClassList("lb-market-title");
+            title.AddToClassList("ui-w700");
+            stall.Add(title);
+            countdowns[index] = new Label();
+            countdowns[index].AddToClassList("lb-market-countdown");
+            stall.Add(countdowns[index]);
+            var grid = new VisualElement();
+            grid.AddToClassList("lb-market-offers");
+            stall.Add(grid);
+            host.Add(stall);
+            stalls[index] = stall;
+            cards[index] = new System.Collections.Generic.List<VisualElement>();
+            offers[index] = grid;
         }
 
-        private void BuildOffers(VisualElement host)
+        private void BuildOffers()
         {
-            if (host == null) return;
-
-            string section = null;
-
-            for (int i = 0; i < Offers.Length; i++)
-            {
-                Offer offer = Offers[i];
-
-                if (offer.Section != section)
-                {
-                    Label head = MakeLabel(offer.Section, "lb-sechead", "ui-w600");
-                    if (section != null) head.AddToClassList("lb-sechead--spaced");
-                    host.Add(head);
-                    section = offer.Section;
-                }
-
-                VisualElement wrap = Sticker("lb-row-wrap");
-
-                VisualElement row = new VisualElement();
-                row.AddToClassList("lb-row");
-
-                VisualElement thumb = new VisualElement();
-                thumb.AddToClassList("lb-rowthumb");
-                thumb.pickingMode = PickingMode.Ignore;
-                thumb.Add(new LobbyIcon(offer.Icon, LobbyIconContext.ShopCard));
-                row.Add(thumb);
-
-                VisualElement text = new VisualElement();
-                text.AddToClassList("lb-row__text");
-                text.pickingMode = PickingMode.Ignore;
-                text.Add(MakeLabel(offer.Title, "lb-row__title", "ui-w600"));
-                text.Add(MakeLabel(offer.Subtitle, "lb-row__sub", "ui-w500"));
-                row.Add(text);
-
-                Button pill = new Button();
-                pill.text = offer.Action;
-                pill.AddToClassList("ui-reset-button");
-                pill.AddToClassList("lb-pill");
-                pill.AddToClassList("ui-w700");
-                pill.clicked += () => Say(NotYet);
-                row.Add(pill);
-
-                if (menu != null)
-                {
-                    menu.Attach(row, () => new List<LobbyMenuItem>
-                    {
-                        new LobbyMenuItem("Preview", () => Say("Previews arrive in a later update")),
-                        new LobbyMenuItem("Details", () => Say(offer.Title + ": " + offer.Subtitle)),
-                    });
-                }
-
-                wrap.Add(row);
-                host.Add(wrap);
-            }
+            dailyGift = AddOffer(0, "Daily gift", "A free daily placeholder gift.", ClaimAction.Claim, LobbyIconKind.DailyBox, freeDaily: true);
+            AddOffer(0, "Paper banner", "Appearance only.", ClaimAction.Price("Coins", 200), LobbyIconKind.CosmeticPaperBanner);
+            AddOffer(0, "Straw hat", "Appearance only.", ClaimAction.Price("Coins", 150), LobbyIconKind.CosmeticStrawHat);
+            AddOffer(1, "Small crate", "A Small crate. Placeholder odds are available under i.", ClaimAction.Price("Premium", 50), LobbyIconKind.CrateSmall, Odds);
+            AddOffer(1, "Medium crate", "A Medium crate. Placeholder odds are available under i.", ClaimAction.Price("Premium", 100), LobbyIconKind.CrateMedium, Odds);
+            AddOffer(2, "Tin roof skin", "A weekly cosmetic placeholder.", ClaimAction.Price("Premium", 75), LobbyIconKind.CosmeticTinRoof);
+            AddOffer(2, "Banner skin", "A weekly cosmetic placeholder.", ClaimAction.Price("Premium", 100), LobbyIconKind.CosmeticPaperBanner);
+            AddOffer(2, "Hat skin", "A weekly cosmetic placeholder.", ClaimAction.Price("Premium", 125), LobbyIconKind.CosmeticStrawHat);
+            AddOffer(3, "Two-day bundle", "An illustrative personalised cosmetics bundle.", ClaimAction.Price("Premium", 250), LobbyIconKind.ShopBundle);
+            for (int i = 0; i < 3; i++)
+                AddOffer(4, ((i + 1) * 500) + " Coins", "A placeholder currency pack.", ClaimAction.Price("Premium", (i + 1) * 25), LobbyIconKind.Pip);
+            if (Application.isMobilePlatform)
+                AddOffer(5, "Free ad gift", "Ad reward placeholder. No ad is played in this build.", ClaimAction.Claim, LobbyIconKind.Laurel);
+            int paid = Application.isMobilePlatform ? 5 : 6;
+            for (int i = 0; i < paid; i++)
+                AddOffer(5, ((i + 1) * 100) + " " + LobbyCurrencyNames.Premium, "Placeholder price in USD cents. No payment is made.",
+                    ClaimAction.Price("USD cents", (i + 1) * 199), LobbyIconKind.Laurel);
         }
 
-        private void OpenWare(Ware ware)
+        private Offer AddOffer(int stall, string title, string description, ClaimAction action,
+            LobbyIconKind icon, string[] disclosure = null, bool freeDaily = false)
         {
-            if (sheet == null || itemContent == null)
-            {
-                Say(NotYet);
-                return;
-            }
-
-            if (itemTitle != null) itemTitle.text = ware.Name;
-            if (itemIcon != null) itemIcon.Kind = ware.Icon;
-            if (itemBuy != null) itemBuy.text = "Buy for " + ware.Cost;
-
-            sheet.Open(itemContent);
-        }
-
-        private static VisualElement Sticker(string wrapClass)
-        {
-            VisualElement wrap = new VisualElement();
-            wrap.AddToClassList("ui-sticker");
-            wrap.AddToClassList(wrapClass);
-            wrap.pickingMode = PickingMode.Ignore;
-
-            VisualElement shadow = new VisualElement();
+            var offer = new Offer { Request = new ClaimRequest(title, description, action, disclosure), FreeDaily = freeDaily };
+            var tile = new PaperButton(() => OpenOffer(offer));
+            offer.Tile = tile;
+            var sticker = new VisualElement();
+            sticker.AddToClassList("ui-sticker");
+            sticker.AddToClassList("lb-market-card");
+            var shadow = new VisualElement { pickingMode = PickingMode.Ignore };
             shadow.AddToClassList("ui-sticker__shadow");
-            shadow.pickingMode = PickingMode.Ignore;
-            wrap.Add(shadow);
-
-            return wrap;
+            sticker.Add(shadow);
+            sticker.Add(tile);
+            tile.AddToClassList("ui-reset-button");
+            tile.AddToClassList("lb-market-tile");
+            if (freeDaily || title == "Free ad gift")
+            {
+                tile.AddToClassList("lb-market-tile--free");
+                var ribbon = new Label("FREE") { pickingMode = PickingMode.Ignore };
+                ribbon.AddToClassList("ui-w700");
+                ribbon.AddToClassList("lb-market-ribbon");
+                tile.Add(ribbon);
+            }
+            var glyph = new LobbyIcon(icon, LobbyIconContext.ShopCard) { pickingMode = PickingMode.Ignore };
+            glyph.AddToClassList("lb-market-icon");
+            tile.Add(glyph);
+            var name = new Label(title) { pickingMode = PickingMode.Ignore, enableRichText = false };
+            name.AddToClassList("ui-w600");
+            name.AddToClassList("lb-market-name");
+            tile.Add(name);
+            var price = new Label(action.PrimaryLabel()) { pickingMode = PickingMode.Ignore, enableRichText = false };
+            price.AddToClassList("ui-w700");
+            price.AddToClassList("lb-market-price");
+            tile.Add(price);
+            if (disclosure != null)
+            {
+                var hint = new Label("Reward odds under i") { pickingMode = PickingMode.Ignore };
+                hint.AddToClassList("lb-market-disclosure");
+                tile.Add(hint);
+            }
+            offers[stall].Add(sticker);
+            cards[stall == 5 ? 4 : stall].Add(sticker);
+            return offer;
         }
 
-        private static Label MakeLabel(string text, string styleClass, string weightClass)
+        private void OpenOffer(Offer offer)
         {
-            Label label = new Label(text);
-            label.AddToClassList(styleClass);
-            label.AddToClassList(weightClass);
-            label.pickingMode = PickingMode.Ignore;
-            return label;
+            if (claims == null || walk.Dragging || walk.Moving || stage?.IsPanning == true || offer.FreeDaily && dailyClaimed) return;
+            claims.Open(offer.Request);
+            pending = offer;
+        }
+
+        private void OnConfirmed()
+        {
+            if (pending == null) return;
+            if (pending.FreeDaily)
+            {
+                // This is visit-local placeholder claim state, not inventory or wallet state.
+                dailyClaimed = true;
+                dailyGift.Tile.SetEnabled(false);
+                RefreshDailyBadge();
+            }
+            Debug.Log("[Shop] Confirmed placeholder: " + pending.Request.Title);
+            pending = null;
+        }
+
+        private void OnCancelled() => pending = null;
+
+        private void RefreshDailyBadge() => badges?.Set("shop.daily", dailyClaimed ? 0 : 1);
+
+        private void RefreshCountdowns()
+        {
+            DateTime now = DateTime.Now;
+            if (dailyDate != now.Date)
+            {
+                dailyDate = now.Date; dailyClaimed = false;
+                dailyGift.Tile.SetEnabled(true);
+                RefreshDailyBadge();
+            }
+            if (now >= bundleStart.AddDays(2)) bundleStart = now;
+            for (int i = 0; i < countdowns.Length; i++)
+            {
+                if (resets[i] <= now) resets[i] = ShopResets.Next(now, (StallKind)i, bundleStart);
+                countdowns[i].text = "Refresh in " + ShopCountdown.Format(resets[i] - now);
+            }
+        }
+
+        public void BindStage(LobbyStage value) => stage = value;
+
+        public override void OnShow()
+        {
+            shown = true;
+            // Never carry projected panels from the last camera pose into a visit.
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                stalls[i].style.display = DisplayStyle.Flex;
+                stalls[i].style.visibility = Visibility.Hidden;
+                stalls[i].style.opacity = 0f;
+                showing[i] = exiting[i] = false;
+            }
+
+            RefreshCountdowns();
+            clock.Resume();
+
+        }
+
+        public override void OnHide()
+        {
+            shown = false;
+
+            clock.Pause();
+            CancelPointer();
+            walk.Stop();
+        }
+
+        public void ScrollTo(string stall)
+        {
+            int index = ShopSnap.StallIndex(stall);
+            if (index < 0) return;
+            CancelPointer();
+            walk.ScrollTo(index);
+        }
+
+        private void BeginPointer(PointerDownEvent evt)
+        {
+            if (evt.button != 0 || !evt.isPrimary) return;
+            // The shell can capture a horizontal swipe and consume its release.
+            // A fresh primary press must clear that gesture before starting another.
+            CancelPointer();
+            // An overflowing offer list owns vertical gestures inside its viewport.
+            for (var target = evt.target as VisualElement; target != null && target != Root; target = target.parent)
+                if (target is ScrollView scroll && scroll.contentContainer.layout.height > scroll.contentViewport.layout.height + 1f)
+                    return;
+            pointer = evt.pointerId;
+            dragStart = dragPrevious = evt.position;
+            dragTime = evt.timestamp;
+            axis = SwipeAxis.Pending;
+        }
+
+        private void MovePointer(PointerMoveEvent evt)
+        {
+            if (evt.pointerId != pointer) return;
+            Vector2 point = evt.position;
+            Vector2 delta = point - dragStart;
+            if (axis == SwipeAxis.Pending)
+            {
+                axis = SwipeDecision.Lock(delta.x, delta.y);
+                if (axis == SwipeAxis.Vertical)
+                {
+                    walk.BeginDrag();
+                    LobbyMouseDrag.Capture(Root, pointer);
+                }
+            }
+            if (axis != SwipeAxis.Vertical) return;
+            float pixelsPerStall = Mathf.Max(200f, Root.layout.height * 0.65f);
+            walk.Drag(-(point.y - dragPrevious.y) / pixelsPerStall,
+                Mathf.Max(0.001f, (evt.timestamp - dragTime) / 1000f));
+            dragPrevious = point;
+            dragTime = evt.timestamp;
+            evt.StopPropagation();
+        }
+
+        private void EndPointer(PointerUpEvent evt)
+        {
+            if (evt.pointerId != pointer) return;
+            bool vertical = axis == SwipeAxis.Vertical;
+            if (vertical)
+            {
+                if (evt.timestamp - dragTime > 100) walk.Drag(0f, 0.1f);
+                walk.Release();
+            }
+            int released = pointer;
+            pointer = -1;
+            if (Root.HasPointerCapture(released)) Root.ReleasePointer(released);
+            if (vertical) evt.StopPropagation();
+        }
+
+        private void CancelPointer()
+        {
+            int released = pointer;
+            pointer = -1;
+            if (walk.Dragging) walk.Release();
+            if (released >= 0 && Root.HasPointerCapture(released)) Root.ReleasePointer(released);
+        }
+
+        // Called by the shell before its page/camera tick, never by a UI schedule.
+        public void Tick(float seconds)
+        {
+            if (!shown || stage == null) return;
+            walk.Step(seconds);
+            stage.SetShopScroll(walk.Position);
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                if (showing[i]) { entrances[i].Step(seconds, LobbyMotion.PopDamping); elapsed[i] += seconds; }
+                if (exiting[i]) exitElapsed[i] += seconds;
+            }
+        }
+
+        // Camera has already consumed the same page spring sample this frame.
+        public void Project()
+        {
+            if (!shown || stage == null || Root.panel == null || Root.layout.height <= 0f) return;
+            Camera camera = stage.ShopCamera;
+            float boundedPosition = Mathf.Clamp(walk.Position, 0, ShopSnap.StallCount - 1);
+            float edgeOffset = ShopProjection.EdgeOffset(walk.Position, Mathf.Max(200f, Root.layout.height * 0.65f));
+            bool atEdge = walk.Position <= 0 || walk.Position >= ShopSnap.StallCount - 1;
+            for (int i = 0; i < stalls.Length; i++)
+            {
+                Vector3 anchor = stage.ShopAnchor(i);
+                Vector3 screen = camera.WorldToScreenPoint(anchor);
+                panelDistances[i] = Vector3.Distance(camera.transform.position, anchor);
+                float measuredHeight = stalls[i].layout.height;
+                if (measuredHeight > 0f) panelHeights[i] = measuredHeight;
+                Vector2 point = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
+                    new Vector2(screen.x, Screen.height - screen.y)));
+                // At rest all anchors project to the same point. Offset each panel's
+                // vertical origin to its declared screen anchor in the usable page.
+                Vector3 restAnchor = stage.ShopAnchor(0);
+                Vector3 restScreen = camera.WorldToScreenPoint(restAnchor +
+                    Vector3.back * boundedPosition * LobbyStage.ShopStallSpacing);
+                Vector2 restPoint = host.WorldToLocal(RuntimePanelUtils.ScreenToPanel(Root.panel,
+                    new Vector2(restScreen.x, Screen.height - restScreen.y)));
+                float vertical = ShopSnap.ScreenAnchor(i);
+                // Offset is screen-space and independent of camera distance.
+                float desiredY = i == 0 ? 8f : host.layout.height * vertical;
+                ShopPanelPose pose = ShopProjection.Project(point.x, point.y,
+                    screen.z, panelDistances[i],
+                    stage.ShopReferenceDistance,
+                    i, boundedPosition, panelHeights[i], vertical, restPoint.y, desiredY);
+                var safe = SafeBounds();
+                // Reserve the pop overshoot as well as the steady depth scale.
+                stalls[i].style.maxHeight = Mathf.Max(0f, safe.height / (pose.Scale * 1.02f));
+                stalls[i].style.overflow = Overflow.Hidden;
+                pose = ShopProjection.Constrain(pose, stalls[i].layout.width * 1.02f, panelHeights[i] * 1.02f,
+                    safe.xMin, safe.yMin, safe.xMax, safe.yMax);
+                ApplyPose(i, new ShopPanelPose(pose.X, pose.Y + edgeOffset, pose.Scale,
+                    pose.Visible && (atEdge || !walk.Dragging && !walk.Moving) && !stage.IsPanning));
+            }
+            bool changed = ShopProjection.OrderByDistance(panelDistances, panelOrder);
+            if (!orderReady || changed)
+            {
+                // UI Toolkit draws later siblings on top. Do not reorder unless needed.
+                for (int i = 0; i < panelOrder.Length; i++) stalls[panelOrder[i]].BringToFront();
+                orderReady = true;
+            }
+        }
+
+        private Rect SafeBounds()
+        {
+            var root = Root.panel.visualTree;
+            var safe = root.Q("safe-area") ?? root.Q("lobby-root") ?? root;
+            Rect bounds = host.WorldToLocal(safe.worldBound);
+            var pills = root.Q("tabbar-dock");
+            foreach (string name in TopBands)
+            {
+                var top = root.Q(name);
+                if (top != null && top.resolvedStyle.display != DisplayStyle.None)
+                    bounds.yMin = Mathf.Max(bounds.yMin, host.WorldToLocal(top.worldBound).yMax);
+            }
+            if (pills != null && pills.resolvedStyle.display != DisplayStyle.None)
+                bounds.yMax = Mathf.Min(bounds.yMax, host.WorldToLocal(pills.worldBound).yMin);
+            bounds.xMin += 16; bounds.xMax -= 16; bounds.yMin += 16; bounds.yMax -= 16;
+            return bounds;
+        }
+
+        private void ApplyPose(int index, ShopPanelPose pose)
+        {
+            var panel = stalls[index];
+            if (pose.Visible && !showing[index])
+            {
+                showing[index] = true; exiting[index] = false; elapsed[index] = 0;
+                entrances[index] = new LobbyMotion.Spring(0f) { Target = 1f };
+                panel.style.visibility = Visibility.Visible;
+            }
+            else if (!pose.Visible && showing[index])
+            {
+                showing[index] = false; exiting[index] = true; exitElapsed[index] = 0;
+                exitAlpha[index] = Mathf.Clamp01(elapsed[index] / LobbyMotion.FadeSeconds);
+                exitScale[index] = 0.85f + 0.15f * entrances[index].Position;
+            }
+            if (!showing[index] && !exiting[index]) return;
+            float alpha, size;
+            if (exiting[index])
+            {
+                float t = Mathf.Clamp01(exitElapsed[index] / 0.100f);
+                alpha = exitAlpha[index] * (1f - t);
+                size = Mathf.Lerp(exitScale[index], 0.95f, LobbyMotion.InCubic(t));
+                if (t >= 1f) { exiting[index] = false; panel.style.visibility = Visibility.Hidden; }
+            }
+            else
+            {
+                alpha = Mathf.Clamp01(elapsed[index] / LobbyMotion.FadeSeconds);
+                size = 0.85f + 0.15f * entrances[index].Position;
+                for (int c = 0; c < cards[index].Count; c++)
+                {
+                    float age = Mathf.Max(0f, elapsed[index] - c * 0.040f);
+                    var pop = new LobbyMotion.Spring(0f) { Target = 1f };
+                    pop.Step(age, LobbyMotion.PopDamping);
+                    cards[index][c].style.opacity = Mathf.Clamp01(age / LobbyMotion.FadeSeconds);
+                    cards[index][c].style.translate = new Translate(0f, 12f * (1f - pop.Position));
+                    cards[index][c].style.scale = new Scale(Vector3.one * (0.85f + 0.15f * pop.Position));
+                }
+            }
+            panel.style.opacity = alpha;
+            panel.style.left = pose.X; panel.style.top = pose.Y;
+            panel.style.scale = new Scale(new Vector3(pose.Scale * size, pose.Scale * size, 1f));
         }
     }
 }

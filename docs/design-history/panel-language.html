@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Node War: panel language</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Kalam:wght@300;400;700&family=Fredoka:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Tokens copied from Assets/UI/Styles/Tokens.uss */
+:root{
+  --paper-50:#f4e9d5; --paper-100:#ebdcc3; --paper-200:#d7c3a5; --paper-300:#c3aa85;
+  --ink:#2d2319; --ink-mute:rgba(45,35,25,.70); --hair:rgba(45,35,25,.15);
+  --gold:#e0a526; --gold-800:#8a6a14; --red:#d2452f; --red-800:#7d211a;
+  --tap:#1f7a6d; --leaf:#c9a227; --coin:#d9a441;
+  --p0:#6699ff; --p0-edge:#28488c; --p1:#ff6666; --p1-edge:#8c2828;
+  --sea-1:#5b6fb5; --sea-2:#3d4a8c; --lake:#9cc8e6;
+
+  /* The one panel recipe, taken from the player card */
+  --edge:2px;           /* ink outline, all panels */
+  /* three edge colours: outer = panels on the world; inner = pressables inside a panel (close, a little lighter); light = only inside a shaded region */
+  --line-outer:#2d2319; --line-inner:#4d3d2d; --line-light:#c3aa85;
+  --lip:5px;            /* thicker bottom edge = the shadow */
+  --lip-sm:3px;         /* rows and buttons */
+  --r-lg:14px; --r-md:12px; --r-sm:8px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
+
+  --display:'Lilita One', sans-serif;
+  --body:'Fredoka', sans-serif; --body-w:600; --track:0.04em;
+}
+*{letter-spacing:var(--track)}
+body.t2{--track:0.02em} body.t6{--track:0.06em}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1d1a17;color:var(--paper-50);font-family:var(--body);font-weight:var(--body-w);padding:24px}
+h1{font-family:var(--display);font-weight:400;font-size:28px;}
+.intro{max-width:1100px;margin:0 auto 20px;line-height:1.45;font-size:16px}
+.intro p{margin-top:6px;color:#d7c3a5}
+.toggles{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.toggles button{font:inherit;padding:6px 12px;border-radius:8px;border:2px solid var(--paper-300);background:#2d2319;color:var(--paper-50);cursor:pointer}
+.toggles button.on{background:var(--gold);color:var(--ink);border-color:var(--ink)}
+
+.wall{display:flex;flex-wrap:wrap;gap:28px;justify-content:center}
+.phone{width:390px;height:780px;border-radius:36px;border:8px solid #0d0b09;position:relative;overflow:hidden;
+  background:
+   radial-gradient(ellipse 60% 22% at 50% 64%, #7c8f55 0 45%, #c9b98a 47% 52%, transparent 54%),
+   radial-gradient(ellipse 18% 6% at 30% 60%, var(--lake) 0 60%, transparent 62%),
+   radial-gradient(circle at 20% 15%, rgba(255,255,255,.08), transparent 40%),
+   linear-gradient(180deg, var(--sea-1), var(--sea-2));}
+.phone::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(115deg, transparent 0 22px, rgba(255,255,255,.035) 22px 24px)}
+.cap{font-family:var(--display);font-size:15px;color:var(--paper-200);text-align:center;margin-top:8px;}
+.col{display:flex;flex-direction:column;align-items:center}
+.screen{position:absolute;inset:0;padding:44px var(--s4) 96px;display:flex;flex-direction:column;gap:var(--s2);z-index:1}
+
+/* ---------- THE PANEL RECIPE ---------- */
+.card{background:var(--paper-100);color:var(--ink);border:var(--edge) solid var(--line-outer);border-bottom-width:calc(var(--edge) + var(--lip));
+  border-radius:var(--r-lg);padding:var(--s3)}
+.card.sm{border-bottom-width:calc(var(--edge) + var(--lip-sm));border-radius:var(--r-md)}
+.grain{background-image:radial-gradient(rgba(45,35,25,.05) 1px, transparent 1px);background-size:5px 5px}
+.dsp{font-family:var(--display);font-weight:400;}
+.meta{font-size:14px;color:var(--ink-mute)}
+.num{font-family:var(--display);font-weight:400}
+
+/* top band */
+.purse{display:flex;gap:var(--s2);align-items:center}
+.coin{display:flex;align-items:center;gap:6px;height:36px;padding:0 12px 0 8px;border-radius:18px;background:rgba(45,35,25,.92);color:var(--paper-50);font-family:var(--display);font-size:16px;border:2px solid var(--ink)}
+.coin i{width:16px;height:16px;border-radius:50%;background:var(--coin);border:2px solid var(--paper-50)}
+.coin i.leaf{border-radius:2px 12px 2px 12px;background:var(--leaf);transform:rotate(-12deg)}
+.rbtn{width:44px;height:44px;border-radius:50%;background:rgba(45,35,25,.92);border:2px solid var(--ink);display:grid;place-items:center;color:var(--paper-50);font-size:20px;position:relative}
+.dot{position:absolute;top:2px;right:2px;width:12px;height:12px;border-radius:50%;background:var(--red);border:2px solid var(--ink)}
+.pcard .row1{display:flex;justify-content:space-between;align-items:baseline}
+.pcard .name{font-family:var(--display);font-size:22px}
+.pcard .rr{font-family:var(--display);font-size:22px;color:var(--gold-800)}
+.meter{height:8px;border:2px solid var(--ink);border-radius:5px;background:var(--paper-300);overflow:hidden;margin:6px 0 4px}
+.meter b{display:block;height:100%;background:var(--ink)}
+
+/* page title: stamped on the world, no panel behind it */
+.title{font-family:var(--display);font-size:34px;color:var(--paper-50);text-align:center;
+  -webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink);margin:var(--s3) 0 var(--s1)}
+
+/* LEDGER: one outlined card, rows flat inside, hairline dividers */
+.ledger{padding:0;overflow:hidden}
+.ledger h3{font-family:var(--display);font-weight:400;font-size:17px;padding:10px var(--s3) 8px;background:var(--paper-200);border-bottom:2px solid var(--ink);display:flex;justify-content:space-between;align-items:center}
+.ledger h3 small{font-family:var(--body);font-weight:var(--body-w);font-size:13px;color:var(--ink-mute)}
+.lrow{display:flex;align-items:center;gap:var(--s3);min-height:56px;padding:var(--s2) var(--s3)}
+.lrow + .lrow{border-top:1px solid var(--hair)}
+.av{width:40px;height:40px;border-radius:10px;border:2px solid var(--ink);display:grid;place-items:center;font-family:var(--display);font-size:18px;color:var(--ink);flex:none;position:relative}
+.av .pres{position:absolute;right:-4px;bottom:-4px;width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);background:#5cb85c}
+.who{flex:1;min-width:0}
+.who .n{font-family:var(--display);font-size:17px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.who .m{font-size:13px;color:var(--ink-mute);line-height:1.2}
+
+/* buttons: same recipe, small lip; press = lip collapses */
+.btn{font-family:var(--display);font-size:15px;height:40px;padding:0 14px;border-radius:var(--r-sm);
+  border:2px solid var(--ink);border-bottom-width:5px;background:var(--paper-50);color:var(--ink);display:inline-flex;align-items:center;gap:6px;cursor:pointer;flex:none}
+.btn:active{border-bottom-width:2px;transform:translateY(3px)}
+.btn.gold{background:var(--gold)} .btn.red{background:var(--red);color:var(--paper-50)} .btn.teal{background:var(--tap);color:var(--paper-50)}
+.btn.sq{width:40px;padding:0;justify-content:center}
+
+/* segmented control: a sunk track, flat segments, no outlined pills */
+/* 2-3 option switch: outer box has the lip; inner shaded track has none; the selected face has a weaker, paper-coloured lip */
+.seg{display:flex;background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:5px;border-radius:12px;padding:4px}
+.seg .in{display:flex;flex:1;background:var(--paper-200);border-radius:8px;padding:4px;gap:4px}
+.seg span{flex:1;text-align:center;font-family:var(--display);font-size:14px;padding:6px 10px;border-radius:6px;color:var(--ink-mute)}
+.seg span.on{background:var(--paper-50);color:var(--ink);box-shadow:0 3px 0 var(--line-light)}
+
+/* LIVE TV ROW: thin cards, tall VS */
+.live{display:flex;align-items:center;gap:6px}
+.pl{flex:1;min-width:0;height:48px;display:flex;flex-direction:column;justify-content:center;padding:0 10px;background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:4px;border-radius:10px}
+.pl.p0{border-left:6px solid var(--p0)} .pl.p1{border-right:6px solid var(--p1);text-align:right}
+.pl .n{font-family:var(--display);font-size:15px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .r{font-family:var(--display);font-size:12px;line-height:1.1;color:var(--gold-800)}
+.vs{width:46px;height:58px;flex:none;border-radius:9px;background:var(--red);border:2px solid var(--ink);border-bottom-width:6px;
+  color:var(--paper-50);font-family:var(--display);font-size:19px;display:grid;place-items:center;-webkit-text-stroke:1px var(--ink);paint-order:stroke fill}
+
+/* search + popover bubble */
+.search{display:flex;gap:var(--s2);align-items:stretch}
+.field{flex:1;height:48px;border-radius:var(--r-md);background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:5px;display:flex;align-items:center;padding:0 12px;gap:8px;color:var(--ink-mute);font-size:16px}
+.bubble{position:absolute;right:16px;top:318px;width:280px;z-index:5;padding:var(--s4)}
+.bubble::before{content:"";position:absolute;top:-13px;right:16px;border:11px solid transparent;border-bottom-color:var(--ink);border-top:0}
+.bubble::after{content:"";position:absolute;top:-9px;right:18px;border:9px solid transparent;border-bottom-color:var(--paper-100);border-top:0}
+.slider{margin:4px 0 14px}
+.slider .lab{display:flex;justify-content:space-between;font-size:15px}
+.slider .lab b{font-family:var(--display);font-weight:400}
+.track{height:10px;margin-top:10px;border-radius:6px;background:var(--paper-300);border:2px solid var(--ink);position:relative}
+.track .fill{position:absolute;top:0;bottom:0;left:0;background:var(--tap);border-radius:4px}
+.thumb{position:absolute;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:4px}
+.toggle{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.sw{width:48px;height:28px;border-radius:14px;background:var(--tap);border:2px solid var(--ink);position:relative}
+.sw::after{content:"";position:absolute;right:2px;top:2px;width:20px;height:20px;border-radius:50%;background:var(--paper-50);border:2px solid var(--ink)}
+.scrim-lite{position:absolute;inset:0;background:rgba(30,22,15,.25);z-index:4}
+
+/* pill nav */
+.nav{position:absolute;left:16px;right:16px;bottom:18px;height:64px;border-radius:32px;background:rgba(45,35,25,.94);border:2px solid var(--ink);display:flex;align-items:center;padding:6px;z-index:3}
+.nav span{flex:1;height:100%;display:grid;place-items:center;font-family:var(--display);font-size:12px;color:var(--paper-200);border-radius:26px}
+.nav span.on{background:var(--gold);color:var(--ink);border:2px solid var(--ink)}
+
+/* bottom sheet */
+.sheet{position:absolute;left:0;right:0;bottom:0;height:60%;z-index:5;border-radius:22px 22px 0 0;border-bottom-width:2px;padding:var(--s4)}
+.handle{width:44px;height:5px;border-radius:3px;background:var(--paper-300);margin:-6px auto 10px}
+.art{height:150px;border-radius:var(--r-md);background:linear-gradient(180deg,#a9b6d9,#e6dcc4);border:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 8px}
+.art .arr{width:36px;height:36px;border-radius:50%;background:rgba(45,35,25,.85);color:var(--paper-50);display:grid;place-items:center;font-family:var(--display)}
+.bars{margin:12px 0;display:grid;grid-template-columns:64px 1fr;gap:6px 10px;align-items:center;font-size:14px}
+.cells{display:flex;gap:3px} .cells i{flex:1;height:14px;border-radius:3px;border:2px solid var(--line-inner);background:var(--line-inner)}
+.cells i.e{background:var(--paper-200);border-color:var(--line-light)} .cells i.up{background:#5cb85c} .cells i.dn{background:transparent;border-color:var(--red);border-style:dashed}
+
+/* workshop tiles: pressable, so outlined with a small lip */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.tile{background:var(--paper-50);border:2px solid var(--ink);border-bottom-width:4px;border-radius:10px;padding:6px}
+.tile.on{border-color:var(--tap);box-shadow:0 0 0 2px var(--tap)}
+.tart{height:78px;border-radius:7px}
+.tn{font-family:var(--display);font-size:15px;margin-top:6px;color:var(--ink)}
+.tm{font-size:12px;color:var(--ink-mute)}
+/* sheet extras */
+.dots{position:absolute;left:0;right:0;bottom:8px;display:flex;gap:6px;justify-content:center}
+.dots i{width:8px;height:8px;border-radius:50%;background:rgba(45,35,25,.3)} .dots i.on{background:var(--ink);width:18px;border-radius:4px}
+.skins{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px}
+.skinrow{display:flex;gap:8px;margin-top:6px}
+.skin{width:52px;height:52px;border-radius:10px;border:2px solid var(--ink);border-bottom-width:4px;display:grid;place-items:center;font-size:16px}
+.skin.on{box-shadow:0 0 0 2px var(--tap);border-color:var(--tap)} .skin.lock{background:var(--paper-200);opacity:.7}
+/* icon board */
+/* anything outlined that sits inside a panel takes the inner edge colour */
+.card .btn, .card .tile:not(.on), .card .pl, .card .vs, .card .seg, .card .skin:not(.on), .card .av, .card .art, .card .field, .card .track, .card .thumb, .card .sw, .card .sw::after, .card .meter{border-color:var(--line-inner)}
+.card.ledger h3{border-bottom-color:var(--line-inner)}
+.icons{max-width:1100px;margin:28px auto 0}
+.icons .card{margin-top:12px}
+.irow{display:grid;grid-template-columns:200px 1fr;gap:12px;align-items:center;padding:10px 0}
+.irow + .irow{border-top:1px solid var(--hair)}
+.irow .lib b{font-family:var(--display);font-weight:400;font-size:17px;display:block}
+.irow .lib span{font-size:13px;color:var(--ink-mute)}
+.iset{display:flex;flex-wrap:wrap;gap:10px}
+.iset img{width:28px;height:28px}
+.iset .rb{width:44px;height:44px;border-radius:50%;background:rgba(45,35,25,.92);display:grid;place-items:center}
+.iset .rb img{width:24px;height:24px}
+
+/* SHOP: unique language: tags hung from the stall, never cards */
+.stall{position:absolute;left:0;right:0;top:150px;height:300px;
+  background:radial-gradient(ellipse 70% 30% at 40% 95%, #8f7a4f 0 50%, transparent 52%),
+  linear-gradient(180deg,transparent 0 30%, transparent 100%)}
+.awning{position:absolute;left:24px;width:200px;top:60px;height:44px;border:2px solid var(--ink);border-radius:8px 8px 0 0;
+  background:repeating-linear-gradient(90deg,var(--red) 0 25px,var(--paper-50) 25px 50px)}
+.awning::after{content:"";position:absolute;left:-2px;right:-2px;bottom:-14px;height:14px;background:radial-gradient(circle at 12.5px 0, var(--red) 11px, transparent 12px) 0 0/25px 14px}
+.posts{position:absolute;left:34px;top:104px;width:180px;height:130px;border-left:8px solid #6b4b2a;border-right:8px solid #6b4b2a}
+.keeper{position:absolute;left:96px;top:150px;width:56px;height:84px;border-radius:28px 28px 10px 10px;background:#b8734a;border:2px solid var(--ink)}
+.keeper::before{content:"";position:absolute;left:12px;top:-30px;width:30px;height:30px;border-radius:50%;background:#f0d0a8;border:2px solid var(--ink)}
+.tags{position:absolute;right:14px;top:160px;width:170px;display:flex;flex-direction:column;gap:14px;z-index:2}
+.tag{position:relative;background:var(--paper-50);color:var(--ink);border:2px solid var(--ink);border-bottom-width:5px;
+  border-radius:6px 16px 16px 6px;padding:10px 12px 10px 26px;transform-origin:0 50%;animation:sway 3.2s ease-in-out infinite}
+.tag:nth-child(2){animation-delay:-1.1s} .tag:nth-child(3){animation-delay:-2.2s}
+.tag::before{content:"";position:absolute;left:8px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--sea-2);border:2px solid var(--ink)}
+.tag::after{content:"";position:absolute;left:-36px;top:50%;width:44px;border-top:2px dashed var(--ink)}
+.tag .n{font-family:var(--display);font-size:16px}
+.tag .p{display:flex;align-items:center;gap:6px;margin-top:4px;font-family:var(--display);font-size:16px;color:var(--gold-800)}
+.tag .p i{width:14px;height:14px;border-radius:50%;background:var(--coin);border:2px solid var(--ink)}
+.tag.sold{opacity:.55} .tag.sold .p{color:var(--ink-mute)}
+@keyframes sway{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.4deg)}}
+.sign{position:absolute;left:28px;top:16px;z-index:2;background:#8a6a3a;color:var(--paper-50);font-family:var(--display);font-size:20px;
+  padding:6px 14px;border:2px solid var(--ink);border-bottom-width:5px;border-radius:6px;transform:rotate(-3deg);-webkit-text-stroke:1px var(--ink);paint-order:stroke fill}
+.sign small{display:block;font-family:var(--body);font-weight:var(--body-w);font-size:13px;-webkit-text-stroke:0;color:var(--paper-200)}
+.rail{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:8px;z-index:2}
+.rail i{width:8px;height:8px;border-radius:50%;background:rgba(244,233,213,.45);border:1.5px solid var(--ink)}
+.rail i.on{height:20px;border-radius:4px;background:var(--paper-50)}
+
+/* rules board */
+.rules{max-width:1100px;margin:28px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+.rules .card{font-size:15px;line-height:1.45}
+.rules h2{font-family:var(--display);font-weight:400;font-size:20px;margin-bottom:6px}
+.rules li{margin-left:18px}
+.dont{display:flex;gap:10px;align-items:center;margin-top:8px}
+.bad{border:2px solid var(--ink);border-radius:16px;padding:10px;background:var(--paper-100);display:flex;gap:6px}
+.bad span{border:2px solid var(--ink);border-radius:20px;padding:4px 10px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="intro">
+  <h1>Node War: panel language</h1>
+  <p>Every panel is built from one recipe, taken from the player card you like: a parchment fill, a 2&nbsp;px ink outline, and a thicker bottom edge in place of a shadow. Display text is Lilita One; body text is Fredoka SemiBold. All text gets extra letter spacing, so it reads lighter without losing weight. The 3D world stays visible: pages have no backdrop panel, and only content sits on cards.</p>
+  <p>The rules and the icon options are below the phones. Toggle the letter spacing to compare:</p>
+  <div class="toggles">
+    <button data-f="t2">Spacing 0.02 em</button>
+    <button class="on" data-f="">Spacing 0.04 em (proposed)</button>
+    <button data-f="t6">Spacing 0.06 em</button>
+  </div>
+</div>
+
+<div class="wall">
+
+<!-- 1. HOME-STYLE TOP BAND + SOCIAL -->
+<div class="col"><div class="phone"><div class="screen">
+  <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔<span class="dot"></span></div></div>
+  <div class="card pcard grain"><div class="row1"><span class="name">Owen#NW7</span><span class="rr">1,184</span></div><div class="meter"><b style="width:62%"></b></div><div class="meta">Era 3 · Ember Coast · 66 RR to next</div></div>
+
+  <div class="card ledger grain" style="margin-top:6px">
+    <h3>Live now <small>tap VS to watch</small></h3>
+    <div style="padding:10px var(--s3);display:flex;flex-direction:column;gap:10px">
+      <div class="live"><div class="pl p0"><span class="n">Marrow#K2</span><span class="r">1,402</span></div><div class="vs">VS</div><div class="pl p1"><span class="n">Tidewise#99</span><span class="r">1,377</span></div></div>
+      <div class="live"><div class="pl p0"><span class="n">Ash#Q</span><span class="r">988</span></div><div class="vs">VS</div><div class="pl p1"><span class="n">Pilgrimage#LONGTAG</span><span class="r">1,011</span></div></div>
+    </div>
+  </div>
+
+  <div class="card ledger grain">
+    <h3>Online <small>4 of 23</small></h3>
+    <div class="lrow"><div class="av" style="background:var(--p0)">M<span class="pres" style="background:var(--red)"></span></div><div class="who"><div class="n">Marrow#K2</div><div class="m">In battle · Era 4</div></div><span class="btn red">Spectate</span></div>
+    <div class="lrow"><div class="av" style="background:#8aa06a">L<span class="pres"></span></div><div class="who"><div class="n">Lantern#3</div><div class="m">Online · Guild</div></div><span class="btn sq">+</span></div>
+    <div class="lrow"><div class="av" style="background:#c25b9a">F<span class="pres"></span></div><div class="who"><div class="n">Fennwick#ABCD</div><div class="m">Online · Era 5</div></div><span class="btn sq">✉</span></div>
+  </div>
+</div>
+<div class="nav"><span>Shop</span><span>Workshop</span><span>Home</span><span class="on">Social</span><span>Guild</span></div>
+</div><div class="cap">1. Top band, ledger lists, thin live rows with a tall VS</div></div>
+
+<!-- 2. GUILD SEARCH + FILTER BUBBLE -->
+<div class="col"><div class="phone"><div class="screen">
+  <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
+  <div class="card pcard grain"><div class="row1"><span class="name">Owen#NW7</span><span class="rr">1,184</span></div><div class="meter"><b style="width:62%"></b></div><div class="meta">Era 3 · Ember Coast</div></div>
+  <div class="title">GUILDS</div>
+  <div class="search"><div class="field">⌕ Search guild names</div><span class="btn sq" style="height:48px;width:48px;font-size:18px">⛉</span></div>
+  <div class="card ledger grain" style="margin-top:4px">
+    <h3>Open guilds <small>↻ refresh</small></h3>
+    <div class="lrow"><div class="av" style="background:var(--gold)">⚓</div><div class="who"><div class="n">Salt &amp; Lantern</div><div class="m">18/25 · min 900 RR</div></div><span class="btn teal">Join</span></div>
+    <div class="lrow"><div class="av" style="background:#7d8fa3">✦</div><div class="who"><div class="n">The Quiet Tide</div><div class="m">25/25 · full</div></div><span class="btn" style="opacity:.5">Full</span></div>
+    <div class="lrow"><div class="av" style="background:#b8734a">❦</div><div class="who"><div class="n">Ember Wardens</div><div class="m">9/25 · friends of members</div></div><span class="btn">View</span></div>
+  </div>
+</div>
+<div class="scrim-lite"></div>
+<div class="card bubble grain">
+  <div class="slider"><div class="lab"><span>Min RR</span><b>800</b></div><div class="track"><div class="fill" style="width:40%"></div><div class="thumb" style="left:40%"></div></div></div>
+  <div class="slider"><div class="lab"><span>Members</span><b>5 to 20</b></div><div class="track"><div class="fill" style="left:17%;width:62%"></div><div class="thumb" style="left:17%"></div><div class="thumb" style="left:79%"></div></div></div>
+  <div class="toggle"><span>Joinable only</span><span class="sw"></span></div>
+  <div style="display:flex;justify-content:space-between;margin-top:14px"><span class="btn">Reset</span><span class="btn gold">Apply</span></div>
+</div>
+<div class="nav"><span>Shop</span><span>Workshop</span><span>Home</span><span>Social</span><span class="on">Guild</span></div>
+</div><div class="cap">2. Stamped title (no panel), search, filter bubble</div></div>
+
+<!-- 3. WORKSHOP BROWSE -->
+<div class="col"><div class="phone"><div class="screen">
+  <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
+  <div style="height:150px;display:grid;place-items:center;font-family:var(--display);color:rgba(244,233,213,.6);font-size:14px">3D districts</div>
+  <div class="seg"><div class="in"><span class="on">Districts</span><span>Suits</span></div></div>
+  <div class="card grain" style="flex:1;padding:var(--s3);overflow:hidden">
+    <div style="display:flex;gap:8px;align-items:stretch;margin-bottom:var(--s3)">
+      <div class="seg" style="flex:1"><div class="in"><span class="on">Owned</span><span>All</span></div></div>
+      <span class="btn" style="height:auto">Sort: Era ▾</span>
+    </div>
+    <div class="grid">
+      <div class="tile on"><div class="tart" style="background:#8aa06a"></div><div class="tn">Lighthouse</div><div class="tm">Era 2 · equipped</div></div>
+      <div class="tile"><div class="tart" style="background:#7d8fa3"></div><div class="tn">Granary</div><div class="tm">Era 1</div></div>
+      <div class="tile"><div class="tart" style="background:#b8734a"></div><div class="tn">Forge</div><div class="tm">Era 3</div></div>
+      <div class="tile"><div class="tart" style="background:#8a6bb0"></div><div class="tn">Observatory</div><div class="tm">Era 4</div></div>
+    </div>
+  </div>
+</div>
+<div class="nav"><span>Shop</span><span class="on">Workshop</span><span>Home</span><span>Social</span><span>Guild</span></div>
+</div><div class="cap">3. Workshop: switches, sort and filter live in the card panel</div></div>
+
+<!-- 4. ITEM SHEET -->
+<div class="col"><div class="phone"><div class="screen">
+  <div class="purse"><div class="coin"><i></i>1,240</div><div class="coin"><i class="leaf"></i>36</div><div style="flex:1"></div><div class="rbtn">☰</div><div class="rbtn">🔔</div></div>
+</div>
+<div class="scrim-lite"></div>
+<div class="card sheet grain" style="height:74%">
+  <div class="handle"></div>
+  <div style="display:flex;justify-content:space-between;align-items:baseline"><span class="dsp" style="font-size:24px">Lighthouse</span><span class="meta">District · Era 2</span></div>
+  <div class="art" style="margin-top:8px;position:relative"><span class="arr">‹</span><span class="dsp" style="font-size:14px;color:var(--ink-mute)">3D preview spins</span><span class="arr">›</span>
+    <div class="dots"><i class="on"></i><i></i></div></div>
+  <div class="skins"><span class="dsp" style="font-size:15px">Skins</span><span class="meta">2 of 4</span></div>
+  <div class="skinrow">
+    <div class="skin on" style="background:#8aa06a"></div><div class="skin" style="background:#d9a441"></div>
+    <div class="skin lock">🔒</div><div class="skin lock">🔒</div>
+  </div>
+  <div class="bars">
+    <span>Range</span><div class="cells"><i></i><i></i><i></i><i></i><i class="up"></i><i class="up"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+    <span>Defence</span><div class="cells"><i></i><i></i><i></i><i class="dn"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+    <span>Output</span><div class="cells"><i></i><i></i><i></i><i></i><i></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i></div>
+  </div>
+  <div class="meta" style="font-size:15px;color:var(--ink)">Reveals nodes two hops away. Slower to claim.</div>
+  <div style="display:flex;gap:10px;margin-top:14px"><span class="btn" style="flex:1;justify-content:center;height:48px">Back</span><span class="btn gold" style="flex:2;justify-content:center;height:48px;font-size:18px">Use</span></div>
+</div>
+</div><div class="cap">4. Item sheet: dots inside the window, skins row</div></div>
+
+</div>
+
+<div class="rules">
+  <div class="card grain"><h2>The one recipe</h2><ul>
+    <li>Parchment fill, 2 px ink outline, a thicker bottom edge as the only shadow (5 px for panels, 3 to 5 px for rows and buttons).</li>
+    <li>Corners: 14 px for panels, 12 px for fields, 8 to 10 px for buttons and avatars.</li>
+    <li>Three edge colours. <b>Outer</b> (ink #2d2319) for panels that sit on the world. <b>Inner</b> (#4d3d2d, close but a little lighter) for anything outlined inside a panel. <b>Light</b> (#c3aa85) only for a lip that sits inside a shaded region, such as the selected face of a switch.</li>
+    <li>Pressing a button collapses its bottom edge, so it physically goes down.</li>
+    <li>Subtle paper grain on every panel; no blur, no glass.</li></ul></div>
+  <div class="card grain"><h2>One outline level</h2><ul>
+    <li>Never put an outlined pill inside an outlined box. Inside a panel, things are flat: filled, sunk or divided by hairlines.</li>
+    <li>Lists are a <b>ledger</b>: one card, a darker header strip, flat 56 px rows. This replaces the thin name panels.</li>
+    <li>The only outlined things inside a panel are buttons, because they are pressable.</li></ul></div>
+  <div class="card grain"><h2>Type</h2><ul>
+    <li>Lilita One for names, numbers, titles and buttons. Fredoka SemiBold for body text and meta lines.</li>
+    <li>All text is tracked out 0.04 em: lighter to read, same weight.</li>
+    <li>Stat histograms are 10 cells and fill the sheet width.</li>
+    <li>Sizes: title 34, panel heading 17 to 24, name 15 to 17, body 15 to 16, meta 13. Nothing below 13.</li>
+    <li>Page titles are stamped straight onto the world (ink stroke and drop), with no panel behind them.</li></ul></div>
+  <div class="card grain"><h2>Space</h2><ul>
+    <li>4/8 scale: 16 screen edge, 8 between cards, 12 inside panels, 12 between a row's avatar and text.</li>
+    <li>Rows are 56 px; live rows are 48 px cards with a 58 px VS, so the VS stands proud of both cards.</li>
+    <li>Name on top, RR tight underneath (12 px) inside the 48 px card, so there is no empty band above names.</li></ul></div>
+  <div class="card grain"><h2>The world shows through</h2><ul>
+    <li>Pages have no full-screen backdrop. Cards hold content; the 3D scene fills the gaps.</li>
+    <li>Scrims are light (25%), so the world stays visible behind sheets and bubbles.</li>
+    <li>The Shop gets its own language later; it is not part of this sheet.</li></ul></div>
+  <div class="card grain"><h2>2 to 3 option switches</h2><ul>
+    <li>The outer box has the outline and the ink lip.</li>
+    <li>The shaded inner track has no lip.</li>
+    <li>The selected face is lighter, with a weaker paper-coloured lip. It sits 4 px inside the track, so the outer border always shows in full.</li>
+    <li>A switch lives in the panel it filters (Owned/All sits with the cards).</li></ul></div>
+  <div class="card grain"><h2>Pill nav</h2><ul>
+    <li>Flat: the selected tab is a gold face with an ink outline. No lip and no raise.</li></ul></div>
+  <div class="card grain"><h2>Don't</h2>
+    <div class="dont"><div class="bad"><span>Owned</span><span>All</span><span>Sort</span></div><span>Outlined pills inside an outlined box: the old Workshop filters.</span></div></div>
+</div>
+
+<div class="icons">
+  <h1>Icon library options</h1>
+  <p style="color:#d7c3a5;margin-top:6px">The same 14 jobs in each free library: menu, bell, search, filter, shop, workshop, home, battle, watch, guild, add friend, coins, settings and refresh. Ink icons on parchment, then the top-bar style (light on dark).</p>
+  <div class="card grain" id="iconboard"></div>
+</div>
+
+<script>
+const libs=[
+ ['Phosphor (Bold)','MIT · 9k icons · 6 weights incl. duotone','ph',['list-bold','bell-bold','magnifying-glass-bold','funnel-bold','storefront-bold','hammer-bold','house-bold','sword-bold','eye-bold','crown-simple-bold','user-plus-bold','coins-bold','gear-bold','arrows-clockwise-bold']],
+ ['Tabler','MIT · 5k icons · adjustable stroke','tabler',['menu-2','bell','search','filter','building-store','hammer','home','swords','eye','crown','user-plus','coins','settings','refresh']],
+ ['Lucide','ISC · 1.5k icons · clean line','lucide',['menu','bell','search','funnel','store','hammer','house','swords','eye','crown','user-plus','coins','settings','refresh-cw']],
+ ['Game-icons.net','CC BY 3.0 (credit needed) · 4k game glyphs, filled','game-icons',['hamburger-menu','ringing-bell','magnifying-glass','funnel','shop','hammer-nails','house','crossed-swords','eyeball','crown','two-shadows','coins','cog','cycle']],
+];
+const u=(p,n,c)=>`https://api.iconify.design/${p}/${n}.svg?color=%23${c}`;
+document.getElementById('iconboard').innerHTML=libs.map(([name,lic,p,ns])=>
+ `<div class="irow"><div class="lib"><b>${name}</b><span>${lic}</span></div><div>
+  <div class="iset">${ns.map(n=>`<img src="${u(p,n,'2d2319')}" title="${n}">`).join('')}</div>
+  <div class="iset" style="margin-top:8px">${ns.slice(0,4).map(n=>`<span class="rb"><img src="${u(p,n,'f4e9d5')}"></span>`).join('')}</div>
+ </div></div>`).join('');
+document.querySelectorAll('.toggles button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.toggles button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.body.className=b.dataset.f;});
+</script>
+</body>
+</html>

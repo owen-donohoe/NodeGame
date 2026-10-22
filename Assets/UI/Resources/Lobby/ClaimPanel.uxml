@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="LobbyBlocks.uss" />
+    <ui:VisualElement name="paper-lb-claim-panel-0">
+        <ui:Button name="claim-info" text="i" class="mk-btn lb-claim-info" tooltip="Information" />
+        <ui:Label name="claim-title" class="mk-h2 mk-ellipsis" />
+        <ui:ScrollView name="claim-details" class="lb-claim-details" />
+        <ui:Button name="claim-primary" class="mk-btn mk-btn--primary" />
+    </ui:VisualElement>
+</ui:UXML>

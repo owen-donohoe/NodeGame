@@ -27,7 +27,7 @@ namespace NodeWar.Lobby.Tests
             var state = new PlayerState { Inventory = new InventoryRecord
                 { Equipped = new EquippedRecord { Variants = variants } } };
             var result = LoadoutTypes.WithEquipment(profile, state);
-            CollectionAssert.AreEqual(new[] { "suit_guardian", "suit_scout" }, result.suitIDs);
+            CollectionAssert.AreEqual(new[] { "suit_warrior", "suit_guardian", "suit_scout" }, result.suitIDs);
             Assert.AreEqual(2, result.suitEras[(int)SuitType.Medic]);
             Assert.AreEqual(1, result.suitEras[(int)SuitType.Warrior]);
             Assert.AreEqual("suit.medic.e2", variants["suit.medic"]);
@@ -88,7 +88,7 @@ namespace NodeWar.Lobby.Tests
         [Test]
         public void Wire_APacketEndingBeforeTheEras_ReadsAsEraZero()
         {
-            var source = LoadoutData.CreateEmpty();
+            var source = LoadoutData.Normalized(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] });
             source.suitEras[(int)SuitType.Scout] = 2;
             byte[] packet = DraftSerializer.SerializeDraftLoadout(1, source);
 

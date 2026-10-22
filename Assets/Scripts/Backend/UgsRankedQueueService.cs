@@ -11,6 +11,9 @@ namespace NodeWar.Backend
     /// <summary>Client ticketing for the ranked queue; ratings and arenas come from Cloud Save.</summary>
     public sealed class UgsRankedQueueService : IRankedQueueService
     {
+        private readonly bool rated;
+        public UgsRankedQueueService(bool rated = true) { this.rated = rated; }
+
         public async Task<string> EnqueueAsync()
         {
             await GameServices.EnsureReadyAsync();
@@ -33,11 +36,15 @@ namespace NodeWar.Backend
                 {
                     { "protocol", build.protocol },
                     { "sim", build.sim },
-                    { "content", build.content }
+                    { "content", build.content },
+                    { "noRR", !rated }
                 })
             };
             IMatchmakerService matchmaker = MatchmakerService.Instance;
-            CreateTicketResponse response = await matchmaker.CreateTicketAsync(players, new CreateTicketOptions("ranked"));
+            // A separate queue prevents an undeployed no-RR policy from silently creating rated matches.
+            // Configure the same authoritative RR matching rules, with unrated allocation/settlement.
+            string queue = rated ? "ranked" : "unranked-1v1";
+            CreateTicketResponse response = await matchmaker.CreateTicketAsync(players, new CreateTicketOptions(queue));
             if (string.IsNullOrWhiteSpace(response?.Id))
                 throw new InvalidOperationException("Matchmaker returned no ranked ticket ID.");
             return response.Id;

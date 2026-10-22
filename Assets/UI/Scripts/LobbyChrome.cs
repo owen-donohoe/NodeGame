@@ -4,13 +4,7 @@ using UnityEngine.UIElements;
 namespace NodeWar.Lobby
 {
     /// <summary>
-    /// The persistent top of the lobby: currency purses, match history, the
-    /// gear, and the trophy strip. It sits outside the page host, so it is bound once here
-    /// rather than once per page.
-    ///
-    /// Only the player name is a link (to Profile); the rest of the strip is
-    /// information. Values the game does not track yet are shown as an em-dash
-    /// rather than a made-up number.
+    /// Persistent currency purses and player header, outside the page track.
     /// </summary>
     public class LobbyChrome
     {
@@ -31,28 +25,53 @@ namespace NodeWar.Lobby
         /// <summary>Raised when the player name is pressed.</summary>
         public event System.Action ProfileRequested;
 
-        /// <summary>Raised when the gear is pressed.</summary>
+        /// <summary>Raised when the burger is pressed; name retained for shell callers.</summary>
         public event System.Action SettingsRequested;
 
-        /// <summary>Raised when the TV button beside the gear is pressed.</summary>
+        /// <summary>Raised when the bell is pressed; name retained for shell callers.</summary>
         public event System.Action HistoryRequested;
+        public event System.Action<string> CurrencyRequested;
 
-        public LobbyChrome(VisualElement root, LobbyToast toast)
+        public LobbyChrome(VisualElement root, LobbyToast toast, BadgeBoard badges = null)
         {
             nameText = root.Q<Label>("name-text");
-            if (nameText != null) nameText.enableRichText = false;
+            if (nameText != null)
+            {
+                nameText.enableRichText = false;
+                TrackedText.Track(nameText);
+            }
             trophyCount = root.Q<Label>("trophy-count");
             trophyMax = root.Q<Label>("trophy-max");
             trophyFill = root.Q<VisualElement>("trophy-fill");
             arenaText = root.Q<Label>("arena-text");
             coinValue = root.Q<Label>("purse-coin-value");
             premiumValue = root.Q<Label>("purse-leaf-value");
+            var premiumName = root.Q<Label>("purse-premium-name");
+            if (premiumName != null) premiumName.text = LobbyCurrencyNames.Premium;
+            var premiumPurse = root.Q<Button>("purse-leaf");
+            if (premiumPurse != null) premiumPurse.tooltip = "Buy " + LobbyCurrencyNames.Premium;
 
-            Bind(root, "name-button", () => { if (ProfileRequested != null) ProfileRequested(); });
+            var strip = root.Q("strip-wrap");
+            if (strip != null) strip.focusable = true;
+            var nameButton = root.Q<Button>("name-button");
+            if (nameButton != null) { nameButton.focusable = false; nameButton.pickingMode = PickingMode.Ignore; }
+            strip?.RegisterCallback<KeyDownEvent>(evt =>
+            {
+                if (evt.keyCode == UnityEngine.KeyCode.Return || evt.keyCode == UnityEngine.KeyCode.Space)
+                {
+                    if (root.Q("trophy-strip")?.resolvedStyle.display != DisplayStyle.None) ProfileRequested?.Invoke();
+                    evt.StopPropagation();
+                }
+            });
+            strip?.RegisterCallback<ClickEvent>(_ =>
+            {
+                if (root.Q("trophy-strip")?.resolvedStyle.display != DisplayStyle.None) ProfileRequested?.Invoke();
+            });
 
-            // TODO(economy): the purses open the shop once it exists.
-            Bind(root, "purse-coin", () => toast.Show("The shop arrives in a later update"));
-            Bind(root, "purse-leaf", () => toast.Show("The shop arrives in a later update"));
+            Bind(root, "purse-coin", () => CurrencyRequested?.Invoke("nodewar://shop/coins"));
+            Bind(root, "purse-leaf", () => CurrencyRequested?.Invoke("nodewar://shop/laurels"));
+            root.Q<Button>("history")?.Add(new LobbyBadgeDot(badges, "bell"));
+
 
             Bind(root, "gear", () => { if (SettingsRequested != null) SettingsRequested(); });
             Bind(root, "history", () => { if (HistoryRequested != null) HistoryRequested(); });
@@ -67,6 +86,8 @@ namespace NodeWar.Lobby
             });
             if (root.panel != null) ObserveState();
         }
+
+        public void Dispose() => BackendServices.StateChanged -= Refresh;
 
         private void ObserveState()
         {
@@ -86,8 +107,8 @@ namespace NodeWar.Lobby
             PlayerProfile profile = PlayerProfile.Instance;
 
             if (nameText != null)
-                nameText.text = HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
-                    profile != null ? profile.Username : "player");
+                TrackedText.SetText(nameText, HandleDisplay.Constrained(HandleDisplay.Display(BackendServices.LastKnownState?.Profile,
+                    profile != null ? profile.Username : "player")));
 
             if (!firstHandleAttempted && BackendServices.LastKnownState != null &&
                 BackendServices.LastKnownState.Profile == null)
@@ -103,14 +124,15 @@ namespace NodeWar.Lobby
 
             RankRecord rank = BackendServices.LastKnownState?.Rank;
             RankDisplay display = new RankDisplay(rank?.RR ?? 0);
-            if (trophyCount != null) trophyCount.text = rank != null ? display.RR.ToString() : Dash;
-            if (trophyMax != null) trophyMax.text = rank != null ? " RR" : "";
+            if (trophyCount != null) trophyCount.text = rank == null ? Dash :
+                display.RR.ToString();
+            if (trophyMax != null) trophyMax.text = "";
             if (trophyFill != null)
                 trophyFill.style.width = Length.Percent(rank != null ? display.Fill * 100f : 0f);
             if (arenaText != null)
-                arenaText.text = rank == null ? "Arena " + Dash : display.Name + (display.Span.HasValue
-                    ? " · " + (display.Span.Value - display.RRIntoArena) + " to " + RankTable.Names[display.Arena + 1]
-                    : " · Top arena");
+                arenaText.text = rank == null ? "Era " + Dash : "Era " + (display.Arena + 1) + " \u00b7 " + display.Name + (display.Span.HasValue
+                    ? " \u00b7 " + (display.Span.Value - display.RRIntoArena) + " RR to next"
+                    : " \u00b7 Top era");
         }
 
         private static async void CreateFirstHandle(string localName)

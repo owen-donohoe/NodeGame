@@ -31,25 +31,28 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/ModuleSetup.cs
   - dotnet/NodeWarCloud/NodeWarCloud/NodeWarCloud.csproj
   - dotnet/NodeWarCloud/NodeWarCloud/PlayerStateModule.cs
+  - dotnet/NodeWarCloud/NodeWarCloud/ProfileViewModule.cs
+  - Assets/Scripts/Backend/Shared/PlayerStatsRules.cs
   - dotnet/NodeWarCloud/NodeWarCloud/Properties/
   - dotnet/NodeWarCloud/NodeWarCloud/RankedMatchModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/ServerCatalog.cs
   - dotnet/NodeWarCloud/NodeWarCloud/WalletService.cs
-verified: cee1a628
+verified: cb532363
 ---
 
 # Cloud
 
 ## Purpose
-UGS Cloud Code and Cloud Save hold authority over ranked identity, results and progression while peers run gameplay. The server refuses client-proposed authority and settles only eligible outcomes.
+UGS Cloud Code and Cloud Save own ranked identity, results and progression while peers run gameplay. The server settles only eligible outcomes.
 
 ## Interface
-Module `NodeWarCloud` exposes these Cloud Code functions; player calls use authenticated `context.PlayerId`, not a supplied player ID:
+Module `NodeWarCloud` exposes these Cloud Code functions; authority comes from authenticated `context.PlayerId`:
 - `GetPlayerState()` → `PlayerState`; initializes protected records including the wallet, grants the `ContentTable` starter kit and normalizes inventory.
-- `Equip(EquippedRecord changes)` → `PlayerState`; validates base, ownership and current-arena eligibility under an inventory write lock.
+- `Equip(EquippedRecord changes)` → `PlayerState`; validates ownership, base debut and current-arena variant eligibility under an inventory write lock, sharing policy with the local fake/clamp.
 - `VerifyMatch(string logBase64)` → `RefereeVerdict`; consistency verification only, without ranked settlement.
 - `ReportMatch(string matchId, string logBase64)` → `MatchReportingResult` (`state`, `message`, `playerState`).
-- `GetMatchHistory()` → `List<MatchHistoryEntry>` from caller history and stored outcomes.
+- `GetMatchHistory()` → `List<MatchHistoryEntry>` from caller history/outcomes, with snapshotted `OpponentName`/`OpponentTag`.
+- `GetProfileView(playerId)` → `PublicProfileView`: card (handle, arena, RR, Offline presence), stats, chosen-slot lobby IDs and recent summaries. Loadout arrays preserve slot order, skip empty slots and exclude variant information. Any authenticated player may read any target; empty target means self. One batch reads only profile/rank/history/inventory.
 - `Rendezvous(string matchId, string joinCode)` → `RendezvousResult` (roster, slot, code, connection state, map ID/hash); only slot 0 publishes a code.
 - `ConfirmConnected(string matchId)` → completion; both confirmations establish connection time.
 - `LeaveMatch(string matchId, bool forfeit)` → `LeaveMatchResult` (outcome, message, seconds left, player state).
@@ -60,13 +63,13 @@ Module `NodeWarCloud` exposes these Cloud Code functions; player calls use authe
 - `SetHandle(name, tag, requestId)` → `PlayerState`; `GetPublicProfile(playerId)` → `ProfileRecord` (name and tag only). Refusals carry player-facing text.
 - `AdminGrantCurrency(targetPlayerId, coins, premium, reason, requestId)` → `WalletRecord`; `AdminGrantItems(targetPlayerId, itemIds, allActive)` → `InventoryRecord`; `AdminSetHandle(targetPlayerId, name, tag)` (free, no cooldown or blocklist); `AdminInitHandleRegistry()` → shards created, run once per environment. Refused unless the caller is in the embedded `Admin/admins.json`; an empty target means the caller.
 
-Ranked-match functions require caller membership. `MatchAllocation` consumes the server-to-server two-player roster and ticket `{ protocol, sim, content }`; it creates `MatchRecord` before play. `RankedMap` chooses catalog map `hourglass-01` and its board hash, never client proposals.
+Ranked calls require membership. `MatchAllocation` creates `MatchRecord` from the trusted roster and ticket `{ protocol, sim, content }`. `RankedMap` selects `hourglass-01` and its board hash.
 
 `CloudSavePlayerRecordStore` uses Protected player keys: `rating` (`RatingRecord`), `rank` (`RankRecord`), `inventory` (`InventoryRecord`), `history` (`HistoryRecord`), `activeMatch` (`ActiveMatchRecord`), `discipline` (`DisciplineRecord`), `wallet` (`WalletRecord`), `profile` (`ProfileRecord`). Players read; only server writes. Discipline and wallet are created fenced by the rating lock; `WalletService` changes the wallet alone under its own lock through `WalletLedger`. `CloudSaveMatchRecordStore` uses Private custom item `match-<id>`: `record`, `presence-0`, `presence-1`, `log-0`, `log-1`. Logs are server-only base64 per reporting slot.
 
-`MatchRecord` contains roster, build/map identity, creation time, pre-match `MatchPlayerSnapshot[]` (rating, rank, owned variants), lifecycle state, reports, outcomes, Relay code, connection timestamps, committed forfeit/abandonment and discipline markers. `IMatchRecordStore`, `ISettlementPlayerStore` and `IDisciplinePlayerStore` separate storage from rules.
+`MatchRecord` holds roster, build/map identity, pre-match snapshots, lifecycle, reports/outcomes, rendezvous and discipline markers. `IMatchRecordStore`, `ISettlementPlayerStore` and `IDisciplinePlayerStore` separate storage from rules.
 
-Deploy from repository root: `ugs deploy dotnet/NodeWarCloud -e development`; queue: `ugs deploy dotnet/NodeWarCloud/Matchmaker -s matchmaker -e development`. Use UGS CLI 2.0.0 for Matchmaker. Production provisioning/deployment remains a release prerequisite; repository files do not prove live deployment state.
+Deploy: `ugs deploy dotnet/NodeWarCloud -e development`; queue: `ugs deploy dotnet/NodeWarCloud/Matchmaker -s matchmaker -e development` (UGS CLI 2.0.0). Verify deployed behavior separately.
 
 ## Connects to
 - `backend-client`: async services call endpoints and display returned authoritative records/results.
@@ -84,18 +87,17 @@ Use server time. Stored field identities remain compatible. Conditional updates 
 ## How it works
 `ranked.mmq` defines one player per ticket, two-player matches, a 300-second pool timeout, equal build identity, arena gap at most one, same-arena preference for thirty seconds, and widening rating windows that become unbounded at 120 seconds. Rules explicitly enable themselves and read protected rating/arena. Allocation rechecks hard caps, known balance, current versions and discipline; the soft rating window stays queue-only. Idempotent retries return the existing record. Claims expire after two hours.
 
-`ReportMatch` checks record/header identity, server map, snapshot ownership and draft eligibility, then runs the referee. Protocol 6 low arenas choose two suits plus free Warrior and two districts plus catalog base pools; high arenas choose three suits and five districts without free grants. Low-arena placements from the server map's free base pool need no ownership. Historical protocols retain their eligibility path. Fewer placements are valid for unplaceable pieces.
+`ReportMatch` checks identity, map, snapshot ownership/eligibility, then replays. Protocol 7 permits three suits/five districts, requires era locks inside those arrays and budgets placements from them. Era 0 locks Farm/Mine/Town and Warrior; era 1 locks Farm/Mine; era 2+ locks nothing. Base debut gates usability; map pools never waive ownership. v6 is rejected; older protocols keep their path; unplaceable pieces allow fewer placements.
 
-First accepted winning report becomes Pending; two must agree on winner/end tick/final hash. Disagreement becomes Disputed. Refusals do not consume the accepted slot; Pending times out lazily. Two consistent unfinished reports use the earlier log's Core breaches: fewer wins, ties void, no strikes.
+First accepted winning report becomes Pending; two must agree on winner/end tick/hash. Disagreement becomes Disputed. Refusals preserve the slot; Pending expires lazily. Consistent unfinished reports compare the earlier log's Core breaches: fewer wins, ties void without strikes.
 
-`MatchSettler` uses pre-match snapshots, updates ratings/RR, reapplies starter grants and clamps inventory (promotion grants no content) and retains twenty history IDs. Each player's four-record conditional batch includes a separate 200-ID `RatingRecord.SettledMatchIds` guard. Partial cross-player settlement retries safely. `LeaveMatch` voids unstarted/expired matches, completes committed outcomes, or requires explicit forfeit for played matches; surrender loses without a strike.
+`MatchSettler` uses pre-match snapshots, updates ratings/RR, grants starters and clamps inventory. `history` retains twenty IDs and aligned newest-first summaries with opponent handles from settlement's profile reads. `Stats` tracks Matches/Wins/Losses, consecutive-win Streak and BestRR; old histories start at zero. `PlayerStatsRules` and `HistorySummaryRules` are shared pure rules. Each player's four-record conditional batch guards all updates with 200 `SettledMatchIds`; partial retries count once. Agreed reports, forfeit/surrender, abandonment and unequal-breach both-left decisions count; voids/disputes/unrated outcomes do not. Surrender carries no strike.
 
 Presence writes only the caller's slot key, never `record`. Claim, absence and mutual-void thresholds live in `MatchHold`. Decisions precede claim-expiry handling; terminal answers report them.
 
 Abandonment strikes; a lone accepted report at timeout adds a non-report, striking from the second within seven days. Block lengths per level and the decay period live in `DisconnectPenalty`. Separate protected discipline writes finish before claim release, guarded by `disciplineApplied`.
 
 ## Decisions
-- Use UGS rather than custom hosting or UGS Economy.
 - Allocate server-side before play rather than trust first-report rosters or settlement-time snapshots.
 - Use write-lock retries and bounded idempotency rather than assume cross-player transactions.
 - Use server presence rather than infer fault from symmetric peer silence.

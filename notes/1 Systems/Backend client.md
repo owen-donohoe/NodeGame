@@ -9,7 +9,7 @@ sources:
   - Assets/Scripts/Backend/BackendServices.cs
   - Assets/Scripts/Backend/PendingRankedReports.cs
   - Assets/Scripts/Backend/Shared/PlayerStateService.cs
-verified: ce9fb6bf
+verified: f576d156
 ---
 
 # Backend client
@@ -39,13 +39,13 @@ the server, and retry it until the server gives any answer.**
 flowchart LR
     UI[Lobby / end card / HUD] --> P["Presenters & trackers<br/>RankedQueuePresenter, RankedResultTracker,<br/>DisconnectHold, PresenceHeartbeat"]
     P --> S["Service interfaces (Backend/Shared)<br/>IPlayerStateService, IRankedQueueService,<br/>IMatchReportService…"]
-    S -->|builds| U["Ugs*Service → Cloud Code / Matchmaker"]
-    S -->|Editor 'Use Local Fakes'| L["Local*Service → simulated answers"]
+    S -->|established services in builds| U["Ugs*Service → Cloud Code / Matchmaker"]
+    S -->|Editor fakes; Social/Profiles/Guild in every build| L["Local*Service → simulated answers"]
 ```
 
 | Piece | Job |
 |---|---|
-| `BackendServices` | Picks UGS or local fakes for every service |
+| `BackendServices` | Picks UGS or local fakes for established services; Social/Profiles/Guild stay local in every build |
 | `LastKnownState` / `StateChanged` | The last state *the server returned*, shown by the UI |
 | `RememberGuard` | Drops answers that belong to a previous account |
 | `PendingRankedReports` | Saves the ranked log to disk and retries after the match, on lobby load and at queue preflight. Any server answer (even a refusal) removes it. A thrown exception keeps it |
@@ -69,7 +69,7 @@ flowchart LR
 ## Traps
 
 - **Awaiting a service in a MonoBehaviour after it's destroyed.** Check that it's still alive after every `await`.
-- **Showing local fake results in a build.** Builds always use UGS.
+- **Mistaking placeholders for production data.** Social/Profiles/Guild use local samples in every build; established services use UGS in builds.
 - **Forgetting the account check** when an async answer arrives late.
 
 ## Patterns you've seen before

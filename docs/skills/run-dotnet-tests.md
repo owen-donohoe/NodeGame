@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: gpt-6, at: 2026-10-11T19:03:46Z }
-verified_at_commit: cee1a628
+verified_at_commit: 3c1b562c
 status: draft
 sources:
   - id: solution
@@ -21,6 +21,9 @@ sources:
   - id: shared-props
     resource: dotnet/Directory.Build.props
     title: Shared LangVersion and compile-item settings
+  - id: paper-math-tests
+    resource: dotnet/NodeWar.Lobby.Tests/PaperMathTests.cs
+    title: Stable paper seeds, closed paths and bounded wobble/rotation
   - id: lobby-test-project
     resource: dotnet/NodeWar.Lobby.Tests/NodeWar.Lobby.Tests.csproj
     title: Lobby test project, linked sources
@@ -36,12 +39,15 @@ sources:
   - id: tests-district-info
     resource: dotnet/NodeWar.Lobby.Tests/DistrictInfoFactsTests.cs
     title: Static district facts from supplied balance without live bindings
-  - id: tests-skin-band
-    resource: dotnet/NodeWar.Lobby.Tests/SkinBandMathTests.cs
-    title: Looping skin band identity, snapping, rebasing and allocation checks
   - id: tests-loadout-capacity
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutCapacityTests.cs
     title: Canonical arena capacities, local completeness, resizing and wire refusals
+  - id: tests-loadout-rules
+    resource: dotnet/NodeWar.Lobby.Tests/LoadoutRulesTests.cs
+    title: Grants and owned-short loadout completeness
+  - id: tests-workshop-stage
+    resource: dotnet/NodeWar.Lobby.Tests/WorkshopStageTests.cs
+    title: Stage identities and locked replacement picks
   - id: tests-loadout-match-setup
     resource: dotnet/NodeWar.Lobby.Tests/LoadoutMatchSetupTests.cs
     title: Per-player grants, board identity, setup equality and Equip/Respawn behavior
@@ -117,13 +123,23 @@ The solution holds eight test projects. Run everything for pass/fail:
 dotnet test dotnet/NodeWar.sln
 ```
 
-The table below records the historical **3788-case** inventory before P1.1; it is not
-a receipt for the current branch. P1.1 adds 11 lobby cases covering two chosen slots,
-old three-suit packet/save normalization, type-indexed equipment retention and fixed
-arena-1 display locks at every rank. At `dae33286`, both the solution test command and
-stock compile check were blocked before compilation by MSBuild access denial to
-`C:\Users\owend\AppData\Local\Microsoft SDKs` (MSB4184). Re-run both outside that
-sandbox to obtain current pass counts; no new passing total is claimed here.
+Lobby stage verification: the serial solution run passes 4,626 cases. The final
+focus-zoom regression adds one Lobby case; its targeted rerun passes all 1,147.
+Unity compile-check passes. Coverage includes two-column Button margins, catalog
+paper-art resolution including side variants, front-edge body projection through
+lift/shake/pop, and bounded continuous replacement motion. One concurrent solution
+run reports a Simulation failure; an isolated rerun passes all 720, followed by the
+successful serial solution run. Editor captures are unavailable because the Unity
+CLI is absent. New pure sources/tests are explicitly linked in the Lobby project.
+
+The table records **4,494 passing cases** at `29ad7b26`. Unity compile-check also
+passes with its output redirected into the worktree, preserving the shared Library
+junction. These results do not cover deployment or Editor wiring. The entries below
+describe earlier verification attempts; their SDK access failures do not describe
+the current run. P1.1 adds 11 lobby cases covering two chosen slots, old three-suit
+packet/save normalization, type-indexed equipment retention and fixed arena-1 locks.
+Its original MSB4184 failure concerned access to
+`C:\Users\owend\AppData\Local\Microsoft SDKs`.
 
 P1.3 adds 19 lobby cases in `UnlockStateTests` and `LoadoutChoicesTests`, linked
 explicitly alongside the two pure sources. They cover parent/highest-arena acquisition,
@@ -150,14 +166,6 @@ with type-indexed eras. At `e935573c`, the solution test command and stock compi
 check were each attempted once and blocked before compilation by the SDK access
 denial above. The lead must run both, including the existing replay/referee suites;
 these additions are not a passing-test receipt.
-
-P1.7 adds 23 lobby cases in `SkinBandMathTests`, explicitly linked with the
-UnityEngine-free `SkinBandMath` source. They cover signed wrapping, increasing-index
-midpoint ties, empty/single choices, 13-slot identity, symmetric scale/fade,
-large-count neighbors, rebasing, buffer reuse and a warmed zero-allocation check.
-At `08bb45e8`, both required commands were attempted once and blocked before
-compilation by the SDK access denial above. The lead must run both; these additions
-are not a passing-test receipt and do not verify UI gestures or Editor wiring.
 
 P1.2b adds capacity and save-migration cases covering canonical low 2/2 and
 high 3/5 shapes, default/offline fallback, promotion/demotion, copied equipment,
@@ -218,17 +226,31 @@ not covered. At 7a0cf4f0 the full solution passed 3966 cases (Lobby 758) and
 compile-check reported clean. Check in the Editor: two panels never stack,
 header and rows stay visible, and the equipped variant survives a page reload.
 
-P1.8 adds one lobby case, `SkinBandMathTests.DragDelta_UsesMeasuredTilePitch`,
-for the new `SkinBandMath.DragDelta` pixel-to-item-unit conversion. At 9d3f8aa2 the
-full solution passed 3967 cases (Lobby 759) and compile-check reported clean. The
-`SkinBand` element and the Skins sheet are compile-checked only; drag, tap, snap,
-cancel and detach behaviour need Editor or device checks.
+The lobby redesign deletes the unused `SkinBand` element, `SkinBandMath` and its
+24 `SkinBandMathTests` cases; at 88cadc48 the full solution passed 4810 cases
+(Lobby 1310) and compile-check reported clean.
 
 P1.10 deletes the suit tree view, model, stylesheet and `SuitTreeModelTests` (18 Lobby
 cases) and adds `LobbyIconContextCompatibilityTests` (2 View cases) pinning the surviving
 `LobbyIconContext` values and the reserved value 11. Four retired SuitTree glyph kinds move
 to the Retired group in `LobbyIconUsage` and lose their fallback drawing. At 89553ac3 the
 full solution passed 3948 cases (Lobby 742, View 1578) and compile-check reported clean.
+
+At `a9edd816`, the standard solution passes 4525 cases (Lobby 1045, Cloud 574). Seven paper-math cases cover stable seeds/paths, bounded drift/rotation and closure. Unity compile-check passes with its scratch output redirected into the worktree; the stock output collided with another process using the shared Library. Editor visual verification remains with the lead.
+
+At 5ebc5213, the solution passes 4722 cases (Lobby 1242) and Unity compile-check
+passes. Fifteen added lobby cases cover owned-short completeness, counted grants,
+locked picks preserving replacement, compact stage identities, and every filled-count
+pair in low/high mode through both-seat wire round-trips, pools and match construction.
+The stock compile/test commands require access to the installed Windows SDK paths.
+Editor stage interactions and scene wiring remain unverified.
+
+At `3c1b562c`, the full solution passes 4727 cases (Lobby 1231, Cloud 590),
+and Unity compile-check passes. Loadout coverage includes era locks inside 3/5
+arrays, fresh presets, legacy migration, locked-slot refusal, confirmed Clear's
+pure operation, exhausted-choice queue eligibility, Town defaults without extra
+draft grants, and shared client/server equip and clamp policy. Clear layout,
+confirmation gestures and stage interactions require Editor/device verification.
 
 The explicit Network `Sweep` and Cloud
 `NewExportMatchesClientBalanceAndCatalog` are outside these passing totals; run the
@@ -237,13 +259,13 @@ release-content gate with a freshly migrated client balance/export before shippi
 | Project | Cases | Covers |
 |---|---|---|
 | `NodeWar.Simulation.Tests` | 720 | `Assets/Tests/EditMode/Tests/`: the version-4 determinism baseline, link weights, movement, production, combat fixes, `MatchFactory`, terrain maps and draft legality, `MatchSetup`, sticky orders, restore, the capture bonus, tick order, eras, breach/tempo, paid respawns, resource caps, Recruit/SetAutoRecruit, Town rewards, Barracks equipping, Infirmary healing and workers, Fortress resistance and district-health drain/regeneration/passive gating, Workshop forging and mobile minion lifecycle, Storehouse self-production/re-claim, progressive collection and lock/Restore lifecycle, remaining-bank capture loot paid once, Pier gates and retreat, latched leg clocks and asymmetric reversal, owner highway, physical-tick routing and current gate estimates, command refusal, vocabulary compatibility and balance hashing; also the dotnet-only balance-asset text guard |
-| `NodeWar.Lobby.Tests` | 769 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, suit trees, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
-| `NodeWar.View.Tests` | 1733 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation (including amber Pier intent and read-only latched interpolation), the district fallback descriptors and art keys, district-health segment visibility/layout, Storehouse bank pips (a row centred above the node along camera-up), grey minion tint, Storehouse-only bank sheet height and Workshop/Storehouse fallback art, icon/context resolution and usage, required UXML names, draft handover and eight startup-sequence cases (draft/fallback, skip-draft with/without wave, paused phases and idempotent unpause) |
+| `NodeWar.Lobby.Tests` | 1231 | loadout wire format (eras and skins included), loadout editor rules, Workshop era chips, lobby routing/back/deep links, shared motion/direction/easing, suit framing and current-stall culling, stats/streak/BestRR rules, retained summary ordering/cap, opponent handle fallbacks, stage mapping/cluster/shots, crate consumption/progress, mode save migration/PLAY mapping, party wait timing/slots/cancel, Workshop replacement gates/mapping, mode labels, badges, async refresh states, claim requests, swipe decisions, item tints, families, the in-match command checks, handshake and emote packets, game settings and input bindings, controls view model, arena rank display, trophy bar, match history rows, the ranked queue presenter and rendezvous, draft loadout packets, the node-action model (Recruit, Repeat, Fortress upgrade), `MatchSetup`/`MatchSetupAck` packets, the pre-rename loadout and profile compatibility cases, `DistrictMigration` of saved decks, and node-command round trips/refusals including ForgeMinion=8, Collect=9 start/cancel and current Market packet refusal, and the bank action model (collection only queues commands; Workshop forging uses shared node-action eligibility; lock and storage reasons match the simulation) |
+| `NodeWar.View.Tests` | 1753 | the UnityEngine-free view maths: camera POV, indicator placement, route reveal, emote rate limit, resource rings/bars and shared full phase, production readout, breach walls, playtest debug, sheet resources, board art and board framing, terrain presentation, order presentation (including amber Pier intent and read-only latched interpolation), the district fallback descriptors and art keys, district-health segment visibility/layout, Storehouse bank pips (a row centred above the node along camera-up), grey minion tint, Storehouse-only bank sheet height and Workshop/Storehouse fallback art, icon/context resolution and usage, required UXML names, draft handover and eight startup-sequence cases (draft/fallback, skip-draft with/without wave, paused phases and idempotent unpause) |
 | `NodeWar.MatchLog.Tests` | 103 | the match log format (round trip, unknown chunks, truncation), the recorder, `MatchReplay`, ERAS and SKINS, BOARD_V2 and SETUP (round trip, conflicting or missing chunks, terrain replay, the core-rules and bank-rules replays: the version-4 script replays every command, a version-3 log and tampered hashes are refused, a midpoint copy replays identically), node-command round trips (including ForgeMinion=8 and Collect=9 start/cancel) and unknown-command refusal |
 | `NodeWar.Network.Tests` | 128 | `LockstepCore` (the networked tick driver) and `InputDelayController` under an in-memory lossy link: clean, loss, burst loss, duplication, reordering, latency, jitter, outages, frame spikes and a late start, each judged against the same match on a perfect link; the adaptive input delay; the lifecycle of an ended or paused core. `SweepTests` is explicit (`--filter "Category=Sweep"`) and prints the numbers behind the tuning constants; a terrain-board lockstep scenario the 1,500-tick core-rules acceptance on `hourglass-01-acceptance` and the bank-rules acceptance (Workshop forging, minion collection/death, Storehouse drain/lock/Restore/capture payout, Fortress health/aura recovery, remote Collect start/cancel, Pier gate, Recruit/Town) on `hourglass-01-banks-acceptance`, each over a lossy link with rollback |
 | `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
 | `NodeWar.BalanceRig.Tests` | 53 | the headless balance rig, scenario validation, repeatable execution against an exported JSON balance, its diagnostics and timeline metrics (including banks/gates and minions excluded from idle-body and Barracks-stall metrics, while living minions remain in final population totals), and setup compatibility with the shared map |
-| `NodeWarCloud.Tests` | 560 | the Cloud Code module: player state, handles and the handle registry, the wallet ledger and its storage, admin grants, the content table, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, `ReleaseContentTests` (a fresh balance export against the client balance and catalog, and v4 content: active types, Storehouse eras, sim-3 records and the refused sim-3 allocation), district migration of stored inventory including Market13 to Storehouse18 retirement and ownership/era preservation, match reporting and settlement, match history, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
+| `NodeWarCloud.Tests` | 590 | the Cloud Code module: player state, handles and the handle registry, the wallet ledger and its storage, admin grants, the content table, accounts, catalog, inventory, Equip and the equipped clamp, the referee and its balance catalog, match records and their store, Matchmaker allocation, map and era eligibility, persistence vocabulary, `ReleaseContentTests` (a fresh balance export against the client balance and catalog, and v4 content: active types, Storehouse eras, sim-3 records and the refused sim-3 allocation), district migration of stored inventory including Market13 to Storehouse18 retirement and ownership/era preservation, match reporting and idempotent stats/summary settlement, missing opponent profiles, public profile authorization/field exclusion, old history deserialization, match history handles, the rank table, the ranked queue fake and status mapping, the report-service fake, ranked rendezvous, confirmation and leaving |
 
 ## E4 acceptance evidence
 

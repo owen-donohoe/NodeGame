@@ -8,7 +8,7 @@ namespace NodeWar.Lobby
     /// A small vector glyph for the lobby, and for the in-match HUD's
     /// indicators and emotes, which have the same font problem.
     ///
-    /// The prototype uses Unicode symbols and emoji, which Fredoka does not
+    /// The prototype uses Unicode symbols and emoji, which the display font does not
     /// carry. Rather than add a second fallback font for seven glyphs, each is
     /// drawn once with Painter2D into a white VectorImage and shown as the
     /// element's background image. Colour is then
@@ -48,6 +48,61 @@ namespace NodeWar.Lobby
         private bool keepOriginalColours;
         private Color? resourceTint;
 
+        // Lobby-only authored icons. Match and market surfaces retain their theme
+        // and procedural fallbacks; attaching is when the actual surface is known.
+        private VectorImage LobbyImage()
+        {
+            if (context == LobbyIconContext.ShopCard) return null;
+            bool lobby = false;
+            for (VisualElement ancestor = parent; ancestor != null; ancestor = ancestor.parent)
+            {
+                if (ancestor.name == "page-shop") return null;
+                if (ancestor.ClassListContains("lb-root")) lobby = true;
+            }
+            if (!lobby) return null;
+            string icon = kind switch
+            {
+                LobbyIconKind.Burger => "list",
+                LobbyIconKind.Bell => "bell",
+                LobbyIconKind.Search => "magnifying-glass",
+                LobbyIconKind.Funnel => "funnel",
+                LobbyIconKind.Shop or LobbyIconKind.NavBarShop => "storefront",
+                LobbyIconKind.Tools => "hammer",
+                LobbyIconKind.NavBarHome or LobbyIconKind.District => "house",
+                LobbyIconKind.Swords or LobbyIconKind.Suit => "sword",
+                LobbyIconKind.Spectate or LobbyIconKind.Tv => "eye",
+                LobbyIconKind.Guild => "crown-simple",
+                LobbyIconKind.AddFriend or LobbyIconKind.Invite => "user-plus",
+                LobbyIconKind.GoldLeaf => "coins",
+                LobbyIconKind.Gear => "gear",
+                LobbyIconKind.Refresh or LobbyIconKind.Swap or LobbyIconKind.Respawn => "arrows-clockwise",
+                LobbyIconKind.Back => "caret-left",
+                LobbyIconKind.Close => "x",
+                LobbyIconKind.Lock => "lock",
+                LobbyIconKind.Chat or LobbyIconKind.NavBarSocial => "chat-circle",
+                LobbyIconKind.Laurel => "trophy",
+                LobbyIconKind.Pointer => "play",
+                LobbyIconKind.Food => "carrot",
+                LobbyIconKind.Materials => "mountains",
+                LobbyIconKind.Metal => "hammer",
+                LobbyIconKind.Sleep => "moon",
+                LobbyIconKind.CrateSmall or LobbyIconKind.CrateMedium or LobbyIconKind.DailyBox or LobbyIconKind.ShopBundle => "package",
+                LobbyIconKind.Info => "info",
+                LobbyIconKind.VictoryBox or LobbyIconKind.Envelope => "envelope",
+                LobbyIconKind.Flag or LobbyIconKind.CosmeticPaperBanner => "flag",
+                LobbyIconKind.Mouth or LobbyIconKind.Smile or LobbyIconKind.EmoteHappy => "smiley",
+                LobbyIconKind.Spark or LobbyIconKind.MagicResource => "star",
+                LobbyIconKind.Diamond or LobbyIconKind.Pip => "diamond",
+                LobbyIconKind.Alert => "warning",
+                LobbyIconKind.Hat or LobbyIconKind.CosmeticStrawHat => "baseball-cap",
+                LobbyIconKind.CosmeticTinRoof => "house",
+                LobbyIconKind.ProfileYouAreHere => "map-pin",
+                LobbyIconKind.None => null,
+                _ => "star"
+            };
+            return icon == null ? null : Resources.Load<VectorImage>("Lobby/Icons/Phosphor/" + icon + "-bold");
+        }
+
         /// <summary>Live resource tint, respecting the theme's original-colour art.</summary>
         public void SetResourceTint(Color tint)
         {
@@ -79,8 +134,13 @@ namespace NodeWar.Lobby
             if (panel != null) ValidateUsage();
 #endif
             keepOriginalColours = false;
+            VectorImage lobbyImage = LobbyImage();
             UIArtTheme theme = UIArt.Theme;
-            if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
+            if (lobbyImage != null)
+            {
+                style.backgroundImage = new StyleBackground(lobbyImage);
+            }
+            else if (theme != null && theme.TryIcon(kind, context, out UIArtTheme.IconEntry entry) && entry.sprite != null)
             {
                 keepOriginalColours = entry.keepOriginalColours;
                 style.backgroundImage = new StyleBackground(entry.sprite);
@@ -98,6 +158,7 @@ namespace NodeWar.Lobby
             AddToClassList("lb-icon");
             pickingMode = PickingMode.Ignore;
             style.unityBackgroundScaleMode = ScaleMode.ScaleToFit;
+            RegisterCallback<AttachToPanelEvent>(_ => RefreshArt());
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             // UXML sets Kind and Context separately. Check only after both initial
             // attributes have been applied, avoiding warnings about temporary pairs.
@@ -129,7 +190,7 @@ namespace NodeWar.Lobby
             VectorImage image;
             if (cache.TryGetValue(kind, out image) && image != null) return image;
 
-            Painter2D p = new Painter2D();
+            InkPen p = new InkPen(PaperMath.Seed(kind.ToString()));
             p.fillColor = Color.white;
             p.strokeColor = Color.white;
             p.lineJoin = LineJoin.Round;
@@ -144,16 +205,16 @@ namespace NodeWar.Lobby
 
             switch (kind)
             {
-                case LobbyIconKind.NavBarShop:
+                case LobbyIconKind.NavBarShop: DrawMarket(p); break;
                 case LobbyIconKind.CosmeticTinRoof:
                 case LobbyIconKind.Shop: DrawShop(p); break;
-                case LobbyIconKind.NavBarHome:
+                case LobbyIconKind.NavBarHome: DrawShop(p); break;
                 case LobbyIconKind.DailyBox:
                 case LobbyIconKind.MagicResource:
                 case LobbyIconKind.IndicatorEffect:
                 case LobbyIconKind.Spark: DrawSpark(p); break;
                 case LobbyIconKind.Tools: DrawTools(p); break;
-                case LobbyIconKind.NavBarSocial:
+                case LobbyIconKind.NavBarSocial: DrawSocial(p); break;
                 case LobbyIconKind.EmoteHappy:
                 case LobbyIconKind.Smile: DrawSmile(p); break;
                 case LobbyIconKind.Gear: DrawGear(p); break;
@@ -192,6 +253,21 @@ namespace NodeWar.Lobby
                 case LobbyIconKind.Food: DrawFood(p); break;
                 case LobbyIconKind.Materials: DrawMaterials(p); break;
                 case LobbyIconKind.Metal: DrawMetal(p); break;
+                case LobbyIconKind.Burger: DrawBurger(p); break;
+                case LobbyIconKind.Bell: DrawBell(p); break;
+                case LobbyIconKind.Funnel: DrawFunnel(p); break;
+                case LobbyIconKind.Swap: DrawSwap(p); break;
+                case LobbyIconKind.CrateSmall: DrawCrate(p, false); break;
+                case LobbyIconKind.CrateMedium: DrawCrate(p, true); break;
+                case LobbyIconKind.Info: DrawInfo(p); break;
+                case LobbyIconKind.Spectate: DrawSpectate(p); break;
+                case LobbyIconKind.Chat: DrawChat(p); break;
+                case LobbyIconKind.Guild: DrawGuild(p); break;
+                case LobbyIconKind.Refresh: DrawRespawn(p); break;
+                case LobbyIconKind.AddFriend: DrawAddFriend(p); break;
+                case LobbyIconKind.Invite: DrawInvite(p); break;
+                case LobbyIconKind.Search: DrawSearch(p); break;
+                case LobbyIconKind.Laurel: DrawLaurel(p); break;
                 default:
                     RoundedRect(p, 3f, 3f, 18f, 18f, 4f);
                     p.Stroke();
@@ -210,8 +286,156 @@ namespace NodeWar.Lobby
             return image;
         }
 
+        private static void Line(InkPen p, float x1, float y1, float x2, float y2)
+        {
+            p.BeginPath();
+            p.MoveTo(new Vector2(x1, y1));
+            p.LineTo(new Vector2(x2, y2));
+            p.Stroke();
+        }
+
+        private static void DrawBurger(InkPen p)
+        {
+            p.lineWidth = 2.2f;
+            Line(p, 4, 6, 20, 6);
+            Line(p, 4, 12, 20, 12);
+            Line(p, 4, 18, 20, 18);
+        }
+
+        private static void DrawMarket(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(3, 10)); p.LineTo(new Vector2(6, 3));
+            p.LineTo(new Vector2(18, 3)); p.LineTo(new Vector2(21, 10)); p.ClosePath(); p.Stroke();
+            Line(p, 5, 10, 5, 21); Line(p, 19, 10, 19, 21); Line(p, 5, 21, 19, 21);
+            Line(p, 9, 4, 8, 10); Line(p, 15, 4, 16, 10); Line(p, 8, 16, 16, 16);
+        }
+
+        private static void DrawSocial(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(8, 7), 3, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(17, 8), 2.5f, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(8, 21), 6, 180, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(17, 21), 4.5f, 220, 360); p.Stroke();
+        }
+
+        private static void DrawBell(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath();
+            p.MoveTo(new Vector2(4, 17));
+            p.LineTo(new Vector2(6, 14));
+            p.LineTo(new Vector2(6, 9));
+            p.Arc(new Vector2(12, 9), 6, 180, 360);
+            p.LineTo(new Vector2(18, 14));
+            p.LineTo(new Vector2(20, 17));
+            p.ClosePath(); p.Stroke();
+            Line(p, 10, 21, 14, 21);
+            Line(p, 12, 1, 12, 3);
+        }
+
+        private static void DrawFunnel(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath();
+            p.MoveTo(new Vector2(3, 4)); p.LineTo(new Vector2(21, 4));
+            p.LineTo(new Vector2(14, 12)); p.LineTo(new Vector2(14, 20));
+            p.LineTo(new Vector2(10, 18)); p.LineTo(new Vector2(10, 12));
+            p.ClosePath(); p.Stroke();
+        }
+
+        private static void DrawSwap(InkPen p)
+        {
+            p.lineWidth = 2;
+            Line(p, 4, 7, 20, 7); Line(p, 16, 3, 20, 7); Line(p, 16, 11, 20, 7);
+            Line(p, 4, 17, 20, 17); Line(p, 4, 17, 8, 13); Line(p, 4, 17, 8, 21);
+        }
+
+        private static void DrawCrate(InkPen p, bool medium)
+        {
+            p.lineWidth = 2;
+            RoundedRect(p, medium ? 2 : 5, medium ? 5 : 8, medium ? 20 : 14, medium ? 16 : 13, 2);
+            p.Stroke();
+            Line(p, medium ? 2 : 5, 12, medium ? 22 : 19, 12);
+            Line(p, 10, medium ? 5 : 8, 10, 21);
+            Line(p, 14, medium ? 5 : 8, 14, 21);
+        }
+
+        private static void DrawInfo(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(12, 12), 9, 0, 360); p.Stroke();
+            Line(p, 12, 11, 12, 17);
+            p.BeginPath(); p.Arc(new Vector2(12, 7), 1, 0, 360); p.Fill();
+        }
+
+        private static void DrawSpectate(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(2, 12));
+            p.QuadraticCurveTo(new Vector2(12, -2), new Vector2(22, 12));
+            p.QuadraticCurveTo(new Vector2(12, 26), new Vector2(2, 12));
+            p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(12, 12), 3, 0, 360); p.Fill();
+        }
+
+        private static void DrawChat(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(3, 4)); p.LineTo(new Vector2(21, 4));
+            p.LineTo(new Vector2(21, 17)); p.LineTo(new Vector2(10, 17));
+            p.LineTo(new Vector2(5, 21)); p.LineTo(new Vector2(5, 17));
+            p.LineTo(new Vector2(3, 17)); p.ClosePath(); p.Stroke();
+            Line(p, 7, 9, 17, 9); Line(p, 7, 13, 14, 13);
+        }
+
+        private static void DrawGuild(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.MoveTo(new Vector2(12, 2)); p.LineTo(new Vector2(21, 6));
+            p.LineTo(new Vector2(19, 16)); p.LineTo(new Vector2(12, 22));
+            p.LineTo(new Vector2(5, 16)); p.LineTo(new Vector2(3, 6)); p.ClosePath(); p.Stroke();
+            Line(p, 8, 9, 16, 9); Line(p, 12, 9, 12, 17);
+        }
+
+        private static void DrawAddFriend(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(9, 7), 4, 0, 360); p.Stroke();
+            p.BeginPath(); p.Arc(new Vector2(9, 21), 7, 180, 360); p.Stroke();
+            Line(p, 16, 11, 22, 11); Line(p, 19, 8, 19, 14);
+        }
+
+        private static void DrawInvite(InkPen p)
+        {
+            p.lineWidth = 2;
+            RoundedRect(p, 2, 4, 18, 13, 2); p.Stroke();
+            Line(p, 3, 5, 11, 11); Line(p, 11, 11, 19, 5);
+            Line(p, 15, 20, 23, 20); Line(p, 19, 16, 19, 24);
+        }
+
+        private static void DrawSearch(InkPen p)
+        {
+            p.lineWidth = 2;
+            p.BeginPath(); p.Arc(new Vector2(10, 10), 7, 0, 360); p.Stroke();
+            Line(p, 15, 15, 22, 22);
+        }
+
+        private static void DrawLaurel(InkPen p)
+        {
+            p.lineWidth = 1.8f;
+            p.BeginPath(); p.Arc(new Vector2(12, 10), 9, 20, 160); p.Stroke();
+            for (int i = 0; i < 3; i++)
+            {
+                float y = 6 + i * 4;
+                Line(p, 4, y, 7, y + 3); Line(p, 2, y + 2, 5, y + 4);
+                Line(p, 20, y, 17, y + 3); Line(p, 22, y + 2, 19, y + 4);
+            }
+        }
+
         // ⌂ - a house outline.
-        private static void DrawShop(Painter2D p)
+        private static void DrawShop(InkPen p)
         {
             p.lineWidth = 2.2f;
             p.BeginPath();
@@ -225,7 +449,7 @@ namespace NodeWar.Lobby
         }
 
         // ✦ - a four-pointed star with concave sides.
-        private static void DrawSpark(Painter2D p)
+        private static void DrawSpark(InkPen p)
         {
             Vector2 c = new Vector2(12f, 12f);
             p.BeginPath();
@@ -239,7 +463,7 @@ namespace NodeWar.Lobby
         }
 
         // ⚒ - a hammer and a pick, crossed.
-        private static void DrawTools(Painter2D p)
+        private static void DrawTools(InkPen p)
         {
             p.lineWidth = 2.2f;
 
@@ -269,7 +493,7 @@ namespace NodeWar.Lobby
         }
 
         // ☺ - a face.
-        private static void DrawSmile(Painter2D p)
+        private static void DrawSmile(InkPen p)
         {
             p.lineWidth = 2f;
             p.BeginPath();
@@ -286,7 +510,7 @@ namespace NodeWar.Lobby
         }
 
         // ⚙ - eight teeth on a ring.
-        private static void DrawGear(Painter2D p)
+        private static void DrawGear(InkPen p)
         {
             Vector2 c = new Vector2(12f, 12f);
             const int teeth = 8;
@@ -320,7 +544,7 @@ namespace NodeWar.Lobby
         }
 
         // ✉ - an envelope.
-        private static void DrawEnvelope(Painter2D p)
+        private static void DrawEnvelope(InkPen p)
         {
             p.lineWidth = 2f;
             p.BeginPath();
@@ -340,7 +564,7 @@ namespace NodeWar.Lobby
 
         // The villager's smile, in the top half of the box so a square element
         // can be placed by its top edge.
-        private static void DrawMouth(Painter2D p)
+        private static void DrawMouth(InkPen p)
         {
             p.lineWidth = 2.8f;
             p.BeginPath();
@@ -350,7 +574,7 @@ namespace NodeWar.Lobby
         }
 
         // A television: screen, antennae, feet.
-        private static void DrawTv(Painter2D p)
+        private static void DrawTv(InkPen p)
         {
             p.lineWidth = 2f;
             RoundedRect(p, 2.5f, 7f, 19f, 13f, 2.5f);
@@ -368,7 +592,7 @@ namespace NodeWar.Lobby
         }
 
         // ← - an arrow pointing left.
-        private static void DrawBack(Painter2D p)
+        private static void DrawBack(InkPen p)
         {
             p.lineWidth = 2.4f;
             p.BeginPath();
@@ -381,7 +605,7 @@ namespace NodeWar.Lobby
         }
 
         // ✕ - two strokes, drawn rather than typed so no font has to carry it.
-        private static void DrawClose(Painter2D p)
+        private static void DrawClose(InkPen p)
         {
             p.lineWidth = 2.4f;
             p.BeginPath();
@@ -393,7 +617,7 @@ namespace NodeWar.Lobby
         }
 
         // ⚑ - a pennant on a pole.
-        private static void DrawFlag(Painter2D p)
+        private static void DrawFlag(InkPen p)
         {
             p.lineWidth = 2.2f;
             p.BeginPath();
@@ -410,7 +634,7 @@ namespace NodeWar.Lobby
         }
 
         // ◠ - an upper half-circle, the prototype's straw hat.
-        private static void DrawHat(Painter2D p)
+        private static void DrawHat(InkPen p)
         {
             p.lineWidth = 2.4f;
             p.BeginPath();
@@ -421,7 +645,7 @@ namespace NodeWar.Lobby
         }
 
         // ❖ - four diamonds in a diamond.
-        private static void DrawDiamond(Painter2D p)
+        private static void DrawDiamond(InkPen p)
         {
             Diamond(p, 12f, 5f, 4f);
             Diamond(p, 19f, 12f, 4f);
@@ -430,7 +654,7 @@ namespace NodeWar.Lobby
         }
 
         // 🏛 - a columned building.
-        private static void DrawDistrict(Painter2D p)
+        private static void DrawDistrict(InkPen p)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(2.5f, 8.5f));
@@ -454,7 +678,7 @@ namespace NodeWar.Lobby
         }
 
         // 🥋 - a robe with a belt.
-        private static void DrawSuit(Painter2D p)
+        private static void DrawSuit(InkPen p)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(8f, 3f));
@@ -473,7 +697,7 @@ namespace NodeWar.Lobby
         }
 
         // 🔒 - a padlock.
-        private static void DrawLock(Painter2D p)
+        private static void DrawLock(InkPen p)
         {
             p.lineWidth = 2.4f;
             p.BeginPath();
@@ -488,7 +712,7 @@ namespace NodeWar.Lobby
         }
 
         // ! - a rounded bar over a dot.
-        private static void DrawAlert(Painter2D p)
+        private static void DrawAlert(InkPen p)
         {
             p.lineWidth = 4.2f;
             p.BeginPath();
@@ -502,7 +726,7 @@ namespace NodeWar.Lobby
         }
 
         // ⚔ - two swords crossed, hilts down.
-        private static void DrawSwords(Painter2D p)
+        private static void DrawSwords(InkPen p)
         {
             // Blades.
             p.lineWidth = 2.4f;
@@ -533,7 +757,7 @@ namespace NodeWar.Lobby
         }
 
         // ↓ onto a line - ground being pushed away from you.
-        private static void DrawCapture(Painter2D p)
+        private static void DrawCapture(InkPen p)
         {
             p.lineWidth = 2.6f;
             p.BeginPath();
@@ -548,7 +772,7 @@ namespace NodeWar.Lobby
         }
 
         // zz - a large Z and a small one above it.
-        private static void DrawSleep(Painter2D p)
+        private static void DrawSleep(InkPen p)
         {
             p.lineWidth = 2.3f;
             p.BeginPath();
@@ -568,7 +792,7 @@ namespace NodeWar.Lobby
         }
 
         // ↻ - most of a circle, with a head on its clockwise end.
-        private static void DrawRespawn(Painter2D p)
+        private static void DrawRespawn(InkPen p)
         {
             Vector2 c = new Vector2(12f, 12.5f);
             const float r = 7.5f;
@@ -595,7 +819,7 @@ namespace NodeWar.Lobby
         }
 
         // Speaker and sound waves, tinted by the current mute state.
-        private static void DrawSpeaker(Painter2D p)
+        private static void DrawSpeaker(InkPen p)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(3f, 9f));
@@ -616,7 +840,7 @@ namespace NodeWar.Lobby
         }
 
         // ▶ - a solid triangle pointing right. The edge arrow rotates it.
-        private static void DrawPointer(Painter2D p)
+        private static void DrawPointer(InkPen p)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(6f, 4f));
@@ -627,7 +851,7 @@ namespace NodeWar.Lobby
         }
 
         // ☹ - the smile's face with the mouth turned over.
-        private static void DrawFrown(Painter2D p)
+        private static void DrawFrown(InkPen p)
         {
             p.lineWidth = 2f;
             p.BeginPath();
@@ -644,7 +868,7 @@ namespace NodeWar.Lobby
         }
 
         // A face with its brows pulled down and in.
-        private static void DrawAngry(Painter2D p)
+        private static void DrawAngry(InkPen p)
         {
             p.lineWidth = 2f;
             p.BeginPath();
@@ -671,7 +895,7 @@ namespace NodeWar.Lobby
 
         // 🍖 - a lumpy meat mass, filled, on a stroked bone so the drumstick
         // reads as two-tone the way DrawLock's shackle-and-body does.
-        private static void DrawFood(Painter2D p)
+        private static void DrawFood(InkPen p)
         {
             p.BeginPath();
             p.Arc(new Vector2(9.5f, 8.5f), 7f, 0f, 360f);
@@ -692,7 +916,7 @@ namespace NodeWar.Lobby
 
         // 🪨 - a faceted rock: a stroked outline with one filled facet, the
         // same fill-plus-outline contrast as the rest of this set.
-        private static void DrawMaterials(Painter2D p)
+        private static void DrawMaterials(InkPen p)
         {
             p.lineWidth = 2.2f;
             p.BeginPath();
@@ -716,7 +940,7 @@ namespace NodeWar.Lobby
 
         // A filled ingot bar under a stroked top facet - the raised face that
         // reads as its second tone.
-        private static void DrawMetal(Painter2D p)
+        private static void DrawMetal(InkPen p)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(4f, 18.5f));
@@ -735,7 +959,7 @@ namespace NodeWar.Lobby
             p.Stroke();
         }
 
-        private static void Diamond(Painter2D p, float cx, float cy, float r)
+        private static void Diamond(InkPen p, float cx, float cy, float r)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(cx, cy - r));
@@ -746,7 +970,7 @@ namespace NodeWar.Lobby
             p.Fill();
         }
 
-        private static void RoundedRect(Painter2D p, float x, float y, float w, float h, float r)
+        private static void RoundedRect(InkPen p, float x, float y, float w, float h, float r)
         {
             p.BeginPath();
             p.MoveTo(new Vector2(x + r, y));

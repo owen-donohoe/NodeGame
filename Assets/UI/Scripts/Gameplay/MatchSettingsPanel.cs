@@ -36,12 +36,12 @@ namespace NodeWar.UI
 
         private readonly Slider musicSlider;
         private readonly Slider effectsSlider;
-        private readonly LobbySwitch routesSwitch;
-        private readonly LobbySwitch emotesSwitch;
+        private readonly LobbyToggle routesSwitch;
+        private readonly LobbyToggle emotesSwitch;
         private readonly LobbyIcon emotesIcon;
         private readonly Label frameCapLabel;
-        private readonly LobbySwitch cameraButtonSwitch;
-        private readonly LobbySwitch tooltipsSwitch;
+        private readonly LobbyToggle cameraButtonSwitch;
+        private readonly LobbyToggle tooltipsSwitch;
         private readonly Label sideLabel;
         private readonly Label targetLabel;
 
@@ -80,8 +80,8 @@ namespace NodeWar.UI
 
             musicSlider = NodeWar.UI.UiRequired.Q<Slider>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsMusic, nameof(MatchSettingsPanel));
             effectsSlider = NodeWar.UI.UiRequired.Q<Slider>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEffects, nameof(MatchSettingsPanel));
-            routesSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRoutes, nameof(MatchSettingsPanel));
-            emotesSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEmotes, nameof(MatchSettingsPanel));
+            routesSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRoutes, nameof(MatchSettingsPanel));
+            emotesSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEmotes, nameof(MatchSettingsPanel));
             emotesIcon = hudRoot.Q<LobbyIcon>("hud-settings-emotes-icon");
             frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsFramecap, nameof(MatchSettingsPanel));
 
@@ -117,9 +117,9 @@ namespace NodeWar.UI
 
             // Only what undoes a bad control combination mid-match; the full
             // list is on the lobby's Settings page.
-            cameraButtonSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsCamerabutton, nameof(MatchSettingsPanel));
+            cameraButtonSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsCamerabutton, nameof(MatchSettingsPanel));
             sideLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsSide, nameof(MatchSettingsPanel));
-            tooltipsSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsTooltips, nameof(MatchSettingsPanel));
+            tooltipsSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsTooltips, nameof(MatchSettingsPanel));
             targetLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsTarget, nameof(MatchSettingsPanel));
             BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowTarget, ControlsViewModel.CycleCameraButtonTarget);
             BindControlsRow(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowCamerabutton, ControlsViewModel.ToggleCameraButton);

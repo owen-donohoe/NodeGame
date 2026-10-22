@@ -1,0 +1,10 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <ui:Style src="PlayEntry.uss" />
+    <ui:VisualElement class="lb-invite-tabs">
+        <lobby:PaperButton name="invite-friends" text="Friends" />
+        <lobby:PaperButton name="invite-guild" text="Guild" />
+        <lobby:PaperButton name="invite-search" text="Search" />
+    </ui:VisualElement>
+    <ui:VisualElement name="invite-results" />
+    <lobby:PaperButton name="invite-code" text="Use a join code instead" />
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

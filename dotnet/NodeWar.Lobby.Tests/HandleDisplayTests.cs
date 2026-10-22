@@ -20,6 +20,17 @@ namespace NodeWar.Lobby.Tests
             Assert.That(HandleDisplay.Display(null, fallback), Is.EqualTo(fallback));
         }
 
+        [TestCase("1234567890123456#ABCD", "1234567890123456#ABCD")]
+        [TestCase("12345678901234567#ABCD", "1234567890123456\u2026#ABCD")]
+        [TestCase("12345678901234567", "1234567890123456\u2026")]
+        [TestCase("Short#LONGTAG", "Short#LONGTAG")]
+        [TestCase("", "")]
+        [TestCase(null, null)]
+        [TestCase("123456789012345e\u0301xy#NW", "123456789012345e\u0301\u2026#NW")]
+        [TestCase("123456789012345\U0001F600xy#NW", "123456789012345\U0001F600\u2026#NW")]
+        public void ConstrainedHeaderCapsOnlyTheNameWithoutSplittingVisibleCharacters(string handle, string expected)
+            => Assert.That(HandleDisplay.Constrained(handle), Is.EqualTo(expected));
+
         [TestCase("Ab_9-z", "Ab_9-z")]
         [TestCase(" A!b @C# ", "AbC")]
         [TestCase("", "Player")]

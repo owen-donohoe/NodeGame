@@ -1,0 +1,12 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <ui:Style src="CrateScreen.uss" />
+    <ui:Label name="crate-prompt" class="lb-crate-prompt" />
+    <ui:VisualElement name="crate-content" class="lb-crate-content">
+        <lobby:PaperCard name="crate-box" class="lb-crate-box"><ui:Label text="Crate" /></lobby:PaperCard>
+        <lobby:PaperCard name="crate-reward" class="lb-crate-reward">
+            <ui:Label name="crate-reward-label" />
+        </lobby:PaperCard>
+    </ui:VisualElement>
+    <ui:ScrollView name="crate-summary" class="lb-crate-summary" />
+    <lobby:PaperButton name="crate-accept" text="Accept" class="lb-crate-accept" />
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

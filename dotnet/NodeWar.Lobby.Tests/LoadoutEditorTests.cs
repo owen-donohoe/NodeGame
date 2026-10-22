@@ -19,7 +19,7 @@ namespace NodeWar.Lobby.Tests
     {
         private static LoadoutEditor Empty()
         {
-            return new LoadoutEditor(LoadoutData.CreateEmpty());
+            return new LoadoutEditor(new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] }, 2);
         }
 
         // ===== SHAPE =====
@@ -29,7 +29,7 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutEditor editor = Empty();
 
-            Assert.AreEqual(2, editor.SuitSlotCount);
+            Assert.AreEqual(3, editor.SuitSlotCount);
             Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
 
@@ -40,8 +40,8 @@ namespace NodeWar.Lobby.Tests
             // without Normalized first would NullReference here.
             LoadoutEditor editor = new LoadoutEditor(new LoadoutData());
 
-            Assert.AreEqual(2, editor.SuitSlotCount);
-            Assert.AreEqual("", editor.SuitAt(0));
+            Assert.AreEqual(3, editor.SuitSlotCount);
+            Assert.AreEqual("suit_warrior", editor.SuitAt(0));
             Assert.IsFalse(editor.SuitSlotsFull);
         }
 
@@ -57,7 +57,7 @@ namespace NodeWar.Lobby.Tests
 
             LoadoutEditor editor = new LoadoutEditor(legacy);
 
-            Assert.AreEqual("suit_scout", editor.SuitAt(0));
+            Assert.AreEqual("suit_scout", editor.SuitAt(1));
             Assert.AreEqual("", editor.SuitAt(LoadoutRules.ChosenSuitSlots(1) - 1));
             Assert.AreEqual(LoadoutRules.ChosenDistrictSlots(1), editor.DistrictSlotCount);
         }
@@ -181,11 +181,11 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData saved = new LoadoutData
             {
-                suitIDs = new[] { "suit_warrior", "suit_scout" },
-                districtIDs = new[] { "node_crossroads", "node_market" }
+                suitIDs = new[] { "suit_warrior", "suit_scout", "" },
+                districtIDs = new[] { "node_crossroads", "node_market", "", "", "" }
             };
 
-            LoadoutEditor editor = new LoadoutEditor(saved);
+            LoadoutEditor editor = new LoadoutEditor(saved, 2);
 
             // Warrior is granted to everyone and Crossroads maps to nothing, so
             // neither is offered by the picker.
@@ -220,6 +220,45 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0, editor.DropUnavailable(suit => false, node => false));
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void ClearChoices_RestoresLockedSlotsAndEmptiesTheRest(int arena)
+        {
+            // Canonical but altered slots, including displaced locked defaults.
+            var source = new LoadoutData
+            {
+                suitIDs = new[] { "suit_scout", "suit_guardian", "suit_warrior" },
+                districtIDs = new[] { "node_barracks", "node_fortress", "node_town", "node_mine", "node_farm" },
+                suitEras = new int[LoadoutData.SuitEraSlots],
+                districtEras = new int[LoadoutData.DistrictEraSlots],
+                skinIDs = new[] { "skin_test" }
+            };
+            source.suitEras[1] = 2;
+            source.districtEras[1] = 1;
+            var editor = new LoadoutEditor(source, arena);
+
+            editor.ClearChoices();
+            var cleared = editor.ToLoadout();
+            var suits = LoadoutRules.LockedSuits(arena);
+            var districts = LoadoutRules.LockedDistricts(arena);
+            for (int i = 0; i < LoadoutData.SuitSlots; i++)
+                Assert.AreEqual(i < suits.Length ? suits[i] : "", cleared.suitIDs[i]);
+            for (int i = 0; i < LoadoutData.DistrictSlots; i++)
+                Assert.AreEqual(i < districts.Length ? districts[i] : "", cleared.districtIDs[i]);
+            CollectionAssert.AreEqual(source.suitEras, cleared.suitEras);
+            CollectionAssert.AreEqual(source.districtEras, cleared.districtEras);
+            CollectionAssert.AreEqual(source.skinIDs, cleared.skinIDs);
+            Assert.AreEqual("suit_scout", source.suitIDs[0]);
+            Assert.AreEqual("node_barracks", source.districtIDs[0]);
+
+            // A second clear keeps the restored defaults, including after a save/reload.
+            var reloaded = new LoadoutEditor(cleared, arena);
+            reloaded.ClearChoices();
+            CollectionAssert.AreEqual(cleared.suitIDs, reloaded.ToLoadout().suitIDs);
+            CollectionAssert.AreEqual(cleared.districtIDs, reloaded.ToLoadout().districtIDs);
+        }
+
         // ===== HANDING THE RESULT BACK =====
 
         [Test]
@@ -229,7 +268,7 @@ namespace NodeWar.Lobby.Tests
             editor.EquipSuit("suit_scout");
             editor.EquipDistrict("node_market");
 
-            LoadoutEditor reloaded = new LoadoutEditor(editor.ToLoadout());
+            LoadoutEditor reloaded = new LoadoutEditor(editor.ToLoadout(), 2);
 
             Assert.AreEqual("suit_scout", reloaded.SuitAt(0));
             Assert.AreEqual("node_market", reloaded.DistrictAt(0));

@@ -102,7 +102,7 @@ namespace NodeWar.Lobby
 
         public void SetLoadout(LoadoutData loadout)
         {
-            data.loadout = LoadoutRecord.From(LoadoutData.Normalized(loadout));
+            LoadoutPresets.Store(ref data, LoadoutData.Normalized(loadout));
             Save();
         }
 
@@ -187,11 +187,13 @@ namespace NodeWar.Lobby
                 if (settingsAbsent)
                     Debug.Log("[PlayerProfile] Added default settings to an older save.");
 
-                if (migrated || settingsAbsent) Save();
+                bool presetsAbsent = LoadoutPresets.Migrate(ref data);
+                if (migrated || settingsAbsent || presetsAbsent) Save();
             }
             else
             {
                 CreateDefaults();
+                LoadoutPresets.Migrate(ref data);
                 Save();
             }
         }
@@ -289,3 +291,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+

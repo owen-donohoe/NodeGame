@@ -5,7 +5,7 @@ tags: [shell/3, realm/backend, system/backend-client, script]
 file: Assets/Scripts/Backend/BackendServices.cs
 sources:
   - Assets/Scripts/Backend/BackendServices.cs
-verified: ce9fb6bf
+verified: f576d156
 ---
 
 # BackendServices
@@ -21,8 +21,10 @@ verified: ce9fb6bf
 
 "The one place a caller gets a backend service." It's a static **service locator**: properties
 `PlayerState`, `Account`, `Inventory`, `MatchReports`, `MatchHistory`, `RankedQueue` and `RankedMatch` each return
-either the `Ugs*Service` or the `Local*Service` fake. Builds always use UGS, and the Editor can switch
+either the `Ugs*Service` or the `Local*Service` fake. These services use UGS in builds, and the Editor can switch
 (*Tools › Node War › Backend › Use Local Fakes*).
+
+`Social`, `Profiles` and `Guild` use local implementations in every build: no UGS adapters exist. Social returns deterministic player cards and live matches. Self profiles combine accepted handle/rank, local chosen slots and own match history; stats remain unknown. Guild supplies sample membership, search and chat; its public browse cache lasts for the app session.
 
 ## Read it in this order
 

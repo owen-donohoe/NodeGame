@@ -42,6 +42,18 @@
 
 :root {
     /* ================= PALETTE ================= */
+    --pal-tap: #1f7a6d;
+    --pal-coin: #d9a441;
+    --pal-tap-soft: rgba(31,122,109,0.14);
+    --pal-umber-70: rgba(45,35,25,0.70);
+    --pal-umber-45: rgba(45,35,25,0.45);
+    --pal-umber-15: rgba(45,35,25,0.15);
+    --pal-umber-50: rgba(45,35,25,0.50);
+    --pal-era-1: #8aa06a;
+    --pal-era-2: #7d8fa3;
+    --pal-era-3: #b8734a;
+    --pal-era-4: #8a6bb0;
+    --pal-era-5: #c25b9a;
 
     /* paper, lightest to darkest */
     --pal-paper-50: rgb(244, 233, 213);
@@ -102,6 +114,11 @@
     --pal-player-0-edge: rgb(40, 72, 140);
     --pal-player-1: rgb(255, 102, 102);
     --pal-player-1-edge: rgb(140, 40, 40);
+    /* Lobby previews only: the board has no 4-player colours yet. */
+    --pal-player-2: #70b879;
+    --pal-player-2-edge: #306b38;
+    --pal-player-3: #b28ae0;
+    --pal-player-3-edge: #624080;
     --pal-neutral: rgb(154, 146, 133);
     --pal-neutral-edge: rgb(107, 100, 89);
 
@@ -135,6 +152,20 @@
     --pal-tile-7: rgb(140, 62, 62);
 
     /* ================= MEANING ================= */
+
+    /* ---- paper drawing roles, shared by Painter2D and USS ---- */
+    --paper-light: var(--pal-paper-50);
+    --paper: var(--pal-paper-100);
+    --paper-dark: var(--pal-paper-200);
+    --paper-ink: var(--pal-umber-900);
+    --paper-ink-width: 3px;
+    --paper-shadow: var(--pal-shadow-a25);
+    --paper-shadow-x: 2px;
+    --paper-shadow-y: 4px;
+    --paper-gold: var(--pal-gold-400);
+    --paper-urgent: var(--pal-red-500);
+    --paper-grain-opacity: 0.045;
+    --paper-wobble: 0.8px;
 
     /* ---- surfaces ---- */
     --surface: var(--pal-paper-100);
@@ -190,6 +221,10 @@
     --p0-edge: var(--pal-player-0-edge);
     --p1: var(--pal-player-1);
     --p1-edge: var(--pal-player-1-edge);
+    --p2: var(--pal-player-2);
+    --p2-edge: var(--pal-player-2-edge);
+    --p3: var(--pal-player-3);
+    --p3-edge: var(--pal-player-3-edge);
     --unowned: var(--pal-neutral);
     --unowned-edge: var(--pal-neutral-edge);
     --mark-ink: var(--pal-umber-900);
@@ -238,6 +273,12 @@
     --space-4: 16px;
     --space-5: 24px;
     --space-6: 32px;
+    --lobby-edge-inset: var(--space-4);
+    --lobby-card-gap: var(--space-2);
+    --lobby-panel-padding: var(--space-3);
+    --font-hand: url("project://database/Assets/UI/Fonts/PatrickHand-Regular-SDF.asset");
+    --lobby-ink-outline: 0px;
+    --lobby-ink-outline-strong: 0px;
 
     /* ---- corners. No pill token: USS turns an oversized radius into an
        ellipse, so a pill is given exactly half its height where it is used. ---- */
@@ -258,8 +299,10 @@
     --motion-sheet: 320ms;
     --motion-bob: 1700ms;
 
-    /* ---- type. Fredoka only; each weight is its own font asset, because
-       -unity-font-style: bold would synthesise rather than use the real cut. ---- */
+    /* ---- type. Display, handwritten labels and readable body copy. ---- */
+    --font-display: url("project://database/Assets/UI/Fonts/LilitaOne-Regular-SDF.asset");
+    --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
+    --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
     --font-medium: url("project://database/Assets/UI/Fonts/Fredoka-Medium-SDF.asset");
     --font-semibold: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
     --font-bold: url("project://database/Assets/UI/Fonts/Fredoka-Bold-SDF.asset");
@@ -268,12 +311,126 @@
        at a 390-wide reference is unreadable on a phone. */
     --type-min: 11px;
     --type-caption: 13px;
+    --type-secondary: 14px;
     --type-body: 17px;
     --type-number: 18px;
     --type-heading: 21px;
     --type-title: 27px;
+    --type-battle: 32px;
+    /* Real font weights replace the synthetic text outlines. */
+    --ink-outline: 0px;
+    --ink-outline-strong: 0px;
 
     /* Minimum touch target. The panels scale to a 390-wide reference, so a
        unit is about one point on a phone. */
     --target-min: 44px;
+    --mk-sheet: var(--pal-paper-50);
+    --mk-card: var(--pal-paper-100);
+    --mk-pressed: var(--pal-paper-200);
+    --mk-track: var(--pal-paper-300);
+    --mk-ink: var(--pal-umber-900);
+    --mk-muted: var(--pal-umber-70);
+    --mk-disabled: var(--pal-umber-45);
+    --mk-hairline: var(--pal-umber-15);
+    --mk-dark: var(--pal-umber-900-a92);
+    --mk-scrim: var(--pal-umber-50);
+    --mk-tap: var(--pal-tap);
+    --mk-tap-soft: var(--pal-tap-soft);
+    --mk-action: var(--pal-gold-500);
+    --mk-urgent: var(--pal-red-500);
+    --mk-private: #74509b;
+    --mk-mode-other: #685e78;
+    --mk-trophy: var(--pal-gold-800);
+    --mk-coin: var(--pal-coin);
+    --mk-leaf: var(--pal-leaf-500);
+    --era-1: var(--pal-era-1);
+    --era-2: var(--pal-era-2);
+    --era-3: var(--pal-era-3);
+    --era-4: var(--pal-era-4);
+    --era-5: var(--pal-era-5);
+}
+
+/* Approved panel language. Lobby scope preserves the shared match faces. */
+.lb-root {
+    /* Lobby values, scoped here so the draft and match HUD keep the shared tokens above. */
+    --pal-umber-500: #2d2319;
+    --pal-gold-400: #e0a526;
+    --pal-gold-500: #e0a526;
+    --pal-gold-800: #8a6a14;
+    --pal-green-400: rgb(128, 147, 91);
+    --pal-green-500: rgb(96, 117, 66);
+    --pal-red-500: #d2452f;
+    --pal-navy-600: rgb(111, 128, 77);
+    --pal-navy-50: #f4e9d5;
+    --pal-orange-500: rgb(179, 124, 66);
+    --pal-tile-0: rgb(129, 147, 103);
+    --pal-tile-1: rgb(167, 115, 77);
+    --pal-tile-2: rgb(181, 155, 113);
+    --pal-tile-3: rgb(127, 136, 81);
+    --pal-tile-4: rgb(153, 114, 94);
+    --pal-tile-5: rgb(147, 132, 110);
+    --pal-tile-6: rgb(175, 140, 72);
+    --pal-tile-7: rgb(156, 100, 76);
+    --edge: var(--pal-umber-900);
+    --ink-mute: var(--pal-umber-70);
+    --action-edge: var(--pal-umber-900);
+    --action-ink: var(--pal-umber-900);
+    --confirm: var(--pal-tap);
+    --confirm-edge: var(--pal-umber-900);
+    --confirm-ink: var(--pal-umber-900);
+    --off-edge: var(--pal-umber-900);
+    --trophy-ink: var(--pal-umber-900);
+    --leaf-edge: var(--pal-umber-900);
+    --badge-edge: var(--pal-umber-900);
+    --status-short-ink: var(--pal-umber-900);
+    --type-min: 13px;
+    --type-body: 16px;
+    --type-number: 22px;
+    --type-heading: 22px;
+    --type-title: 24px;
+    --line-outer: #2d2319;
+    --line-inner: #4d3d2d;
+    --line-light: #c3aa85;
+    --lip-panel: 5px;
+    --lip-press: 3px;
+    --edge-panel-bottom: 7px;
+    --edge-press-bottom: 5px;
+    --corner-sm: 10px;
+    --corner-md: 12px;
+    --corner-lg: 14px;
+    --corner-sheet: 14px;
+    --stroke: 2px;
+    --stroke-mid: 2px;
+    --paper-ink-width: 2px;
+    --radius-panel: 14px;
+    --radius-field: 12px;
+    --radius-tile: 10px;
+    --radius-button: 8px;
+    --tracking: 0.6px;
+    --font-body: url("project://database/Assets/UI/Fonts/Fredoka-SemiBold-SDF.asset");
+    --font-label: var(--font-display);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-display);
+    --font-hand: var(--font-body);
+    --font-bold: var(--font-display);
+    --lobby-edge-inset: 12px;
+    --mk-scrim: rgba(30,22,15,0.25);
+    --scrim: rgba(30,22,15,0.25);
+    letter-spacing: var(--tracking);
+}
+/* Shop keeps its established faces and tracking while sharing lobby chrome. */
+#page-shop {
+    --corner-sm: 10px;
+    --corner-md: 16px;
+    --corner-lg: 24px;
+    --corner-sheet: 28px;
+    --stroke: 3px;
+    --stroke-mid: 2.5px;
+    --paper-ink-width: 3px;
+    --font-body: url("project://database/Assets/UI/Fonts/Kalam-Regular-SDF.asset");
+    --font-label: url("project://database/Assets/UI/Fonts/Kalam-Bold-SDF.asset");
+    --font-bold: var(--font-label);
+    --font-medium: var(--font-body);
+    --font-semibold: var(--font-label);
+    letter-spacing: 0;
 }

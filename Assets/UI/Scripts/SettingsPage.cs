@@ -38,11 +38,11 @@ namespace NodeWar.Lobby
         private readonly Slider effectsSlider;
         private readonly Slider cameraSlider;
 
-        private readonly LobbySwitch colourblindSwitch;
-        private readonly LobbySwitch motionSwitch;
-        private readonly LobbySwitch confirmSwitch;
-        private readonly LobbySwitch hapticsSwitch;
-        private readonly LobbySwitch batterySwitch;
+        private readonly LobbyToggle colourblindSwitch;
+        private readonly LobbyToggle motionSwitch;
+        private readonly LobbyToggle confirmSwitch;
+        private readonly LobbyToggle hapticsSwitch;
+        private readonly LobbyToggle batterySwitch;
 
         private readonly Label sizeLabel;
         private readonly Label frameCapLabel;
@@ -116,11 +116,11 @@ namespace NodeWar.Lobby
             effectsSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsEffects, nameof(SettingsPage));
             cameraSlider = NodeWar.UI.UiRequired.Q<Slider>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsCamera, nameof(SettingsPage));
 
-            colourblindSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsColourblind, nameof(SettingsPage));
-            motionSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsMotion, nameof(SettingsPage));
-            confirmSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsConfirm, nameof(SettingsPage));
-            hapticsSwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsHaptics, nameof(SettingsPage));
-            batterySwitch = NodeWar.UI.UiRequired.Q<LobbySwitch>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsBattery, nameof(SettingsPage));
+            colourblindSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsColourblind, nameof(SettingsPage));
+            motionSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsMotion, nameof(SettingsPage));
+            confirmSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsConfirm, nameof(SettingsPage));
+            hapticsSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsHaptics, nameof(SettingsPage));
+            batterySwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsBattery, nameof(SettingsPage));
 
             sizeLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsSize, nameof(SettingsPage));
             frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsFramecap, nameof(SettingsPage));
@@ -280,7 +280,7 @@ namespace NodeWar.Lobby
         /// The whole settings row is the tap target for its switch, as in the
         /// prototype - the switch itself ignores picking.
         /// </summary>
-        private void BindSwitchRow(string rowName, LobbySwitch toggle)
+        private void BindSwitchRow(string rowName, LobbyToggle toggle)
         {
             Button row = NodeWar.UI.UiRequired.Q<Button>(Root, rowName, nameof(SettingsPage));
             if (row == null || toggle == null) return;
@@ -418,7 +418,7 @@ namespace NodeWar.Lobby
             if (slider != null) slider.value = value;
         }
 
-        private static void SetSwitch(LobbySwitch toggle, bool value)
+        private static void SetSwitch(LobbyToggle toggle, bool value)
         {
             if (toggle != null) toggle.Value = value;
         }
@@ -428,7 +428,7 @@ namespace NodeWar.Lobby
             return slider != null ? slider.value : fallback;
         }
 
-        private static bool ReadSwitch(LobbySwitch toggle, bool fallback)
+        private static bool ReadSwitch(LobbyToggle toggle, bool fallback)
         {
             return toggle != null ? toggle.Value : fallback;
         }

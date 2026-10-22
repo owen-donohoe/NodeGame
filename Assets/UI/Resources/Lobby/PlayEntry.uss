@@ -1,0 +1,4 @@
+.lb-invite-tabs { flex-direction: row; }
+.lb-invite-tabs PaperButton { flex-grow: 1; flex-basis: 0; min-width: 48px; min-height: 48px; }
+.lb-entry-heading { font-size: var(--type-heading); margin-top: 8px; }
+#player-search { min-height: 48px; margin-top: 12px; }

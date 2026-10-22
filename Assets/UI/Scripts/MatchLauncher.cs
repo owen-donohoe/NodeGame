@@ -23,9 +23,9 @@ namespace NodeWar.Lobby
     ///   Both: create MatchConnection, parent the NetworkManager under it, load Gameplay
     ///
     /// What is NOT the same is failure handling. NetworkManager.StartAsRelayHost
-    /// and StartAsRelayClient are `async void` with no try/catch, so a failed
-    /// UGS sign-in or a wrong join code throws into nothing: relayReady simply
-    /// stays false forever. The shipped modal cannot tell that apart from "the
+    /// and StartAsRelayClient return a Task: this launcher fails the phase as soon as it completes false (and
+    /// ignores it if the launcher was cancelled meanwhile). The shipped modal discards the task, so a failed
+    /// UGS sign-in or a wrong join code leaves relayReady false and it cannot tell that apart from "the
     /// opponent is slow", so it shows one 30-second "Timed out." for both.
     ///
     /// Here the two are separate phases with separate deadlines, so a wrong code
@@ -33,8 +33,10 @@ namespace NodeWar.Lobby
     /// does not time out at all. That is the difference between a message and a
     /// recovery action.
     /// </summary>
-    public class MatchLauncher
+    public partial class MatchLauncher
     {
+        // Unrated queues share rendezvous, but never submit ranked gameplay reports.
+        public bool RatedMatch { get; set; } = true;
         public enum Phase
         {
             Idle,
@@ -123,9 +125,9 @@ namespace NodeWar.Lobby
             };
             LoadoutData choices = catalog.CurrentLoadout(launchState).ToLoadout();
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (!LoadoutRules.IsComplete(choices, arena))
+            if (!LoadoutRules.IsComplete(choices, arena, launchState))
             {
-                Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+                Fail("Fill your loadout", "Open the Workshop and equip your available items.");
                 return false;
             }
             if (launchState?.Rank != null) PlayerProfile.Instance?.SetLoadout(choices);
@@ -142,10 +144,10 @@ namespace NodeWar.Lobby
                 return false;
             }
             int arena = LoadoutRules.ArenaOrFallback(launchState?.Rank);
-            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena))
+            if (LoadoutRules.IsComplete(catalog.CurrentLoadout(launchState).ToLoadout(), arena, launchState))
                 return true;
             Cleanup();
-            Fail("Fill your loadout", "Open the Workshop and fill every chosen slot.");
+            Fail("Fill your loadout", "Open the Workshop and equip your available items.");
             return false;
         }
 
@@ -184,6 +186,7 @@ namespace NodeWar.Lobby
 
         public void HostRelay()
         {
+            ResetPrivateLobby();
             SetRanked(null, null, NoDeadline, HandshakeTimeout);
             BeginHost(false, null);
         }
@@ -233,6 +236,7 @@ namespace NodeWar.Lobby
         /// </summary>
         public void JoinRelay(string joinCode)
         {
+            ResetPrivateLobby();
             string code = (joinCode ?? "").Trim();
 
             if (code.Length == 0)
@@ -262,6 +266,7 @@ namespace NodeWar.Lobby
         public void Cancel()
         {
             preparationVersion++;
+            LeavePrivateLobby();
             Cleanup();
             CurrentPhase = Phase.Idle;
             JoinCode = null;
@@ -285,15 +290,20 @@ namespace NodeWar.Lobby
 
             if (lan)
             {
-                networkManager.StartAsHost();
+                try { networkManager.StartAsHost(); }
+                catch (Exception e)
+                {
+                    Cleanup(); Fail("Couldn't host a LAN room.", "Close any other local room and retry. (" + e.GetType().Name + ")"); return;
+                }
                 JoinCode = NetworkManager.GetLocalIPAddress();
                 EnterPhase(Phase.WaitingForOpponent);
             }
             else
             {
-                networkManager.StartAsRelayHost();
+                var setup = networkManager.StartAsRelayHost();
                 JoinCode = null;
                 EnterPhase(Phase.CreatingRoom);
+                await ObserveRelaySetup(networkManager, setup);
             }
         }
 
@@ -334,9 +344,10 @@ namespace NodeWar.Lobby
             }
             else
             {
-                networkManager.StartAsRelayClient(address);
+                var setup = networkManager.StartAsRelayClient(address);
                 JoinCode = address;
                 EnterPhase(Phase.CreatingRoom);
+                await ObserveRelaySetup(networkManager, setup);
             }
         }
 
@@ -344,6 +355,7 @@ namespace NodeWar.Lobby
 
         public void Update()
         {
+            PumpPrivateLobby();
             switch (CurrentPhase)
             {
                 case Phase.CreatingRoom:
@@ -385,7 +397,24 @@ namespace NodeWar.Lobby
             if (Time.time - phaseEnterTime <= RelaySetupTimeout) return;
 
             Cleanup();
+            FailRelaySetup();
+        }
 
+        /// <summary>
+        /// A failed relay setup completes the phase at once instead of waiting out the deadline. A setup the
+        /// launcher has since cancelled or replaced is ignored: the manager already tore itself down.
+        /// </summary>
+        private async System.Threading.Tasks.Task ObserveRelaySetup(NetworkManager manager,
+            System.Threading.Tasks.Task<bool> setup)
+        {
+            bool ok = await setup;
+            if (ok || manager != networkManager || CurrentPhase != Phase.CreatingRoom) return;
+            Cleanup();
+            FailRelaySetup();
+        }
+
+        private void FailRelaySetup()
+        {
             if (localPlayerID == 0)
             {
                 Fail("Couldn't create a room.",
@@ -412,6 +441,11 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
+                if (ReceivePrivateLobby(packets[i]))
+                {
+                    if (networkManager == null) return;
+                    continue;
+                }
                 if (InputSerializer.ReadPacketType(packets[i]) != PacketType.Handshake) continue;
 
                 BuildIdentity self = LocalBuildIdentity.Current;
@@ -421,6 +455,12 @@ namespace NodeWar.Lobby
                 HandshakeVerdict verdict = InputSerializer.TryDeserializeHandshake(packets[i], out BuildIdentity peer)
                     ? InputSerializer.Compare(self, peer)
                     : HandshakeVerdict.PeerOlder;
+
+                if (privateLobbyActive && verdict == HandshakeVerdict.Compatible)
+                {
+                    if (!privatePeerCompatible) { privatePeerCompatible = true; Notify(); }
+                    continue; // Start releases the existing handshake.
+                }
 
                 // Three of each, as the shipped flow does: the reply is
                 // unreliable and a dropped one would strand the client.
@@ -467,6 +507,11 @@ namespace NodeWar.Lobby
 
             for (int i = 0; i < packets.Length; i++)
             {
+                if (ReceivePrivateLobby(packets[i]))
+                {
+                    if (networkManager == null) return;
+                    continue;
+                }
                 PacketType type = InputSerializer.ReadPacketType(packets[i]);
                 if (type != PacketType.HandshakeAck && type != PacketType.HandshakeReject) continue;
 
@@ -491,7 +536,7 @@ namespace NodeWar.Lobby
                 return;
             }
 
-            if (Time.time - phaseEnterTime <= handshakeTimeout) return;
+            if (privateLobbyActive || Time.time - phaseEnterTime <= handshakeTimeout) return;
 
             Cleanup();
             Fail("The host didn't answer.",
@@ -502,6 +547,7 @@ namespace NodeWar.Lobby
 
         private void Succeed()
         {
+            if (PrivateLobby != null) localPlayerID = PrivateLobby.SeatOf(privateLocalId);
             if (!RecheckLoadout()) return;
             CurrentPhase = Phase.Connected;
             Notify();
@@ -512,7 +558,7 @@ namespace NodeWar.Lobby
             match.isBotMatch = false;
             match.localPlayerID = localPlayerID;
             match.networkManager = networkManager;
-            match.isRanked = rankedMatchId != null;
+            match.isRanked = rankedMatchId != null && RatedMatch;
             match.matchId = rankedMatchId;
             match.playerIds = rankedPlayerIds;
 
@@ -598,6 +644,7 @@ namespace NodeWar.Lobby
         public void Dispose()
         {
             preparationVersion++;
+            LeavePrivateLobby();
             Cleanup();
             CurrentPhase = Phase.Idle;
         }

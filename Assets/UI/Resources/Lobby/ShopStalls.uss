@@ -1,0 +1,54 @@
+/* World panels have no backing. Only the offer cards use paper surfaces. */
+.lb-market-page { flex-grow: 1; background-color: var(--clear); overflow: hidden; }
+.lb-market-page > TemplateContainer { flex-grow: 1; min-height: 0; }
+.lb-market-projections { flex-grow: 1; }
+.lb-market-stall { position: absolute; width: 174px; transform-origin: 0 0; visibility: hidden; }
+.lb-market-title { font-size: var(--type-heading); color: var(--ink); white-space: normal; }
+.lb-market-countdown { color: var(--ink); margin-bottom: var(--space-3); font-size: var(--type-min); }
+.lb-market-shelf-title { color: var(--ink); font-size: var(--type-caption); margin-top: var(--space-2); margin-bottom: var(--space-2); }
+.lb-market-offers { flex-direction: column; }
+.lb-market-card { margin-bottom: var(--space-3); }
+.lb-market-tile {
+    min-height: 94px;
+    padding: var(--space-2);
+    align-items: center;
+    justify-content: center;
+    background-color: var(--surface-raised);
+    border-radius: var(--corner-md);
+    color: var(--ink);
+}
+.lb-market-tile:active { background-color: var(--surface-sunk); }
+.lb-market-tile:disabled { background-color: var(--surface-sunk); }
+.lb-market-tile--free { background-color: var(--action); color: var(--ink); }
+.lb-market-tile Label { font-size: var(--type-min); white-space: normal; -unity-text-align: middle-center; }
+.lb-market-price { color: var(--ink-mute); margin-top: 2px; }
+.lb-market-tile--free .lb-market-price { color: var(--ink); }
+.lb-market-ribbon {
+    position: absolute; top: -5px; right: 6px; padding: 2px 8px;
+    border-radius: var(--corner-sm); background-color: var(--confirm); color: var(--ink);
+}
+.lb-market-disclosure { color: var(--ink-mute); margin-top: 4px; }
+.lb-market-icon { width: 46px; height: 46px; margin-bottom: 4px; }
+.lb-market-stall--bank .lb-market-offers { flex-direction: row; flex-wrap: wrap; }
+.lb-market-stall--bank .lb-market-card { width: 30%; margin-right: 3%; }
+.lb-market-stall--bank .lb-market-tile { min-height: 102px; padding: 3px; }
+.lb-market-stall--bank .lb-market-icon { width: 32px; height: 32px; }
+.lb-market-stall--bank .lb-market-ribbon { right: 0; padding: 1px 4px; }
+
+/* Stalls are paper cut-outs; placement and depth remain owned by projection. */
+.lb-market-stall { padding: 12px; --paper-card-fill: var(--paper); }
+.lb-market-title, .lb-market-countdown, .lb-market-shelf-title { color: var(--ink); }
+.lb-market-title { font-size: 24px; }
+.lb-market-tile--free { --paper-card-fill: var(--paper-gold); }
+.lb-market-ribbon { background-color: var(--paper-gold); color: var(--ink); border-width: 1px; border-color: var(--ink); }
+.lb-market-tile Label { font-size: 14px; color: var(--ink); }
+
+/* Offer tiles are separate cut-out cards inside the stall; the paper underlay draws them. */
+.lb-market-tile, .lb-market-tile:active, .lb-market-tile:disabled, .lb-market-tile--free { background-color: var(--clear); border-color: var(--clear); border-width: 0; }
+.lb-market-tile { --paper-card-fill: var(--paper-light); }
+.lb-market-tile:disabled { --paper-card-fill: var(--paper-dark); }
+.lb-market-tile--free { --paper-card-fill: var(--paper-gold); }
+.lb-market-tile > .ui-paper-button__caption { display: none; }
+.lb-market-card { margin: 0 4px var(--space-3); }
+.lb-market-card > .ui-sticker__shadow { display: none; }
+.lb-market-stall--bank .lb-market-card { margin-right: 3%; }

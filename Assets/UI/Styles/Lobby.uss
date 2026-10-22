@@ -1,8 +1,7 @@
 /*
     Node War - lobby stylesheet.
 
-    The lobby's look, translated from lobby-prototype.html (v3.2). That file is
-    the spec: sizes, colours and timings below are its values, not new ones.
+    Lobby shell geometry. Visual roles follow docs/style-guide.md.
 
     Lobby only. Colour, spacing, shape, motion and type come from the shared
     theme (Tokens.uss, through the panel's UnityDefaultRuntimeTheme.tss); the
@@ -26,28 +25,28 @@
 
 :root {
     /* ---- stand-in scenery (CSS fakery in the prototype too). LobbyBackdrop
-       reads the sky and ground through customStyle, so these hold literals. ---- */
-    --backdrop-sky-0: rgb(247, 238, 219);
-    --backdrop-sky-1: rgb(231, 213, 182);
-    --backdrop-sky-2: rgb(210, 187, 149);
-    --backdrop-ground-top: rgb(207, 184, 143);
-    --backdrop-ground-bottom: rgb(188, 161, 115);
-    --backdrop-prop-a: rgb(198, 168, 111);
-    --backdrop-prop-b: rgb(185, 156, 107);
-    --backdrop-prop-c: rgb(203, 177, 131);
-    --backdrop-prop-d: rgb(194, 166, 114);
-    --backdrop-prop-shadow: rgba(90, 70, 40, 0.28);
+       uses these roles when the runtime stage is unavailable. ---- */
+    --backdrop-sky-0: var(--paper-light);
+    --backdrop-sky-1: var(--paper-light);
+    --backdrop-sky-2: var(--paper-light);
+    --backdrop-ground-top: var(--paper-dark);
+    --backdrop-ground-bottom: var(--paper-dark);
+    --backdrop-prop-a: var(--paper-dark);
+    --backdrop-prop-b: var(--paper-dark);
+    --backdrop-prop-c: var(--paper-dark);
+    --backdrop-prop-d: var(--paper-dark);
+    --backdrop-prop-shadow: var(--scrim);
 
     /* ---- the tab bar's resting icon ink ---- */
-    --tab-ink: rgb(169, 151, 124);
+    --tab-ink: var(--ink);
 
     /* ---- placeholder screens ---- */
-    --placeholder-ink: rgb(90, 50, 140);
-    --placeholder-fill: rgba(90, 50, 140, 0.12);
+    --placeholder-ink: var(--ink);
+    --placeholder-fill: var(--paper-dark);
 }
 
 /* ===================================================================
-   Root. Fredoka, the label reset, the weights (.ui-w500/600/700), the
+   Root. Font roles, the label reset, the weights (.ui-w500/600/700), the
    reset button, shadows (.ui-sticker__shadow, .ui-soft-shadow), lip
    buttons (.ui-button), the sheet, the bar and the toast are shared
    components in Components.uss. The lobby adds only its own ground.
@@ -136,18 +135,14 @@
     overflow: hidden;
 }
 
-/* The pages sit side by side in one track, which slides to show a page -
-   a tab press scrolls rather than cuts. NavigationController sets each
-   page to the host width and the track translate. */
+/* NavigationController translates edge-attached pages with LobbyMotion. */
 .lb-page-track {
     position: absolute;
     left: 0;
+    right: 0;
     top: 0;
     bottom: 0;
     flex-direction: row;
-    transition-property: translate;
-    transition-duration: var(--motion-page);
-    transition-timing-function: ease-out;
 }
 
 /* Every tab page. LobbyPage adds the class. */
@@ -176,287 +171,9 @@
     padding-bottom: 0;
 }
 
-/* ---- top bar ---- */
-
-.lb-topbar {
-    flex-direction: row;
-    align-items: center;
-    padding-top: 18px;
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    flex-shrink: 0;
-}
-
-.lb-purse {
-    flex-direction: row;
-    align-items: center;
-    background-color: var(--glass);
-    border-top-left-radius: 19px;
-    border-top-right-radius: 19px;
-    border-bottom-left-radius: 19px;
-    border-bottom-right-radius: 19px;
-    padding-top: 7px;
-    padding-bottom: 7px;
-    padding-left: 8px;
-    padding-right: 14px;
-    margin-right: var(--space-2);
-    color: var(--ink-inverse);
-    font-size: 19px;
-}
-
-.lb-root .lb-purse__value {
-    margin-left: 6px;
-    color: var(--ink-inverse);
-    font-size: 19px;
-}
-
-.lb-coin {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--action);
-    border-left-width: var(--stroke-mid);
-    border-right-width: var(--stroke-mid);
-    border-top-width: var(--stroke-mid);
-    border-bottom-width: var(--stroke-mid);
-    border-left-color: var(--action-edge);
-    border-right-color: var(--action-edge);
-    border-top-color: var(--action-edge);
-    border-bottom-color: var(--action-edge);
-    border-top-left-radius: 50%;
-    border-top-right-radius: 50%;
-    border-bottom-left-radius: 50%;
-    border-bottom-right-radius: 50%;
-}
-
-/* The coin's square hole - a ::before in the prototype. */
-.lb-coin__hole {
-    width: 7px;
-    height: 7px;
-    background-color: var(--action-edge);
-}
-
-.lb-leaf {
-    width: 24px;
-    height: 24px;
-    flex-shrink: 0;
-    background-color: var(--leaf);
-    border-left-width: var(--stroke-mid);
-    border-right-width: var(--stroke-mid);
-    border-top-width: var(--stroke-mid);
-    border-bottom-width: var(--stroke-mid);
-    border-left-color: var(--leaf-edge);
-    border-right-color: var(--leaf-edge);
-    border-top-color: var(--leaf-edge);
-    border-bottom-color: var(--leaf-edge);
-    border-top-left-radius: 3px;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 3px;
-    border-bottom-left-radius: 12px;
-    rotate: -12deg;
-}
-
-.lb-spacer {
-    flex-grow: 1;
-}
-
-.lb-gear {
-    width: 44px;
-    height: 44px;
-    border-top-left-radius: 50%;
-    border-top-right-radius: 50%;
-    border-bottom-left-radius: 50%;
-    border-bottom-right-radius: 50%;
-    background-color: var(--glass);
-    align-items: center;
-    justify-content: center;
-}
-
-.lb-gear--history {
-    margin-right: var(--space-2);
-}
-
-.lb-gear > .lb-icon {
-    width: 20px;
-    height: 20px;
-    -unity-background-image-tint-color: var(--ink-inverse);
-}
-
-/* ---- trophy strip ---- */
-
-.lb-strip-wrap {
-    margin-top: var(--space-3);
-    margin-left: var(--space-4);
-    margin-right: var(--space-4);
-    flex-shrink: 0;
-}
-
-.lb-strip {
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    padding-top: var(--space-2);
-    padding-bottom: var(--space-3);
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
-}
-
-.lb-strip__row {
-    flex-direction: row;
-    align-items: center;
-}
-
-/* Only the name is the link to Profile, not the whole strip. */
-.lb-name-btn {
-    flex-grow: 1;
-    flex-shrink: 1;
-    flex-direction: row;
-    align-items: center;
-    justify-content: flex-start;
-    padding-top: 6px;
-    padding-bottom: 6px;
-    padding-left: 4px;
-    padding-right: 8px;
-    margin-left: -4px;
-    margin-right: var(--space-2);
-    border-top-left-radius: var(--corner-sm);
-    border-top-right-radius: var(--corner-sm);
-    border-bottom-left-radius: var(--corner-sm);
-    border-bottom-right-radius: var(--corner-sm);
-    transition-property: scale, background-color;
-    transition-duration: var(--motion-press), var(--motion-release);
-}
-
-.lb-name-btn:active {
-    scale: 0.97 0.97;
-    background-color: var(--press-tint);
-}
-
-.lb-root .lb-name-btn__text {
-    font-size: 21px;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    flex-shrink: 1;
-}
-
-.lb-root .lb-name-btn__chev {
-    font-size: 19px;
-    color: var(--ink-mute);
-    margin-left: 5px;
-    translate: 0 -1px;
-}
-
-.lb-trophy {
-    flex-direction: row;
-    align-items: flex-end;
-    flex-shrink: 0;
-}
-
-.lb-root .lb-trophy__count {
-    font-size: 26px;
-    color: var(--trophy-ink);
-}
-
-.lb-root .lb-trophy__max {
-    margin-left: 3px;
-    font-size: 15px;
-    color: var(--ink-mute);
-    margin-bottom: 4px;
-}
-
-/* The trophy bar is the shared .ui-bar, sitting 3px under its row. */
-.lb-track {
-    margin-top: 3px;
-}
-
-.lb-root .lb-arena {
-    margin-top: 5px;
-    font-size: 15px;
-    color: var(--ink-mute);
-}
-
-/* ---- tab bar: thin floating capsule, icons only ---- */
-
-.lb-tabbar-dock {
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 26px;
-    align-items: center;
-}
-
-.lb-tabbar-wrap {
-    position: relative;
-}
-
-.lb-tabbar-wrap > .ui-soft-shadow {
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-}
-
-.lb-tabbar {
-    flex-direction: row;
-    background-color: var(--glass-strong);
-    border-top-left-radius: 27px;
-    border-top-right-radius: 27px;
-    border-bottom-left-radius: 27px;
-    border-bottom-right-radius: 27px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 5px;
-    padding-bottom: 5px;
-}
-
-.lb-tab {
-    width: 44px;
-    height: 44px;
-    margin-right: 4px;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    align-items: center;
-    justify-content: center;
-    transition-property: background-color, scale;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--last {
-    margin-right: 0;
-}
-
-.lb-tab > .lb-icon {
-    width: 19px;
-    height: 19px;
-    -unity-background-image-tint-color: var(--tab-ink);
-    transition-property: -unity-background-image-tint-color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-tab--on {
-    background-color: var(--action);
-    scale: 1.06 1.06;
-}
-
-.lb-tab--on > .lb-icon {
-    -unity-background-image-tint-color: var(--action-ink);
-}
-
+.lb-tabbar-dock { position: absolute; left: 0; right: 0; bottom: 0; }
+.ui-root .lb-pill-progress { background-color: var(--mk-action); border-width: 2px; border-color: var(--line-outer); border-radius: 26px; }
+.ui-root .mk-tabs--sliding .mk-tab--on { background-color: var(--clear); }
 /* ===================================================================
    Icons. Vector images drawn by LobbyIcon; colour is the tint, so it
    transitions like any other style property.
@@ -477,162 +194,6 @@
     right: 0;
     top: 0;
     bottom: 0;
-}
-
-/*
-    The lobby's sheet, on top of the shared .ui-sheet: it runs 48px past the
-    bottom edge, with that much extra padding. Its slide overshoots
-    (ease-out-back), and without the extension the overshoot lifted the
-    sheet's bottom edge into view as a gap.
-*/
-.lb-sheet {
-    bottom: -48px;
-    min-height: 46%;
-    max-height: 88%;
-    padding-bottom: 72px;
-    transition-property: translate, min-height;
-    transition-timing-function: ease-out-back;
-}
-
-.lb-sheet--large {
-    min-height: 88%;
-}
-
-.lb-view--hidden {
-    display: none;
-}
-
-/* ---- segmented control ---- */
-
-.lb-seg {
-    flex-direction: row;
-    background-color: var(--surface-sunk);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: 29px;
-    border-top-right-radius: 29px;
-    border-bottom-left-radius: 29px;
-    border-bottom-right-radius: 29px;
-    padding-left: 4px;
-    padding-right: 4px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    margin-bottom: 14px;
-}
-
-.lb-seg__btn {
-    flex-grow: 1;
-    flex-basis: 0;
-    height: 44px;
-    margin-right: 4px;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    border-bottom-left-radius: 22px;
-    border-bottom-right-radius: 22px;
-    font-size: 15px;
-    color: var(--ink-mute);
-    transition-property: background-color, color;
-    transition-duration: var(--motion-release);
-}
-
-.lb-seg__btn--last {
-    margin-right: 0;
-}
-
-/* The prototype's 0 2px 0 lift, as a bottom border. */
-.lb-seg__btn--on {
-    background-color: var(--surface-raised);
-    color: var(--ink);
-    border-bottom-width: var(--stroke-thin);
-    border-bottom-color: var(--shadow-soft);
-}
-
-/* Looks disabled but still answers a tap, so it can say why. */
-.lb-seg__btn--off {
-    opacity: 0.45;
-}
-
-/* ---- big buttons ---- */
-
-/* ---- code box ---- */
-
-.lb-codebox {
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    padding-top: var(--space-4);
-    padding-bottom: var(--space-4);
-    margin-bottom: var(--space-3);
-    align-items: center;
-}
-
-.lb-root .lb-codebox__label {
-    font-size: 15px;
-    color: var(--ink-mute);
-    -unity-text-align: middle-center;
-    white-space: normal;
-}
-
-.lb-root .lb-codebox__code {
-    font-size: 38px;
-    letter-spacing: 5px;
-    color: var(--ink);
-    -unity-text-align: middle-center;
-}
-
-/* The prototype's .field. The editable region is the inner child. */
-.lb-field {
-    margin-left: 0;
-    margin-right: 0;
-    margin-top: 0;
-    margin-bottom: var(--space-3);
-}
-
-.lb-field > .unity-base-text-field__input {
-    height: 60px;
-    background-color: var(--surface-raised);
-    background-image: none;
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    -unity-font-definition: var(--font-semibold);
-    font-size: 23px;
-    color: var(--ink);
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    --unity-selection-color: var(--action);
-    -unity-text-align: middle-center;
-}
-
-.lb-field > .unity-label {
-    display: none;
 }
 
 /* ===================================================================
@@ -660,19 +221,17 @@
     right: 0;
     top: 0;
     bottom: 0;
-    background-color: var(--surface);
-    translate: 100% 0;
-    transition-property: translate;
-    transition-duration: 300ms;
-    transition-timing-function: ease-out;
-}
-
-.lb-push--open {
-    translate: 0 0;
+    background-color: var(--mk-card);
+    border-width: 2px; border-bottom-width: 7px; border-color: var(--line-outer); border-radius: 14px;
 }
 
 .lb-push__scroll {
     flex-grow: 1;
+}
+
+/* PlayPopup hides its inactive views with this. */
+.lb-view--hidden {
+    display: none;
 }
 
 .lb-push__header {
@@ -684,7 +243,7 @@
 }
 
 .lb-root .lb-push__title {
-    font-size: 30px;
+    font-size: var(--type-title);
     color: var(--ink);
     margin-left: var(--space-3);
 }
@@ -733,7 +292,7 @@
 }
 
 .lb-placeholder__label {
-    font-size: 13px;
+    font-size: var(--type-caption);
     color: var(--placeholder-ink);
     -unity-font-style: bold;
     -unity-text-align: middle-center;
@@ -750,7 +309,7 @@
     justify-content: center;
     padding-left: var(--space-6);
     padding-right: var(--space-6);
-    padding-bottom: 130px;
+    padding-bottom: 96px;
 }
 
 .lb-stub__icon {
@@ -777,18 +336,18 @@
 .lb-stub__icon > .lb-icon {
     width: 40px;
     height: 40px;
-    -unity-background-image-tint-color: var(--ink-mute);
+    -unity-background-image-tint-color: var(--ink);
 }
 
 .lb-root .lb-stub__title {
-    font-size: 26px;
+    font-size: var(--type-title);
     color: var(--ink);
     margin-bottom: var(--space-2);
     -unity-text-align: middle-center;
 }
 
 .lb-root .lb-stub__body {
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
     white-space: normal;
     -unity-text-align: middle-center;
@@ -805,55 +364,6 @@
     right: 0;
     top: 0;
     bottom: 0;
-}
-
-.lb-menu {
-    position: absolute;
-    min-width: 200px;
-    background-color: var(--surface-raised);
-    border-left-width: var(--stroke);
-    border-right-width: var(--stroke);
-    border-top-width: var(--stroke);
-    border-bottom-width: var(--stroke);
-    border-left-color: var(--edge);
-    border-right-color: var(--edge);
-    border-top-color: var(--edge);
-    border-bottom-color: var(--edge);
-    border-top-left-radius: var(--corner-md);
-    border-top-right-radius: var(--corner-md);
-    border-bottom-left-radius: var(--corner-md);
-    border-bottom-right-radius: var(--corner-md);
-    overflow: hidden;
-    opacity: 0;
-    scale: 0.9 0.9;
-    transform-origin: top;
-    transition-property: opacity, scale;
-    transition-duration: 140ms, 180ms;
-    transition-timing-function: ease-out, ease-out-back;
-}
-
-.lb-menu--on {
-    opacity: 1;
-    scale: 1 1;
-}
-
-.lb-menu__row {
-    height: 52px;
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
-    font-size: 18px;
-    color: var(--ink);
-    -unity-text-align: middle-left;
-    border-bottom-width: var(--stroke-thin);
-    border-bottom-color: var(--rule);
-}
-
-.lb-menu__row--last {
-    border-bottom-width: 0;
-}
-
-.lb-menu__row:active {
-    background-color: var(--surface-sunk);
 }
 
 /* Applied to the long-pressed element while its menu is open. */
@@ -935,13 +445,13 @@
 .lb-loadout-line {
     flex-direction: row;
     flex-wrap: wrap;
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 }
 
 .lb-root .lb-loadout-line__part {
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
-    margin-right: 5px;
+    margin-right: 8px;
 }
 
 .lb-root .lb-loadout-line__part--short {

@@ -43,6 +43,10 @@ namespace NodeWar.Cloud
                     state = record.state,
                     createdUnixSeconds = record.createdUnixSeconds
                 };
+                var summary = state.History.Summaries?.FirstOrDefault(s => s.MatchId == matchId &&
+                    s.OpponentId == entry.opponentPlayerId);
+                entry.OpponentName = summary?.OpponentName ?? "";
+                entry.OpponentTag = summary?.OpponentTag ?? "";
                 if (record.state == MatchRecordState.Settled && record.outcomes != null)
                 {
                     var outcome = record.outcomes[self];

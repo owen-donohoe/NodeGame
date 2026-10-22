@@ -1,0 +1,25 @@
+.ui-root .teammate-row { min-height: 56px; flex-direction: row; align-items: center; padding: 8px 12px; border-top-width: 1px; border-top-color: rgba(45,35,25,0.15); }
+.ui-root .teammate-row .mk-avatar { width: 40px; height: 40px; margin-right: 8px; flex-shrink: 0; }
+.ui-root .teammate-who { flex-grow: 1; flex-shrink: 1; min-width: 0; margin-right: 8px; }
+.ui-root .teammate-who Label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-root .teammate-presence { flex-direction: row; align-items: center; }
+.ui-root .teammate-dot { width: 8px; height: 8px; border-radius: 4px; margin-right: 4px; flex-shrink: 0; }
+.ui-root .teammate-dot--online { background-color: #38834b; }
+.ui-root .teammate-dot--battle { background-color: #d58424; }
+.ui-root .teammate-dot--offline { background-color: #d2452f; }
+.ui-root .teammate-row .mk-btn { width: 88px; min-width: 88px; height: 40px; min-height: 40px; padding: 4px; margin: 0; flex-shrink: 0; }
+
+.ui-root .teammate-presence > Label { flex-grow: 1; flex-shrink: 0; min-width: 88px; }
+.ui-root .teammate-empty { min-height: 56px; padding: 8px 12px; -unity-text-align: middle-center; white-space: normal; }
+
+.ui-root #teammate-invite-sheet .mk-avatar { border-radius: 10px; }
+.ui-root .teammate-title { font-size: 22px; -unity-font-definition: var(--font-display); -unity-text-align: middle-center; margin: 0 0 12px; }
+.ui-root .teammate-handle { flex-direction: row; min-width: 0; }
+.ui-root .teammate-name, .ui-root .teammate-tag { font-size: 17px; -unity-font-definition: var(--font-display); margin: 0; padding: 0; }
+.ui-root .teammate-name { flex-shrink: 1; min-width: 0; }
+.ui-root .teammate-tag { flex-shrink: 0; }
+.ui-root #teammate-invite-sheet .mk-ledger { margin: 0 0 12px; }
+.ui-root .teammate-done { height: 48px; min-height: 48px; margin: 16px 0 0; }
+.ui-root .teammate-presence > Label { font-size: 13px; }
+
+.ui-root #teammate-invite-sheet .mk-ledger:last-child { margin-bottom: 0; }

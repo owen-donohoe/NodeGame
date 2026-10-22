@@ -5,6 +5,56 @@ namespace NodeWar.Lobby.Tests
 {
     public class WorkshopInventorySessionTests
     {
+        private static NodeWar.Backend.PlayerState Snapshot() => new NodeWar.Backend.PlayerState
+        {
+            Rank = new NodeWar.Backend.RankRecord { Arena = 2 },
+            Inventory = new NodeWar.Backend.InventoryRecord
+            {
+                OwnedVariants = new System.Collections.Generic.List<string>(),
+                OwnedSkins = new System.Collections.Generic.List<string>()
+            }
+        };
+
+        [Test]
+        public void FailedInventoryRetainsSnapshotAndLoadoutAndReleasesBusyGate()
+        {
+            var session = Open();
+            var state = Snapshot();
+            state.Inventory.OwnedVariants.Add("suit.guardian.e0");
+            state.Inventory.OwnedVariants.Add("suit.scout.e0");
+            session.AcceptState(state);
+            var chosen = LoadoutData.CreateEmpty(2);
+            chosen.suitIDs[1] = "suit_guardian";
+            session.TryBeginRequest(out var token);
+            Assert.IsTrue(session.Failed());
+            session.EndRequest(token);
+            Assert.AreSame(state, session.State);
+            Assert.IsFalse(session.Busy);
+            var model = new LoadoutScreenModel(LoadoutRules.OwnedEditor(chosen, 2, session.State).ToLoadout(), 2);
+            Assert.AreEqual("suit_guardian", model.ToData().suitIDs[1]);
+            model.Inspect("suit_scout", true);
+            Assert.IsTrue(model.Use(true, session.Busy));
+            Assert.IsFalse(session.AcceptState(null));
+            Assert.IsFalse(session.AcceptState(new NodeWar.Backend.PlayerState { Rank = state.Rank }));
+            Assert.AreSame(state, session.State);
+        }
+
+        [Test]
+        public void RetryBackoffIsCappedAndOneToastPerOutageAndAccountClearsState()
+        {
+            var session = Open();
+            Assert.IsTrue(session.Failed());
+            Assert.AreEqual(2, session.RetrySeconds);
+            Assert.IsFalse(session.Failed());
+            Assert.AreEqual(4, session.RetrySeconds);
+            for (int i = 0; i < 10; i++) session.Failed();
+            Assert.AreEqual(30, session.RetrySeconds);
+            session.AcceptState(Snapshot());
+            Assert.AreEqual(0, session.RetrySeconds);
+            Assert.IsTrue(session.Failed());
+            session.InvalidateAccount();
+            Assert.IsNull(session.State);
+        }
         private static WorkshopInventorySession Open(string baseId = "villager_guardian")
         {
             var session = new WorkshopInventorySession();
@@ -24,6 +74,25 @@ namespace NodeWar.Lobby.Tests
             session.Select("villager_guardian");
             Assert.That(session.IsCurrent(token), Is.False);
             Assert.That(session.IsVisitCurrent(token), Is.False);
+        }
+
+        [Test]
+        public void AccountChange_RejectsPreviousAccountResponses()
+        {
+            var session = Open("a");
+            Assert.That(session.TryBeginRequest(out var old), Is.True);
+            int visit = session.InvalidateAccount();
+            session.Select("a");
+            Assert.That(session.IsOpen, Is.True);
+            Assert.That(session.IsCurrent(old), Is.False);
+            Assert.That(session.IsVisitCurrent(old), Is.False);
+            Assert.That(session.IsVisitCurrent(visit), Is.True);
+            session.EndRequest(old);
+            Assert.That(session.TryBeginRequest(out var fresh), Is.True);
+            Assert.That(session.IsCurrent(fresh), Is.True);
+            var forged = new InventoryRequestToken(fresh.Visit, fresh.Selection, fresh.Request, fresh.BaseID, fresh.Account - 1);
+            Assert.That(session.IsCurrent(forged), Is.False, "the account generation alone must invalidate");
+            Assert.That(session.IsVisitCurrent(forged), Is.False);
         }
 
         [Test]

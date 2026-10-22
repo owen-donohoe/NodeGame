@@ -181,7 +181,6 @@ namespace NodeWar.EditorTools
             AssignLayout(so, "shopPageLayout", Load(UIRoot + "/Layouts/ShopPage.uxml"));
             AssignLayout(so, "socialPageLayout", Load(UIRoot + "/Layouts/SocialPage.uxml"));
             AssignLayout(so, "settingsPageLayout", Load(UIRoot + "/Layouts/SettingsPage.uxml"));
-            AssignLayout(so, "matchHistoryPageLayout", Load(UIRoot + "/Layouts/MatchHistoryPage.uxml"));
 
             AssignDefinitions<SuitDefinition>(so, "allSuits", DataRoot + "/Suits");
             AssignDefinitions<DistrictDefinition>(so, "allDistricts", DataRoot + "/Nodes");

@@ -9,13 +9,9 @@ namespace NodeWar.Lobby
     /// that flag a short side - so the three can never disagree about what
     /// "available" or "owned" means.
     ///
-    /// The rules, from docs/ui-migration-inventory.md:
-    ///   - Warrior is granted in low arenas by
-    ///     GameManager.BuildDraftedSuits, so a slot spent on it buys nothing;
-    ///   - Crossroads cannot be mapped to a DistrictType by GameManager, so a
-    ///     slot spent on it produces nothing.
-    /// Warrior becomes offered at arena 2; Crossroads is never offered. Base ownership
-    /// comes from server inventory, with starter ownership before state arrives.
+    /// Fixed defaults live in the loadout and become editable by era through
+    /// LoadoutRules. Base ownership and usability come from server inventory
+    /// and the shared debut policy, with starter ownership before state arrives.
     /// </summary>
     public class LoadoutCatalog
     {
@@ -104,10 +100,7 @@ namespace NodeWar.Lobby
         {
             int arena = LoadoutRules.ArenaOrFallback(state?.Rank);
             PlayerProfile profile = PlayerProfile.Instance;
-            var editor = LoadoutRules.LocalEditor(profile != null ? profile.Loadout : default, arena);
-            editor.DropUnavailable(id => IsSuitOffered(id, arena) && UnlockForBase(id, state).CanUse,
-                id => IsDistrictOffered(id, arena) && UnlockForBase(id, state).CanUse);
-            return editor;
+            return LoadoutRules.OwnedEditor(profile != null ? profile.Loadout : default, arena, state);
         }
     }
 }

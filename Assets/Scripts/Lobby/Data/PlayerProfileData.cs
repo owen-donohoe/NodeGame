@@ -17,6 +17,9 @@ namespace NodeWar.Lobby
         // Code reads and writes them through UnlockedDistrictIDs.
         public string[] unlockedNodeIDs;
         public int selectedGameModeIndex; // cast to GameMode
+        public int lobbyModeVersion;
+        public int selectedLobbyModeIndex;
+        public bool privateLobbyMode;
         public int boxesAvailable;
         public float boxProgress;
 
@@ -24,6 +27,9 @@ namespace NodeWar.Lobby
         // what an older save without this field deserialises to - so the
         // requested default costs no migration.
         public int workshopTabIndex;
+
+        public LoadoutRecord[] loadoutPresets;
+        public int activeLoadoutPreset;
 
         // Older saves omit this field and start false: the reminder has
         // not been shown on this device yet.
@@ -44,3 +50,4 @@ namespace NodeWar.Lobby
         }
     }
 }
+

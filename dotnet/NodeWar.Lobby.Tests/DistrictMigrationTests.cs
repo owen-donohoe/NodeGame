@@ -26,7 +26,10 @@ namespace NodeWar.Lobby.Tests
         public void DeckMergeKeepsFirstAndClearsRetired(string a, string b, string x, string y)
         {
             var record = new LoadoutRecord { nodeIDs = new[] { a, b } };
-            CollectionAssert.AreEqual(new[] { x, y }, record.ToLoadout().districtIDs);
+            var expected = new System.Collections.Generic.List<string> { "node_farm", "node_mine", "node_town" };
+            foreach (string id in new[] { x, y }) if (id.Length > 0 && !expected.Contains(id)) expected.Add(id);
+            while (expected.Count < 5) expected.Add("");
+            CollectionAssert.AreEqual(expected, record.ToLoadout().districtIDs);
             CollectionAssert.AreEqual(new[] { a, b }, record.nodeIDs, "Detached conversion must not edit source.");
         }
         [TestCase(7)]
@@ -38,7 +41,7 @@ namespace NodeWar.Lobby.Tests
                 out _, out _, out _, out _, out _));
             Assert.IsFalse(PlacementLegality.IsDraftable((DistrictType)retired));
             Assert.AreEqual(4, (int)LoadoutTypes.DistrictForLobbyId(
-                new LoadoutRecord { nodeIDs = new[] { "node_camp", "" } }.ToLoadout().districtIDs[0]));
+                new LoadoutRecord { nodeIDs = new[] { "node_camp", "" } }.ToLoadout().districtIDs[3]));
         }
     }
 }

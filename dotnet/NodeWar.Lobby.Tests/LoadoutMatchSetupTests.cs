@@ -8,6 +8,41 @@ namespace NodeWar.Lobby.Tests
     [TestFixture]
     public class LoadoutMatchSetupTests
     {
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void EveryShortOwnedLoadout_PreservesWireShapeAndBuildsMatch(int arena)
+        {
+            string[] suits = { "suit_warrior", "suit_guardian", "suit_scout" };
+            string[] districts = { "node_farm", "node_mine", "node_town", "node_barracks", "node_village" };
+            var board = PremadeMaps.Hourglass01();
+            for (int suitCount = 0; suitCount <= 3; suitCount++)
+            for (int districtCount = 0; districtCount <= 5; districtCount++)
+            {
+                var data = new LoadoutData { suitIDs = new string[3], districtIDs = new string[5] };
+                Array.Copy(suits, data.suitIDs, suitCount);
+                Array.Copy(districts, data.districtIDs, districtCount);
+                data = LoadoutData.Normalized(data, arena);
+                var owned = data.suitIDs.Concat(data.districtIDs).Where(id => !string.IsNullOrEmpty(id))
+                    .Select(id => NodeWar.Backend.CatalogIds.Variant(LoadoutTypes.CatalogBaseForLobbyId(id), 0)).ToList();
+                var state = new NodeWar.Backend.PlayerState { Rank = new NodeWar.Backend.RankRecord { Arena = arena },
+                    Inventory = new NodeWar.Backend.InventoryRecord { OwnedVariants = owned } };
+                Assert.IsTrue(LoadoutRules.IsComplete(data, arena, state));
+                for (int seat = 0; seat < 2; seat++)
+                {
+                    var packet = NodeWar.Network.DraftSerializer.SerializeDraftLoadout(seat, data);
+                    Assert.IsTrue(NodeWar.Network.DraftSerializer.TryDeserializeDraftLoadout(packet, out int decodedSeat, out var decoded));
+                    Assert.AreEqual(seat, decodedSeat);
+                    CollectionAssert.AreEqual(data.suitIDs, decoded.suitIDs);
+                    CollectionAssert.AreEqual(data.districtIDs, decoded.districtIDs);
+                    var pool = LoadoutMatchSetup.DistrictPool(decoded, board.baseDraftDistrictsP0);
+                    Assert.AreEqual(data.districtIDs.Count(id => !string.IsNullOrEmpty(id)), pool.Length);
+                    Assert.AreEqual(data.suitIDs.Count(id => !string.IsNullOrEmpty(id)), LoadoutMatchSetup.DraftedSuits(decoded).Length);
+                    var setup = new PlayerSetup { suits = LoadoutMatchSetup.DraftedSuits(decoded), districts = LoadoutMatchSetup.DraftedDistricts(decoded) };
+                    Assert.DoesNotThrow(() => MatchFactory.Build(GameBalanceData.Default(), board, Array.Empty<DraftPlacement>(), new[] { setup, setup }));
+                }
+            }
+        }
+
         private static LoadoutData Low() => new LoadoutData
         {
             suitIDs = new[] { "suit_guardian", "suit_scout" },
@@ -25,13 +60,12 @@ namespace NodeWar.Lobby.Tests
         {
             var board = PremadeMaps.Hourglass01();
             var pool = LoadoutMatchSetup.DistrictPool(Low(), board.baseDraftDistrictsP0);
-            Assert.IsTrue(LoadoutMatchSetup.GetsFreeGrants(Low()));
-            CollectionAssert.AreEqual(new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Village,
+            CollectionAssert.AreEqual(new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Town,
                 DistrictType.Barracks, DistrictType.Forge }, pool.Select(p => p.DistrictType));
-            CollectionAssert.AreEqual(new[] { false, false, false, true, true }, pool.Select(p => p.IsFromLoadout));
+            CollectionAssert.AreEqual(new[] { true, true, true, true, true }, pool.Select(p => p.IsFromLoadout));
             CollectionAssert.AreEqual(new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Scout },
                 LoadoutMatchSetup.DraftedSuits(Low()));
-            CollectionAssert.AreEqual(new[] { (int)DistrictType.Barracks, (int)DistrictType.Forge },
+            CollectionAssert.AreEqual(new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town, (int)DistrictType.Barracks, (int)DistrictType.Forge },
                 LoadoutMatchSetup.DraftedDistricts(Low()));
         }
 
@@ -39,7 +73,6 @@ namespace NodeWar.Lobby.Tests
         public void HighPool_FiveChosenOnly()
         {
             var pool = LoadoutMatchSetup.DistrictPool(High(), PremadeMaps.Hourglass01().baseDraftDistrictsP0);
-            Assert.IsFalse(LoadoutMatchSetup.GetsFreeGrants(High()));
             CollectionAssert.AreEqual(LoadoutMatchSetup.DraftedDistricts(High()), pool.Select(p => (int)p.DistrictType));
             Assert.AreEqual(5, pool.Length);
             Assert.IsTrue(pool.All(p => p.IsFromLoadout));
@@ -69,7 +102,7 @@ namespace NodeWar.Lobby.Tests
                 var pool = LoadoutMatchSetup.DistrictPool(loadout,
                     seat == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1);
                 Assert.AreEqual(5, pool.Length);
-                Assert.AreEqual(seat != highSeat, pool.Any(p => !p.IsFromLoadout));
+                Assert.IsTrue(pool.All(p => p.IsFromLoadout));
                 Assert.AreEqual(seat != highSeat, LoadoutMatchSetup.DraftedSuits(loadout).Contains((int)SuitType.Warrior));
             }
         }
@@ -78,8 +111,8 @@ namespace NodeWar.Lobby.Tests
         public void BlankSlots_DoNotChangeMode()
         {
             var board = PremadeMaps.Hourglass01();
-            Assert.AreEqual(0, LoadoutMatchSetup.DistrictPool(LoadoutData.CreateEmpty(2), board.baseDraftDistrictsP0).Length);
-            Assert.AreEqual(0, LoadoutMatchSetup.DraftedSuits(LoadoutData.CreateEmpty(2)).Length);
+            Assert.AreEqual(3, LoadoutMatchSetup.DistrictPool(LoadoutData.CreateEmpty(2), board.baseDraftDistrictsP0).Length);
+            Assert.AreEqual(1, LoadoutMatchSetup.DraftedSuits(LoadoutData.CreateEmpty(2)).Length);
             Assert.AreEqual(3, LoadoutMatchSetup.DistrictPool(LoadoutData.CreateEmpty(1), board.baseDraftDistrictsP0).Length);
             CollectionAssert.AreEqual(new[] { (int)SuitType.Warrior }, LoadoutMatchSetup.DraftedSuits(LoadoutData.CreateEmpty(1)));
         }
@@ -202,14 +235,12 @@ namespace NodeWar.Lobby.Tests
             var suits = new[] { (int)SuitType.Guardian, (int)SuitType.Medic, (int)SuitType.Scout };
             var districts = new[] { (int)DistrictType.Barracks, (int)DistrictType.Forge,
                 (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Village };
-            bool low = false;
             switch (invalid)
             {
                 case "shape":
                     loadout.districtIDs = new string[2];
-                    low = true;
                     suits = new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Medic };
-                    districts = Array.Empty<int>();
+                    districts = new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town };
                     break;
                 case "unknownSuit":
                     loadout.suitIDs[0] = "suit_unknown";
@@ -238,26 +269,22 @@ namespace NodeWar.Lobby.Tests
                     break;
                 case "nullShape":
                     loadout = default;
-                    low = true;
                     suits = new[] { (int)SuitType.Warrior };
-                    districts = Array.Empty<int>();
+                    districts = new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town };
                     break;
                 case "nullSuits":
                     loadout.suitIDs = null;
-                    low = true;
                     suits = new[] { (int)SuitType.Warrior };
-                    districts = districts.Take(2).ToArray();
+                    districts = new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town }.Concat(districts.Take(2)).ToArray();
                     break;
                 case "nullDistricts":
                     loadout.districtIDs = null;
-                    low = true;
                     suits = new[] { (int)SuitType.Warrior, (int)SuitType.Guardian, (int)SuitType.Medic };
-                    districts = Array.Empty<int>();
+                    districts = new[] { (int)DistrictType.Farm, (int)DistrictType.Mine, (int)DistrictType.Town };
                     break;
             }
             var originalSuits = loadout.suitIDs?.ToArray();
             var originalDistricts = loadout.districtIDs?.ToArray();
-            Assert.AreEqual(low, LoadoutMatchSetup.GetsFreeGrants(loadout));
             var pool = LoadoutMatchSetup.DistrictPool(loadout, null);
             CollectionAssert.AreEqual(districts, pool.Select(p => (int)p.DistrictType));
             Assert.IsTrue(pool.All(p => p.IsFromLoadout));
@@ -274,11 +301,10 @@ namespace NodeWar.Lobby.Tests
             LoadoutData loadout = default;
             var basePool = PremadeMaps.Hourglass01().baseDraftDistrictsP0;
             var pool = LoadoutMatchSetup.DistrictPool(loadout, basePool);
-            Assert.IsTrue(LoadoutMatchSetup.GetsFreeGrants(loadout));
-            CollectionAssert.AreEqual(basePool, pool.Select(p => p.DistrictType));
-            Assert.IsTrue(pool.All(p => !p.IsFromLoadout));
+            CollectionAssert.AreEqual(new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Town }, pool.Select(p => p.DistrictType));
+            Assert.IsTrue(pool.All(p => p.IsFromLoadout));
             CollectionAssert.AreEqual(new[] { (int)SuitType.Warrior }, LoadoutMatchSetup.DraftedSuits(loadout));
-            Assert.IsEmpty(LoadoutMatchSetup.DraftedDistricts(loadout));
+            Assert.AreEqual(3, LoadoutMatchSetup.DraftedDistricts(loadout).Length);
         }
     }
 }

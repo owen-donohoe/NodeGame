@@ -63,9 +63,8 @@ namespace NodeWar.Backend
     public sealed class RankedQueuePresenter
     {
         private const double PollIntervalSeconds = 2.0;
-        private const double BotOfferSeconds = 90.0;
+        public const double BotOfferSeconds = 90.0;
         private const int MaxAutoRequeues = 3;
-        private const int MaxConsecutivePollExceptions = 3;
         private const string RequeueMessage = "Opponent's connection failed — finding a new match…";
 
         private enum Phase { Idle, Preflight, ForfeitPrompt, WaitingForResult, Queue, CancellingForBot, Connecting, Rendezvous, Blocked }
@@ -92,7 +91,6 @@ namespace NodeWar.Backend
         // Queue state.
         private string ticketId;
         private bool pollInFlight;
-        private int consecutivePollExceptions;
         private bool botOfferShown;
         private double startedAtSeconds;
         private double lastPollAtSeconds;
@@ -326,7 +324,6 @@ namespace NodeWar.Backend
             now = Math.Max(now, lastTickNow);
             phase = Phase.Queue;
             pollInFlight = false;
-            consecutivePollExceptions = 0;
             botOfferShown = false;
             startedAtSeconds = now;
             lastPollAtSeconds = now;
@@ -383,16 +380,11 @@ namespace NodeWar.Backend
                 catch (Exception ex)
                 {
                     if (!IsCurrent(attemptGeneration) || phase != Phase.Queue) return;
-                    consecutivePollExceptions++;
-                    if (consecutivePollExceptions >= MaxConsecutivePollExceptions)
-                    {
-                        _ = CancelTicketSwallowedAsync(pollingTicket);
-                        Fail(ShortMessage(ex));
-                    }
+                    _ = CancelTicketSwallowedAsync(pollingTicket);
+                    Fail(ShortMessage(ex));
                     return;
                 }
                 if (!IsCurrent(attemptGeneration) || phase != Phase.Queue) return;
-                consecutivePollExceptions = 0;
 
                 switch (result.state)
                 {

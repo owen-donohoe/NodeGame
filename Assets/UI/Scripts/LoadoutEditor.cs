@@ -12,7 +12,7 @@ namespace NodeWar.Lobby
     /// expresses the same rules across five [SerializeField] slot displays and a
     /// visibility pass, where they cannot be tested at all.
     ///
-    /// Slot counts come from the canonical source shape, or an explicit local arena.
+    /// Every era uses three suit/five district slots; the arena selects its fixed items.
     /// </summary>
     public class LoadoutEditor
     {
@@ -21,6 +21,8 @@ namespace NodeWar.Lobby
 
         private readonly string[] suitIDs;
         private readonly string[] districtIDs;
+        private readonly string[] lockedSuits;
+        private readonly string[] lockedDistricts;
 
         // Type-indexed equipment and skins ride along untouched; only the chosen slots are edited.
         private readonly int[] suitEras;
@@ -28,22 +30,20 @@ namespace NodeWar.Lobby
         private readonly string[] skinIDs;
 
         /// <summary>
-        /// Starts from an existing loadout, preserving its canonical capacity.
-        /// Default and legacy saved shapes normalize to low mode.
+        /// Starts from an existing loadout at the offline arena fallback.
         /// </summary>
-        public LoadoutEditor(LoadoutData source)
+        public LoadoutEditor(LoadoutData source) : this(source, 1) { }
+
+        public LoadoutEditor(LoadoutData source, int arena, bool restoreLocks = true)
         {
-            LoadoutData normalized = LoadoutData.Normalized(source);
+            LoadoutData normalized = restoreLocks ? LoadoutData.Normalized(source, arena) : LoadoutData.Normalized(source);
+            lockedSuits = LoadoutRules.LockedSuits(arena);
+            lockedDistricts = LoadoutRules.LockedDistricts(arena);
             suitIDs = normalized.suitIDs;
             districtIDs = normalized.districtIDs;
             suitEras = normalized.suitEras;
             districtEras = normalized.districtEras;
             skinIDs = normalized.skinIDs;
-        }
-
-        /// <summary>Explicit local editing after rank is known, or arena 1 for offline edits.</summary>
-        public LoadoutEditor(LoadoutData source, int arena) : this(LoadoutData.Normalized(source, arena))
-        {
         }
 
         public int SuitSlotCount { get { return suitIDs.Length; } }
@@ -107,37 +107,55 @@ namespace NodeWar.Lobby
             return Equip(districtIDs, districtID);
         }
 
+        public bool ReplaceSuitSlot(int slot, string suitID)
+        {
+            if (IsSuitSlotLocked(slot) || !InRange(suitIDs, slot) || string.IsNullOrEmpty(suitIDs[slot]) ||
+                string.IsNullOrEmpty(suitID) || IsSuitEquipped(suitID)) return false;
+            suitIDs[slot] = suitID;
+            return true;
+        }
+
+        public bool ReplaceDistrictSlot(int slot, string districtID)
+        {
+            if (IsDistrictSlotLocked(slot) || !InRange(districtIDs, slot) || string.IsNullOrEmpty(districtIDs[slot]) ||
+                string.IsNullOrEmpty(districtID) || IsDistrictEquipped(districtID)) return false;
+            districtIDs[slot] = districtID;
+            return true;
+        }
+
         /// <summary>Empties a suit slot. Returns what was in it, or "".</summary>
         public string ClearSuitSlot(int slot)
         {
-            return Clear(suitIDs, slot);
+            return IsSuitSlotLocked(slot) ? "" : Clear(suitIDs, slot);
         }
 
         public string ClearDistrictSlot(int slot)
         {
-            return Clear(districtIDs, slot);
+            return IsDistrictSlotLocked(slot) ? "" : Clear(districtIDs, slot);
+        }
+
+        public bool IsSuitSlotLocked(int slot) => System.Array.IndexOf(lockedSuits, SuitAt(slot)) >= 0;
+        public bool IsDistrictSlotLocked(int slot) => System.Array.IndexOf(lockedDistricts, DistrictAt(slot)) >= 0;
+
+        public void ClearChoices()
+        {
+            for (int i = 0; i < SuitSlotCount; i++)
+                suitIDs[i] = i < lockedSuits.Length ? lockedSuits[i] : "";
+            for (int i = 0; i < DistrictSlotCount; i++)
+                districtIDs[i] = i < lockedDistricts.Length ? lockedDistricts[i] : "";
         }
 
         /// <summary>
-        /// Drops any equipped ID that is no longer offered - a suit that has
-        /// become globally granted, or a district the picker excludes. Returns
-        /// how many entries were cleared, so the caller can decide whether the
-        /// profile is worth rewriting.
-        ///
-        /// This is what stops an existing save from showing an item in a slot
-        /// that the list has no row for. Both cases exist today: a profile can
-        /// hold suit_warrior, which every player is granted regardless
-        /// (GameManager.BuildDraftedSuits), and node_crossroads, which
-        /// LoadoutTypes.DistrictForLobbyId discards (inventory findings 8 and 4). Either is
-        /// a slot already producing nothing; clearing it hands the slot back.
+        /// Drops unavailable editable choices, preserving the era's locked items.
+        /// Returns the cleared count so persistence can avoid redundant writes.
         /// </summary>
         public int DropUnavailable(System.Func<string, bool> suitOffered,
                                    System.Func<string, bool> districtOffered)
         {
             int cleared = 0;
 
-            cleared += DropFrom(suitIDs, suitOffered);
-            cleared += DropFrom(districtIDs, districtOffered);
+            cleared += DropFrom(suitIDs, id => System.Array.IndexOf(lockedSuits, id) >= 0 || suitOffered == null || suitOffered(id));
+            cleared += DropFrom(districtIDs, id => System.Array.IndexOf(lockedDistricts, id) >= 0 || districtOffered == null || districtOffered(id));
 
             return cleared;
         }

@@ -48,9 +48,27 @@ public class LobbyIconDrawerTests
             Assert.AreEqual(original[i], Enum.GetName(typeof(LobbyIconKind), i), "Persisted value " + i);
     }
 
-    [TestCase(LobbyIconKind.NavBarHome, LobbyIconKind.Spark)]
-    [TestCase(LobbyIconKind.NavBarSocial, LobbyIconKind.Smile)]
-    [TestCase(LobbyIconKind.NavBarShop, LobbyIconKind.Shop)]
+    [Test]
+    public void SemanticAndRedesignKindsKeepAppendOnlyValues()
+    {
+        string[] kinds = { "NavBarHome", "NavBarSocial", "NavBarShop", "DailyBox", "VictoryBox", "ShopBundle",
+            "GoldLeaf", "MagicResource", "SuitTreeAvailable", "SuitTreeOwned", "SuitTreeEquipped", "SuitTreeLocked",
+            "ProfileYouAreHere", "IndicatorEffect", "IndicatorThreatToCore", "IndicatorThreatToTerritory",
+            "IndicatorNodeUnderAttack", "IndicatorNodeContested", "EmoteHappy", "EmoteWhiteFlag",
+            "CosmeticTinRoof", "CosmeticPaperBanner", "CosmeticStrawHat", "Burger", "Bell", "Funnel", "Swap",
+            "CrateSmall", "CrateMedium", "Info", "Spectate", "Chat", "Guild", "Refresh", "AddFriend", "Invite", "Search", "Laurel" };
+        for (int i = 0; i < kinds.Length; i++)
+            Assert.AreEqual(kinds[i], Enum.GetName(typeof(LobbyIconKind), i + 30));
+    }
+
+    [TestCase(LobbyIconKind.NavBarHome, "DrawShop(p); break;")]
+    [TestCase(LobbyIconKind.NavBarSocial, "DrawSocial(p); break;")]
+    [TestCase(LobbyIconKind.NavBarShop, "DrawMarket(p); break;")]
+    public void NavigationHasDedicatedSemanticDrawing(LobbyIconKind kind, string drawing)
+    {
+        Assert.AreEqual(drawing, Drawers()[kind.ToString()]);
+    }
+
     [TestCase(LobbyIconKind.DailyBox, LobbyIconKind.Spark)]
     [TestCase(LobbyIconKind.VictoryBox, LobbyIconKind.Envelope)]
     [TestCase(LobbyIconKind.ShopBundle, LobbyIconKind.Envelope)]

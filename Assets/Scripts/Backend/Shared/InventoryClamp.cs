@@ -8,7 +8,8 @@ namespace NodeWar.Backend
         /// <summary>
         /// Settlement-only demotion clamp; ownership and skins are retained. A tree suit
         /// must have an equipped node available at the arena, else it drops to the root.
-        /// Everything else (districts, non-tree suits) keeps the era rule.
+        /// Other variants keep the era rule. Bases before debut retain a dormant
+        /// root which the shared equip predicate refuses until usable.
         /// </summary>
         public static bool ClampToArena(InventoryRecord inventory, int arena)
         {
@@ -17,6 +18,19 @@ namespace NodeWar.Backend
             arena = Math.Max(0, arena);
             foreach (string baseId in new List<string>(inventory.Equipped.Variants.Keys))
             {
+                // Owned bases before their debut remain dormant at their root;
+                // the same shared predicate refuses them in client/server equip.
+                if (!LoadoutCapacityPolicy.IsBaseUsable(baseId, arena))
+                {
+                    string root = CatalogIds.Variant(baseId, 0);
+                    if (inventory.Equipped.Variants[baseId] != root)
+                    {
+                        if (!inventory.OwnedVariants.Contains(root)) inventory.OwnedVariants.Add(root);
+                        inventory.Equipped.Variants[baseId] = root;
+                        changed = true;
+                    }
+                    continue;
+                }
                 if (SuitTree.IsTreeSuit(baseId)) { changed |= ClampSuit(inventory, baseId, arena); continue; }
                 if (!CatalogIds.TryParseVariant(inventory.Equipped.Variants[baseId], out string equippedBase, out int era) ||
                     equippedBase != baseId || era <= arena) continue;

@@ -77,6 +77,10 @@ namespace NodeWar.Lobby
 
         private GameMode mode = GameMode.OneVsOne;
         private bool useLan;
+        public event System.Action<GameMode> ModeChanged;
+        public event System.Action BotRequested;
+        public event System.Action<string> PrivateJoinRequested;
+        private bool internalEntry;
 
         public PlayPopup(VisualTreeAsset layout, LobbyManager lobbyManager, LobbyToast toast, LobbySheet sheet,
                          LoadoutCatalog catalog)
@@ -102,6 +106,11 @@ namespace NodeWar.Lobby
             modeOnline = Root.Q<Button>("play-mode-1v1");
             modeBot = Root.Q<Button>("play-mode-bot");
             modeTesting = Root.Q<Button>("play-mode-testing");
+            // Testing is reached through the development-only burger destination.
+            modeTesting?.RemoveFromHierarchy();
+            if (modeOnline != null) modeOnline.style.display = DisplayStyle.None;
+            if (modeBot != null) modeBot.style.display = DisplayStyle.None;
+            if (modeLocked != null) modeLocked.style.display = DisplayStyle.None;
             modeLocked = Root.Q<Button>("play-mode-locked");
             transportRow = Root.Q<VisualElement>("play-transport");
             relayTabButton = Root.Q<Button>("play-transport-relay");
@@ -187,13 +196,37 @@ namespace NodeWar.Lobby
         {
             // Ranked is the default play (D14). Private modes stay one tap away
             // until the Social tab takes them over.
-            mode = GameMode.Locked;
+            Show(GameMode.Locked);
+        }
+
+        public void Show(GameMode selectedMode)
+        {
+            internalEntry = false;
+#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+            if (selectedMode == GameMode.Testing) selectedMode = GameMode.Locked;
+#endif
+            mode = selectedMode;
 
             SetTransport(useLan);
             SetMode(mode);
             ShowView(View.Find);
 
             if (sheet != null) sheet.Open(Root);
+        }
+
+        public void OpenRankedFlow()
+        {
+            Show(GameMode.Locked);
+            internalEntry = true;
+            StartRankedQueue();
+        }
+
+        public void OpenJoinCode(bool lan)
+        {
+            Show(GameMode.OneVsOne);
+            internalEntry = true;
+            SetTransport(lan);
+            SetVisible(transportRow, false);
         }
 
         public void Hide()
@@ -248,6 +281,7 @@ namespace NodeWar.Lobby
             }
 
             RefreshNote();
+            ModeChanged?.Invoke(mode);
         }
 
         private static void SetOn(Button button, bool on)
@@ -298,6 +332,7 @@ namespace NodeWar.Lobby
         private void OnStart()
         {
             if (mode == GameMode.Locked) StartRankedQueue();
+            else if (mode == GameMode.Bot) BotRequested?.Invoke();
             else LaunchLocal(mode);
         }
 
@@ -342,14 +377,15 @@ namespace NodeWar.Lobby
         /// <summary>Bot offer accepted: the ticket is already cancelled. Unranked by construction.</summary>
         private void OnRankedBotAccepted()
         {
-            LaunchLocal(GameMode.Bot);
+            BotRequested?.Invoke();
         }
 
         /// <summary>The view's Cancel/Back. While an attempt runs the presenter handles it.</summary>
         private void OnRankedBack()
         {
             if (rankedPresenter != null && rankedPresenter.IsActive) return;
-            ShowView(View.Find);
+            if (internalEntry) Hide();
+            else ShowView(View.Find);
         }
 
         private void DisposeRankedPresenter()
@@ -411,6 +447,10 @@ namespace NodeWar.Lobby
         {
             string entered = codeField != null ? codeField.value : "";
 
+            if (!useLan && PrivateJoinRequested != null)
+            {
+                Hide(); PrivateJoinRequested.Invoke(entered); return;
+            }
             if (useLan) launcher.JoinLan(entered); else launcher.JoinRelay(entered);
             ShowView(View.Status);
             RefreshStatus();

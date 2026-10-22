@@ -19,7 +19,7 @@ sources:
   - scripts/compile-check.ps1
   - Assets/Scripts/Editor/TestBridge.cs
   - Assets/Tests/EditMode/Outline/NodeWar.View.Outline.Tests.asmdef
-verified: 41a0df69
+verified: f576d156
 ---
 
 # Test evidence

@@ -18,8 +18,8 @@ namespace NodeWar.Lobby
     }
 
     /// <summary>
-    /// The menu a long press opens: a scrim, the pressed element lifted, and a
-    /// short list anchored where the finger was.
+    /// The menu a long press opens: a shared sheet, the pressed element lifted, and a
+    /// short list of actions.
     ///
     /// One instance for the whole lobby. Pages attach it with
     /// <see cref="Attach"/>, which adds a <see cref="LongPressManipulator"/>
@@ -28,35 +28,33 @@ namespace NodeWar.Lobby
     /// </summary>
     public class LobbyContextMenu
     {
-        // Menu geometry from the prototype: 52px rows, kept 12px from any edge,
-        // opened below the finger unless that would run off the bottom.
-        private const float RowHeight = 52f;
-        private const float Edge = 12f;
-        private const float BelowFinger = 18f;
-        private const float MenuWidth = 212f;
-
         private readonly VisualElement layer;
-        private readonly VisualElement scrim;
         private readonly VisualElement menu;
+        private readonly MkSheet sheet;
         private VisualElement lifted;
+        private readonly VisualElement bubbleScrim = new VisualElement();
+        private readonly VisualElement bubble = new VisualElement();
 
         public LobbyContextMenu(VisualElement root)
         {
             layer = root.Q<VisualElement>("menu-layer");
-            scrim = root.Q<VisualElement>("menu-scrim");
-            menu = root.Q<VisualElement>("menu");
-
-            if (scrim != null)
-            {
-                scrim.RegisterCallback<PointerDownEvent>(evt =>
-                {
-                    Close();
-                    evt.StopPropagation();
-                });
-            }
+            layer.Clear();
+            sheet = new MkSheet { name = "menu" };
+            layer.Add(sheet);
+            menu = sheet.Body;
+            sheet.Closed += Close;
+            bubbleScrim.AddToClassList("lb-context-bubble-scrim");
+            bubble.AddToClassList("lb-context-bubble");
+            var styles = Resources.Load<StyleSheet>("Lobby/ContextBubble");
+            if (styles != null) layer.styleSheets.Add(styles);
+            layer.Add(bubbleScrim); layer.Add(bubble);
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.None;
+            bubbleScrim.RegisterCallback<PointerDownEvent>(evt => { Close(); evt.StopPropagation(); });
         }
 
         public bool IsOpen { get; private set; }
+        public event System.Action Opened;
+        public event System.Action Closed;
 
         /// <summary>
         /// Gives an element a long-press menu. The rows are asked for when the
@@ -86,10 +84,8 @@ namespace NodeWar.Lobby
 
                 Button row = new Button();
                 row.text = item.Label;
-                row.AddToClassList("ui-reset-button");
-                row.AddToClassList("lb-menu__row");
+                row.AddToClassList("mk-btn");
                 row.AddToClassList("ui-w500");
-                if (i == items.Count - 1) row.AddToClassList("lb-menu__row--last");
 
                 row.clicked += () =>
                 {
@@ -100,27 +96,8 @@ namespace NodeWar.Lobby
                 menu.Add(row);
             }
 
-            Vector2 local = layer.WorldToLocal(panelPosition);
-            float width = layer.layout.width;
-            float height = layer.layout.height;
-            float menuHeight = items.Count * RowHeight;
-
-            float left = Mathf.Clamp(local.x - MenuWidth * 0.5f, Edge, Mathf.Max(Edge, width - MenuWidth - Edge));
-            float top = local.y + BelowFinger;
-            if (top + menuHeight > height - 196f) top = local.y - menuHeight - 30f;
-            top = Mathf.Max(Edge, top);
-
-            menu.style.left = left;
-            menu.style.top = top;
-            menu.style.width = MenuWidth;
             menu.pickingMode = PickingMode.Position;
-            menu.AddToClassList("lb-menu--on");
-
-            if (scrim != null)
-            {
-                scrim.AddToClassList("ui-scrim--on");
-                scrim.pickingMode = PickingMode.Position;
-            }
+            sheet.Open();
 
             lifted = source;
             if (lifted != null) lifted.AddToClassList("lb-lifted");
@@ -129,6 +106,34 @@ namespace NodeWar.Lobby
             // Haptics setting. Settings are not saved yet, so there is no flag.
 
             IsOpen = true;
+            Opened?.Invoke();
+        }
+
+        /// <summary>Anchored player actions, kept on the shared menu layer above a room sheet.</summary>
+        public void ShowBubble(VisualElement source, IList<LobbyMenuItem> items)
+        {
+            if (source == null || items == null || items.Count == 0) return;
+            Close(); bubble.Clear();
+            var tip = new VisualElement { pickingMode = PickingMode.Ignore }; tip.AddToClassList("lb-context-bubble-tip"); bubble.Add(tip);
+            foreach (var item in items)
+            {
+                var row = GuildViews.Button(item.Label, () => { Close(); item.Action?.Invoke(); });
+                bubble.Add(row);
+            }
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.Flex;
+            bubbleScrim.BringToFront(); bubble.BringToFront();
+            var point = layer.WorldToLocal(new Vector2(source.worldBound.center.x, source.worldBound.yMax));
+            float width = Mathf.Min(240, Mathf.Max(160, layer.layout.width - 24));
+            float left = Mathf.Clamp(point.x - width / 2, 12, Mathf.Max(12, layer.layout.width - width - 12));
+            float height = items.Count * 52 + 32;
+            bool above = point.y + height + 12 > layer.layout.height;
+            bubble.style.width = width;
+            bubble.style.left = left;
+            bubble.style.top = above ? Mathf.Max(12, layer.WorldToLocal(new Vector2(0, source.worldBound.yMin)).y - height - 8) : point.y + 8;
+            tip.style.left = Mathf.Clamp(point.x - left - 8, 16, width - 32);
+            tip.EnableInClassList("lb-context-bubble-tip--below", above);
+            lifted = source; lifted.AddToClassList("lb-lifted");
+            IsOpen = true; Opened?.Invoke();
         }
 
         public void Close()
@@ -136,24 +141,20 @@ namespace NodeWar.Lobby
             if (!IsOpen) return;
 
             IsOpen = false;
+            bubbleScrim.style.display = bubble.style.display = DisplayStyle.None;
+            sheet.Close();
 
             if (menu != null)
             {
                 // The rows stay in place so the menu can fade out, but a faded
                 // row must not keep catching taps meant for the page beneath.
-                menu.RemoveFromClassList("lb-menu--on");
                 menu.pickingMode = PickingMode.Ignore;
                 foreach (VisualElement row in menu.Children()) row.pickingMode = PickingMode.Ignore;
             }
 
-            if (scrim != null)
-            {
-                scrim.RemoveFromClassList("ui-scrim--on");
-                scrim.pickingMode = PickingMode.Ignore;
-            }
-
             if (lifted != null) lifted.RemoveFromClassList("lb-lifted");
             lifted = null;
+            Closed?.Invoke();
         }
     }
 }

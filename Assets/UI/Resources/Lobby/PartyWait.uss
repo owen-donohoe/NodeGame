@@ -1,0 +1,9 @@
+.lb-party-safe { flex-grow: 1; background-color: var(--clear); justify-content: center; }
+.lb-party-body { margin: 24px; }
+.lb-party-title { font-size: var(--type-title); white-space: normal; margin-bottom: 16px; }
+.lb-party-presence-row { flex-direction: row; align-items: center; }
+.lb-party-presence { width: 10px; height: 10px; border-radius: 5px; background-color: var(--paper-dark); margin-right: 8px; }
+.lb-party-slots { flex-direction: row; margin: 16px 0; }
+.lb-party-slot { flex-grow: 1; flex-basis: 0; min-height: 48px; white-space: normal; margin: 4px; padding: 8px; background-color: var(--scrim); }
+.lb-party-slot-filled { background-color: var(--confirm); }
+.lb-party-body PaperButton { min-width: 48px; min-height: 48px; margin-top: 8px; }

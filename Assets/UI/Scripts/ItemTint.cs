@@ -76,6 +76,16 @@ namespace NodeWar.Lobby
         /// display name, upper-cased. Falls back to the ID, then to a dash, so
         /// a tile always has something on it.
         /// </summary>
+        /// <summary>Seed for a skin placeholder: distinct per skin of the same base item, stable across runs.</summary>
+        public static string SkinKey(string itemID, string skinID) => itemID + "/" + skinID;
+
+        /// <summary>The badge character for a skin: the first letter of its last dotted segment ("skin.base.gold" gives G).</summary>
+        public static string SkinBadge(string skinID)
+        {
+            int dot = skinID == null ? -1 : skinID.LastIndexOf('.');
+            return MonogramFor(null, dot >= 0 ? skinID.Substring(dot + 1) : skinID);
+        }
+
         public static string MonogramFor(string displayName, string itemID)
         {
             string source = !string.IsNullOrEmpty(displayName) ? displayName : itemID;

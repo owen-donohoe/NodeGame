@@ -8,8 +8,8 @@
 :root {
     /* The aside keeps the look it had under the old theme: a darker card edge
        and caption ink than the rest of the lobby uses. */
-    --social-card-edge: rgb(72, 56, 40);
-    --social-caption-ink: rgb(105, 90, 72);
+    --social-card-edge: var(--ink);
+    --social-caption-ink: var(--ink);
 }
 
 .social {

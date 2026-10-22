@@ -4,13 +4,13 @@ namespace NodeWar.Lobby
     /// A player's pre-match selection: which suits and which districts they
     /// bring into the draft.
     ///
-    /// Array lengths encode low (2/2) or high (3/5) chosen capacity, including
-    /// blank slots. SuitSlots and DistrictSlots are maxima, not effective counts.
+    /// Arrays always contain three suits and five districts, including fixed
+    /// items and blank choices. Legacy 2/2 saves gain the starter items once.
     ///
     /// This struct crosses the wire (DraftSerializer) and persists to disk
     /// (PlayerProfile, via JsonUtility). Both encode the arrays with an
-    /// explicit count. Remote data preserves its own canonical mode; only local
-    /// arena-aware operations resize it.
+    /// explicit count. Remote data preserves its choices; local arena-aware
+    /// operations restore any missing locks.
     ///
     /// Because it is a struct, `new LoadoutData()` leaves both arrays null.
     /// Anything that reads the arrays should go through
@@ -19,10 +19,10 @@ namespace NodeWar.Lobby
     [System.Serializable]
     public struct LoadoutData
     {
-        /// <summary>Maximum chosen suit capacity; low arenas use two slots plus free Warrior.</summary>
+        /// <summary>Total suit capacity, including locked items.</summary>
         public const int SuitSlots = 3;
 
-        /// <summary>Maximum chosen district capacity; low arenas use two slots plus free base pieces.</summary>
+        /// <summary>Total district capacity, including locked items.</summary>
         public const int DistrictSlots = 5;
 
         public string[] suitIDs;
@@ -50,9 +50,7 @@ namespace NodeWar.Lobby
         public string[] skinIDs;
 
         /// <summary>
-        /// A low-arena loadout with both arrays allocated at two slots and
-        /// every entry an empty string. This is what an unset loadout looks
-        /// like; it is never null-armed.
+        /// A fresh loadout containing Warrior and Farm/Mine/Town, with blank choices.
         /// </summary>
         public static LoadoutData CreateEmpty()
         {
@@ -61,29 +59,61 @@ namespace NodeWar.Lobby
 
         public static LoadoutData CreateEmpty(int arena)
         {
-            return Resize(default, NodeWar.Backend.LoadoutCapacityPolicy.SuitCapacity(arena),
-                NodeWar.Backend.LoadoutCapacityPolicy.DistrictCapacity(arena));
+            return Normalized(default, arena);
         }
 
         /// <summary>
-        /// A detached copy preserving canonical 2/2 or 3/5 shape. Null/default
-        /// and noncanonical saved shapes become low mode, retaining the first
-        /// two choices; null entries become empty strings. Wire readers validate
-        /// counts before calling this, so legacy save migration cannot mask a bad packet.
+        /// A detached 3/5 copy. Legacy short saves gain defaults and retain up
+        /// to two choices per side. Canonical blanks stay blank. Wire readers
+        /// validate counts first so migration cannot mask malformed packets.
         /// </summary>
         public static LoadoutData Normalized(LoadoutData source)
         {
-            bool high = NodeWar.Backend.LoadoutCapacityPolicy.IsHighShape(
-                source.suitIDs == null ? 0 : source.suitIDs.Length,
-                source.districtIDs == null ? 0 : source.districtIDs.Length);
-            return Resize(source, high ? SuitSlots : 2, high ? DistrictSlots : 2);
+            bool high = source.suitIDs != null && source.suitIDs.Length >= SuitSlots &&
+                source.districtIDs != null && source.districtIDs.Length >= DistrictSlots;
+            if (high) return Resize(source, SuitSlots, DistrictSlots);
+            // Low-shape choices follow the fixed defaults. Preserve up to two
+            // distinct choices per side; repeated normalization is idempotent.
+            var result = Resize(source, SuitSlots, DistrictSlots);
+            result.suitIDs = WithDefaults(source.suitIDs, SuitSlots, NodeWar.Backend.LoadoutCapacityPolicy.DefaultSuits());
+            result.districtIDs = WithDefaults(source.districtIDs, DistrictSlots,
+                NodeWar.Backend.LoadoutCapacityPolicy.DefaultDistricts());
+            return result;
         }
 
-        /// <summary>Local resizing only. First migrate legacy shapes so their third suit stays dropped.</summary>
+        /// <summary>Local editing: migrate legacy choices, then restore the current era's locks.</summary>
         public static LoadoutData Normalized(LoadoutData source, int arena)
         {
-            return Resize(Normalized(source), NodeWar.Backend.LoadoutCapacityPolicy.SuitCapacity(arena),
-                NodeWar.Backend.LoadoutCapacityPolicy.DistrictCapacity(arena));
+            var result = Normalized(source);
+            result.suitIDs = WithLocks(result.suitIDs, NodeWar.Backend.LoadoutCapacityPolicy.LockedSuits(arena));
+            result.districtIDs = WithLocks(result.districtIDs, NodeWar.Backend.LoadoutCapacityPolicy.LockedDistricts(arena));
+            return result;
+        }
+
+        private static string[] WithDefaults(string[] source, int count, string[] defaults)
+        {
+            var result = NormalizeSlots(null, count);
+            System.Array.Copy(defaults, result, defaults.Length);
+            int next = defaults.Length;
+            if (source != null)
+                for (int i = 0; i < System.Math.Min(2, source.Length) && next < count; i++)
+                    if (!string.IsNullOrEmpty(source[i]) && System.Array.IndexOf(result, source[i]) < 0)
+                        result[next++] = source[i];
+            return result;
+        }
+
+        private static string[] WithLocks(string[] source, string[] locks)
+        {
+            // Existing choices keep their slots where possible. Missing fixed
+            // defaults use blanks first, then displace the last editable item.
+            foreach (string id in locks)
+            {
+                if (System.Array.IndexOf(source, id) >= 0) continue;
+                int slot = System.Array.FindIndex(source, string.IsNullOrEmpty);
+                if (slot < 0) slot = System.Array.FindLastIndex(source, value => System.Array.IndexOf(locks, value) < 0);
+                if (slot >= 0) source[slot] = id;
+            }
+            return source;
         }
 
         private static LoadoutData Resize(LoadoutData source, int suits, int districts)

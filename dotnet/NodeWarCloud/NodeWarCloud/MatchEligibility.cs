@@ -9,6 +9,8 @@ namespace NodeWar.Cloud
     {
         public static string Check(MatchRecord record, Log log)
         {
+            if (record.protocol == 6 || record.protocol > ProtocolVersion.Current)
+                return "Incompatible protocol version; use protocol 7.";
             var header = log?.header;
             if (header == null || header.matchId != record.matchId || header.playerIds == null ||
                 header.playerIds.Length != 2 || header.playerIds[0] != record.playerIds[0] ||
@@ -19,7 +21,7 @@ namespace NodeWar.Cloud
             if (mapError != null) return mapError;
             if (log.loadouts == null || log.loadouts.Length != 2) return "Log needs two loadouts.";
             var board = log.board;
-            if (record.protocol >= 6)
+            if (record.protocol == ProtocolVersion.Current)
             {
                 string budgetError = CheckBudgets(record, log, out board);
                 if (budgetError != null) return budgetError;
@@ -30,13 +32,13 @@ namespace NodeWar.Cloud
                 if (loadout?.suits == null || loadout.districts == null) return "Log needs complete loadouts.";
                 foreach (int type in loadout.suits)
                 {
-                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras);
+                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForSuit(type), type, loadout.suitEras, record.protocol);
                     if (error != null) return error;
                 }
                 foreach (int type in loadout.districts)
                 {
                     if (!NodeWar.Simulation.DistrictRoster.IsActive((NodeWar.Simulation.DistrictType)type)) return "Inactive district.";
-                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras);
+                    string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type), type, loadout.districtEras, record.protocol);
                     if (error != null) return error;
                 }
             }
@@ -48,13 +50,8 @@ namespace NodeWar.Cloud
                     if (p != 0 && p != 1) return "Invalid draft player.";
                     if (!NodeWar.Simulation.PlacementLegality.IsDraftable(placement.districtType)) return "Inactive draft district.";
                     int type = (int)placement.districtType;
-                    // Only the server catalog's board may waive ownership, never the log's own claim.
-                    var basePool = record.protocol < 6 ? null
-                        : p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
-                    bool free = LoadoutCapacityPolicy.GetsFreeGrants(record.players[p].Rank.Arena) &&
-                        basePool != null && System.Array.IndexOf(basePool, placement.districtType) >= 0;
                     string error = CheckVariant(record.players[p], LoadoutTypes.CatalogBaseForDistrict(type),
-                        type, log.loadouts[p].districtEras, requireOwnership: !free);
+                        type, log.loadouts[p].districtEras, record.protocol);
                     if (error != null) return error;
                 }
             return null;
@@ -91,12 +88,10 @@ namespace NodeWar.Cloud
                 if (loadout?.suits == null || loadout.districts == null)
                     return "Log needs complete loadouts.";
                 int arena = record.players[p].Rank.Arena;
-                bool low = LoadoutCapacityPolicy.GetsFreeGrants(arena);
-                int suitBudget = LoadoutCapacityPolicy.SuitCapacity(arena) + (low ? 1 : 0);
+                int suitBudget = LoadoutCapacityPolicy.SuitCapacity(arena);
                 if (loadout.suits.Length > suitBudget ||
                     loadout.districts.Length > LoadoutCapacityPolicy.DistrictCapacity(arena))
                     return "Loadout exceeds snapshot arena budget.";
-                bool warrior = false;
                 for (int i = 0; i < loadout.suits.Length; i++)
                 {
                     int type = loadout.suits[i];
@@ -105,9 +100,12 @@ namespace NodeWar.Cloud
                         return "Invalid chosen suit.";
                     for (int j = 0; j < i; j++)
                         if (loadout.suits[j] == type) return "Duplicate chosen suit.";
-                    if (type == (int)SuitType.Warrior) warrior = true;
+                    if (!LoadoutCapacityPolicy.IsBaseUsable(LoadoutTypes.CatalogBaseForSuit(type), arena))
+                        return "Drafted base is unavailable at the snapshot arena.";
                 }
-                if (low && !warrior) return "Low arena loadout needs its free Warrior.";
+                foreach (string id in LoadoutCapacityPolicy.LockedSuits(arena))
+                    if (System.Array.IndexOf(loadout.suits, (int)LoadoutTypes.SuitForLobbyId(id)) < 0)
+                        return "Loadout is missing a locked suit.";
 
                 budgets[p] = new int[LoadoutTypes.DistrictTypeCount];
                 for (int i = 0; i < loadout.districts.Length; i++)
@@ -118,14 +116,13 @@ namespace NodeWar.Cloud
                         LoadoutTypes.CatalogBaseForDistrict(type) == null)
                         return "Invalid chosen district.";
                     if (budgets[p][type] != 0) return "Duplicate chosen district.";
+                    if (!LoadoutCapacityPolicy.IsBaseUsable(LoadoutTypes.CatalogBaseForDistrict(type), arena))
+                        return "Drafted base is unavailable at the snapshot arena.";
                     budgets[p][type]++;
                 }
-                if (low)
-                {
-                    var basePool = p == 0 ? board.baseDraftDistrictsP0 : board.baseDraftDistrictsP1;
-                    if (basePool != null)
-                        foreach (var type in basePool) budgets[p][(int)type]++;
-                }
+                foreach (string id in LoadoutCapacityPolicy.LockedDistricts(arena))
+                    if (budgets[p][(int)LoadoutTypes.DistrictForLobbyId(id)] == 0)
+                        return "Loadout is missing a locked district.";
             }
             if (log.draft != null)
                 foreach (var placement in log.draft)
@@ -140,16 +137,16 @@ namespace NodeWar.Cloud
             return null;
         }
         private static string CheckVariant(MatchPlayerSnapshot player, string baseId, int type, int[] eras,
-            bool requireOwnership = true)
+            ushort protocol, bool requireOwnership = true)
         {
             if (baseId == null) return "Unknown drafted type.";
             // ERAS encodes a null table as an empty array when another table is present.
             if (eras != null && eras.Length > 0 && type >= eras.Length) return "Incomplete era table.";
             int era = eras == null || eras.Length == 0 ? 0 : eras[type];
             if (era < 0 || era >= CatalogIds.EraCount ||
-                (SuitTree.IsTreeSuit(baseId)
+                (protocol == ProtocolVersion.Current ? !LoadoutCapacityPolicy.IsVariantUsable(baseId, CatalogIds.Variant(baseId, era), player.Rank.Arena) : (SuitTree.IsTreeSuit(baseId)
                     ? !SuitTree.IsAvailable(CatalogIds.Variant(baseId, era), player.Rank.Arena)
-                    : era > player.Rank.Arena))
+                    : era > player.Rank.Arena)))
                 return "Drafted era exceeds the snapshot arena.";
             if (requireOwnership && !player.OwnedVariants.Contains(CatalogIds.Variant(baseId, era)))
                 return "Drafted variant was not owned in the snapshot.";

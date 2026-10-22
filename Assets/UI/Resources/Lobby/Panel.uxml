@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:lobby="NodeWar.Lobby">
+    <ui:Style src="Panel.uss" />
+    <ui:VisualElement name="panel-scrim" class="lb-panel-scrim" />
+    <ui:VisualElement name="panel-safe-area" class="lb-panel-safe-area" picking-mode="Ignore">
+        <lobby:PaperCard class="lb-panel-body" name="paper-lb-panel-body-0">
+            <ui:VisualElement class="lb-panel-heading">
+                <ui:Label name="panel-title" />
+                <lobby:PaperButton name="panel-close" text="Close" />
+            </ui:VisualElement>
+            <ui:ScrollView name="panel-content" />
+        </lobby:PaperCard>
+    </ui:VisualElement>
+<ui:Style src="PaperLobby.uss" /></ui:UXML>

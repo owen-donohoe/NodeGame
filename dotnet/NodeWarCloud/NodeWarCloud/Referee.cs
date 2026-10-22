@@ -64,6 +64,8 @@ namespace NodeWar.Cloud
                     verdict.error = error;
                     return verdict;
                 }
+                if (log.header.protocol == 6 || log.header.protocol > NodeWar.Backend.ProtocolVersion.Current)
+                    return RefereeVerdict.Refused("Incompatible protocol version; use protocol 7.");
                 if (!balances.TryGet(log.header.content, out var balance))
                 {
                     verdict.error = "unknown balance";

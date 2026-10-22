@@ -18,7 +18,7 @@ sources:
   - Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
   - Assets/Scripts/Game/Simulation/NodeActionRules.cs
-verified: e9255fad
+verified: 0d22d7d8
 ---
 
 # Node War
@@ -35,7 +35,7 @@ The shipped `hourglass-01` map is a mirrored 7×7 grid ringed by ocean. Cores si
 
 Each player begins with one owned Core and three villagers. Other districts begin neutral. A player may have at most 25 units; dead bodies still occupy population, permanently consumed units do not.
 
-Before play, both players agree to the same map and rules, then manually place districts in a turn-based draft. Below arena index 2, each player chooses two suits and two districts and receives Warrior plus the map's Farm/Mine/Village base pool. From arena index 2, each chooses three suits and five districts without those grants; Warrior can be omitted. P0 places first. Ordinary districts require empty Land slots; Pier requires an empty Lake slot; Cores and Ocean cannot receive picks. A piece with no legal cell is skipped. Draft ends when neither player has a playable piece.
+Before play, both players agree to the same map and rules, then place districts in a turn-based draft. Every loadout has five district slots and three suit slots. Era index equals arena index: era 0 fixes Farm/Mine/Town and Warrior, leaving two choices per side; era 1 fixes Farm/Mine, leaving three district and three suit choices; era 2+ fixes nothing. Fresh presets start with Farm/Mine/Town and Warrior, which remain ordinary choices after unlocking. Clear keeps only the current era's fixed items. Queue entry requires each side full or no further owned, currently usable item to choose. Human drafts use that list without extra grants. P0 places first. Ordinary districts require empty Land slots; Pier requires an empty Lake slot; Cores and Ocean refuse picks. Unplaceable pieces are skipped; drafting ends when neither player has a playable piece.
 
 On timeout, a still-legal parked piece is confirmed. Otherwise the lowest playable pick receives a legal fallback placement. Drafted districts use their placer's era and keep their type/era when captured. They do not transform into the capturing player's loadout choice. Rules also support upgrade-category slots whose full capture selects the claimer's drafted district, falling back to the base district.
 
@@ -115,7 +115,7 @@ Workshop forging costs 3 metal, with a 30-tick per-era cooldown, and never repea
 
 ## Combat suits, fighting and recovery
 
-Equipping a combat suit requires an Idle body without a combat suit, its owner's permitted district, a suit in the player's resolved drafted suits and enough food/materials. This includes the free Warrior at low arenas. Missing suit stats prevent equipping. Warrior, Guardian, Scout and Berserker provide their balance-defined fighting/movement stats; Medic heals the most damaged friendly unit on its node instead of attacking. Combat-suited bodies never work.
+Equipping a combat suit requires an Idle body without a combat suit, its owner's permitted district, a suit in the player's resolved drafted suits and enough food/materials. Warrior follows the same loadout rule, fixed only in era 0. Missing suit stats prevent equipping. Warrior, Guardian, Scout and Berserker provide their balance-defined fighting/movement stats; Medic heals the most damaged friendly unit on its node instead of attacking. Combat-suited bodies never work.
 
 Opposing living units sharing a node enter combat. Attackers assign targets round-robin, with targets ordered by descending fight priority then unit ID. Attacks follow cooldowns; district ownership does not directly reduce damage. A Medic heals instead on its combat turn.
 

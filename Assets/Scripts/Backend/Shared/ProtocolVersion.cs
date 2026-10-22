@@ -14,6 +14,7 @@ namespace NodeWar.Backend
         //    Count prefixes alone cannot make setup identical: older clients normalize to
         //    fixed capacities and always add the free grants. No packet layout change.
         //    Release only with the capacity, grant, server/bot and launch changes integrated.
-        public const ushort Current = 6;
+        // 7: Always 3/5 slots, with era locks inside; no appended map grants.
+        public const ushort Current = 7;
     }
 }

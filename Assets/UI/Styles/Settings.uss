@@ -13,11 +13,11 @@
 }
 
 .lb-push__scroll .unity-scroll-view__content-container {
-    padding-bottom: 40px;
+    padding-bottom: 32px;
 }
 
 .lb-root .lb-group-label {
-    font-size: 15px;
+    font-size: var(--type-secondary);
     color: var(--ink-mute);
     padding-left: var(--space-4);
     padding-right: var(--space-4);
@@ -25,7 +25,7 @@
 }
 
 .lb-root .lb-group-label--first {
-    margin-top: 20px;
+    margin-top: 16px;
 }
 
 .lb-group-wrap {
@@ -107,14 +107,14 @@
 .lb-root .lb-grow__label {
     flex-grow: 1;
     flex-basis: 0;
-    font-size: 18px;
+    font-size: var(--type-heading);
     color: var(--ink);
     margin-right: var(--space-3);
     -unity-text-align: middle-left;
 }
 
 .lb-root .lb-grow__value {
-    font-size: 16px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
 }
 
@@ -146,7 +146,7 @@
 
 .lb-root .cp-title {
     margin-left: var(--space-3);
-    font-size: 26px;
+    font-size: var(--type-title);
     color: var(--ink);
 }
 
@@ -159,11 +159,11 @@
     width: 100%;
     max-width: 760px;
     align-self: center;
-    padding-bottom: 48px;
+    padding-bottom: 32px;
 }
 
 .lb-root .cp-header {
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
     margin-top: var(--space-4);
     padding-left: var(--space-4);
@@ -308,7 +308,7 @@
     flex-grow: 1;
     flex-basis: 0;
     flex-shrink: 1;
-    font-size: 19px;
+    font-size: var(--type-heading);
     color: var(--ink);
     white-space: normal;
     -unity-text-align: middle-left;
@@ -355,7 +355,7 @@
 
 .lb-root .cp-action__text {
     flex-grow: 1;
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink);
     -unity-text-align: middle-right;
     white-space: normal;
@@ -386,7 +386,7 @@
 .lb-root .cp-hold-value {
     width: 70px;
     margin-left: var(--space-2);
-    font-size: 17px;
+    font-size: var(--type-body);
     color: var(--ink-mute);
     -unity-text-align: middle-right;
 }
@@ -419,7 +419,7 @@
     border-top-right-radius: var(--corner-md);
     border-bottom-left-radius: var(--corner-md);
     border-bottom-right-radius: var(--corner-md);
-    font-size: 18px;
+    font-size: var(--type-heading);
     color: var(--ink);
 }
 
@@ -478,13 +478,13 @@
 }
 
 .lb-root .cp-item__text {
-    font-size: 18px;
+    font-size: var(--type-heading);
     color: var(--ink);
     -unity-text-align: middle-left;
 }
 
 .lb-root .lb-settings-footnote {
-    font-size: 15px;
+    font-size: var(--type-secondary);
     color: var(--ink-mute);
     -unity-text-align: middle-center;
     margin-top: var(--space-2);
@@ -515,7 +515,7 @@
 }
 
 .lb-root .lb-history__title {
-    font-size: 18px;
+    font-size: var(--type-heading);
     color: var(--ink);
     -unity-text-align: middle-left;
 }

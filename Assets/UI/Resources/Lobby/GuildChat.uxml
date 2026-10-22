@@ -1,0 +1,13 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <ui:Style src="Guild.uss" />
+    <ui:VisualElement name="guild-chat-safe" class="mk-card lb-guild-chat-safe">
+        <ui:VisualElement name="guild-chat-header" />
+        <ui:Button name="guild-chat-close" class="mk-btn" text="Back" />
+        <ui:ScrollView name="guild-chat-list" class="lb-guild-chat-list" mode="Vertical" vertical-scroller-visibility="Hidden" />
+        <ui:Label name="guild-chat-error" class="mk-muted" />
+        <ui:VisualElement class="lb-guild-compose">
+            <ui:TextField name="guild-chat-input" class="mk-field" tooltip="Plain text and emoji, up to 200 characters" />
+            <ui:Button name="guild-chat-send" class="mk-btn mk-btn--primary" text="Send" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

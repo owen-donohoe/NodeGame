@@ -51,8 +51,8 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData result = LoadoutData.Normalized(new LoadoutData());
 
-            Assert.AreEqual(Slots(S), result.suitIDs);
-            Assert.AreEqual(Slots(N), result.districtIDs);
+            Assert.AreEqual(Slots(S, "suit_warrior"), result.suitIDs);
+            Assert.AreEqual(Slots(N, "node_farm", "node_mine", "node_town"), result.districtIDs);
         }
 
         [Test]
@@ -62,8 +62,8 @@ namespace NodeWar.Lobby.Tests
 
             Assert.AreEqual(S, result.suitIDs.Length);
             Assert.AreEqual(N, result.districtIDs.Length);
-            Assert.IsTrue(result.suitIDs.All(s => s == ""));
-            Assert.IsTrue(result.districtIDs.All(s => s == ""));
+            CollectionAssert.AreEqual(Slots(S, "suit_warrior"), result.suitIDs);
+            CollectionAssert.AreEqual(Slots(N, "node_farm", "node_mine", "node_town"), result.districtIDs);
         }
 
         [Test]
@@ -75,8 +75,8 @@ namespace NodeWar.Lobby.Tests
                 districtIDs = new string[0]
             });
 
-            Assert.AreEqual(Slots(S, "suit_scout"), result.suitIDs);
-            Assert.AreEqual(Slots(N), result.districtIDs);
+            Assert.AreEqual(Slots(S, "suit_warrior", "suit_scout"), result.suitIDs);
+            Assert.AreEqual(Slots(N, "node_farm", "node_mine", "node_town"), result.districtIDs);
         }
 
         [Test]
@@ -162,8 +162,8 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData decoded = RoundTrip(LoadoutData.CreateEmpty(), 0);
 
-            Assert.AreEqual(Slots(S), decoded.suitIDs);
-            Assert.AreEqual(Slots(N), decoded.districtIDs);
+            Assert.AreEqual(Slots(S, "suit_warrior"), decoded.suitIDs);
+            Assert.AreEqual(Slots(N, "node_farm", "node_mine", "node_town"), decoded.districtIDs);
         }
 
         /// <summary>
@@ -176,8 +176,8 @@ namespace NodeWar.Lobby.Tests
         {
             LoadoutData decoded = RoundTrip(new LoadoutData(), 0);
 
-            Assert.AreEqual(Slots(S), decoded.suitIDs);
-            Assert.AreEqual(Slots(N), decoded.districtIDs);
+            Assert.AreEqual(Slots(S, "suit_warrior"), decoded.suitIDs);
+            Assert.AreEqual(Slots(N, "node_farm", "node_mine", "node_town"), decoded.districtIDs);
         }
 
         [Test]
