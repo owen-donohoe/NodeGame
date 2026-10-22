@@ -100,8 +100,16 @@ namespace NodeWar.Backend
     public sealed class HistoryRecord
     {
         public List<string> MatchIds;
+        public LastLoadout LastLoadout;
         public PlayerStats Stats = new PlayerStats();
         public List<HistorySummary> Summaries = new List<HistorySummary>();
+    }
+
+    /// <summary>Lobby IDs from the most recently settled verified log, in chosen order.</summary>
+    public sealed class LastLoadout
+    {
+        public string[] SuitIds;
+        public string[] DistrictIds;
     }
 
     public sealed class HistorySummary

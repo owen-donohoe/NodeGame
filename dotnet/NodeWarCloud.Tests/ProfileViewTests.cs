@@ -36,8 +36,8 @@ namespace NodeWar.Cloud.Tests
             state.Rank = new RankRecord { RR = 800, Arena = 2 };
             state.Inventory.Equipped = new EquippedRecord { Variants = new Dictionary<string, string>
                 { ["suit.guardian"] = "suit.guardian.e0", ["district.farm"] = "district.farm.e0" } };
-            state.Inventory.EquippedSuitIDs = new[] { "suit_guardian" };
-            state.Inventory.EquippedNodeIDs = new[] { "node_farm" };
+            state.History.LastLoadout = new LastLoadout { SuitIds = new[] { "suit_guardian" },
+                DistrictIds = new[] { "node_farm" } };
             state.History.Stats = new PlayerStats { Matches = 1, Wins = 1, Streak = 1, BestRR = 800 };
             HistorySummaryRules.Prepend(state.History, new HistorySummary { MatchId = "match", OpponentId = "rival",
                 OpponentName = "Rival", OpponentTag = "R", Won = true, RRDelta = 20, Arena = 2, CreatedUnix = 123 });
@@ -75,17 +75,32 @@ namespace NodeWar.Cloud.Tests
                 inventory.OwnedVariants.Add(variant);
                 inventory.Equipped.Variants.Add(baseId, variant);
             }
-            inventory.EquippedSuitIDs = new[] { "suit.guardian", "", null, "suit_warrior" };
-            inventory.EquippedNodeIDs = new[] { "node_barracks", null, " ", "district.farm" };
+            var history = new HistoryRecord { LastLoadout = new LastLoadout
+            {
+                SuitIds = new[] { "suit.guardian", "", null, "suit_warrior" },
+                DistrictIds = new[] { "node_barracks", null, " ", "district.farm", "node_mine", "node_town", "node_village" }
+            } };
             var view = await ProfileViews.GetAsync("caller", "target", _ => new Store
-                { State = new PlayerState { Inventory = inventory } });
+                { State = new PlayerState { Inventory = inventory, History = history } });
             Assert.That(view.SuitIds, Is.EqualTo(new[] { "suit_guardian", "suit_warrior" }));
-            Assert.That(view.DistrictIds, Is.EqualTo(new[] { "node_barracks", "node_farm" }));
+            Assert.That(view.DistrictIds, Is.EqualTo(new[] { "node_barracks", "node_farm", "node_mine", "node_town", "node_village" }));
 
-            inventory.EquippedSuitIDs = Array.Empty<string>();
-            inventory.EquippedNodeIDs = null;
+            history.LastLoadout.SuitIds = Array.Empty<string>();
+            history.LastLoadout.DistrictIds = null;
             view = await ProfileViews.GetAsync("caller", "target", _ => new Store
-                { State = new PlayerState { Inventory = inventory } });
+                { State = new PlayerState { Inventory = inventory, History = history } });
+            Assert.That(view.SuitIds, Is.Empty);
+            Assert.That(view.DistrictIds, Is.Empty);
+        }
+
+        [Test]
+        public async Task NoSettledLogReturnsEmptyLoadoutEvenWithLegacyEquipment()
+        {
+            var state = PlayerStateLogic.ApplyDefaults(new PlayerState());
+            state.Inventory.EquippedSuitIDs = new[] { "suit_warrior" };
+            state.Inventory.EquippedNodeIDs = new[] { "node_farm" };
+            state.History = JsonConvert.DeserializeObject<HistoryRecord>("{\"MatchIds\":[\"old\"]}");
+            var view = await ProfileViews.GetAsync("caller", "target", _ => new Store { State = state });
             Assert.That(view.SuitIds, Is.Empty);
             Assert.That(view.DistrictIds, Is.Empty);
         }

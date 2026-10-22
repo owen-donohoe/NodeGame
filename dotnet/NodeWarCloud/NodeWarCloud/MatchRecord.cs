@@ -86,6 +86,9 @@ namespace NodeWar.Cloud
         // players left.
         public bool unfinished;
         public int[] breaches;
+        // Eligibility-checked, replay-verified lobby IDs for both players. Kept
+        // with the report so settlement recovery needs no extra log read.
+        public LastLoadout[] loadouts;
         // Durable until copied to log-N. Retries save the winning record's log,
         // never a concurrent upload that lost the record write-lock race.
         public string pendingLogBase64;

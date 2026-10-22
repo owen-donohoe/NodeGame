@@ -66,7 +66,7 @@ namespace NodeWar.Cloud
             PlayerStateKeys.All.Concat(new[] { PlayerStateKeys.ActiveMatch, PlayerStateKeys.Discipline, PlayerStateKeys.Profile }).ToList());
 
         public async Task<PlayerState> ReadProfileViewAsync() => (await ReadLockedAsync(new List<string>
-            { PlayerStateKeys.Profile, PlayerStateKeys.Rank, PlayerStateKeys.History, PlayerStateKeys.Inventory })).State;
+            { PlayerStateKeys.Profile, PlayerStateKeys.Rank, PlayerStateKeys.History })).State;
 
 
         // Everything the client is shown: settlement records, wallet and profile.
