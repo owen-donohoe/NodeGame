@@ -13,6 +13,40 @@ namespace NodeWar.MatchLog
     {
         private static readonly GameBalanceData Balance = GameBalanceData.Default();
 
+        [TestCase(3)]
+        [TestCase(4)]
+        public void HistoricalBoardV2_StillRoundTripsItsFrozenPayload(int sim)
+        {
+            MatchLog log = TestLogs.Full();
+            log.header.sim = (ushort)sim;
+            log.setup = new MatchSetup("test-map", log.setup.BoardHash, (ushort)sim, log.header.content);
+            byte[] bytes = MatchLogFormat.Write(log);
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 10), 6);
+            Assert.Throws<InvalidOperationException>(() => TestLogs.Find(bytes, 12));
+            var read = TestLogs.Read(bytes);
+            Assert.AreEqual(MapSymmetry.FlipZ, read.board.symmetry);
+            TestLogs.Equal(log, read);
+            CollectionAssert.AreEqual(bytes, MatchLogFormat.Write(read));
+        }
+
+        [TestCase(MapSymmetry.FlipZ)]
+        [TestCase(MapSymmetry.HalfTurn)]
+        public void BoardV3_PreservesDeepLakeAndSymmetryAndRejectsBadSymmetry(MapSymmetry symmetry)
+        {
+            MatchLog log = TestLogs.Full();
+            log.header.sim = 5;
+            log.board.symmetry = symmetry;
+            byte[] bytes = MatchLogFormat.Write(log);
+            int chunk = TestLogs.Find(bytes, 12);
+            var read = TestLogs.Read(bytes);
+            TestLogs.Equal(log, read);
+            CollectionAssert.Contains(read.board.terrain, TerrainType.DeepLake);
+            bytes[chunk + 6 + TestLogs.IntAt(bytes, chunk + 2) - 1] = 2;
+            TestLogs.Refused(bytes, "unknown symmetry");
+            log.board.symmetry = (MapSymmetry)2;
+            Assert.Throws<ArgumentException>(() => MatchLogFormat.Write(log));
+        }
+
         private static PlayerSetup[] Setups(PlayerLoadout[] loadouts)
         {
             return new[]
@@ -29,7 +63,7 @@ namespace NodeWar.MatchLog
             DraftPlacement[] draft =
             {
                 new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 1, gridZ = 3 },
-                new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 4, gridZ = 2 }
+                new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 5, gridZ = 2 }
             };
             PlayerLoadout[] loadouts =
             {
@@ -38,7 +72,7 @@ namespace NodeWar.MatchLog
             };
             var header = new MatchLogHeader
             {
-                sim = (ushort)SimulationVersion.Current, matchId = "terrain", playerIds = new[] { "", "" }, kind = MatchKind.Bot
+                sim = 5, matchId = "terrain", playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
             var recorder = new MatchRecorder(header, MatchSetup.ForShippedMap(PremadeMaps.Hourglass01Id, header.content), board, loadouts, draft);
@@ -59,7 +93,7 @@ namespace NodeWar.MatchLog
             });
 
             byte[] bytes = recorder.ToBytes();
-            Assert.GreaterOrEqual(TestLogs.Find(bytes, 10), 6, "BOARD_V2 is written for a version 3 log.");
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 12), 6, "BOARD_V2 is written for a version 3 log.");
             Assert.Throws<InvalidOperationException>(() => TestLogs.Find(bytes, 2), "The old BOARD chunk is not.");
             Assert.GreaterOrEqual(TestLogs.Find(bytes, 11), 6, "SETUP rides with it.");
 
@@ -73,7 +107,7 @@ namespace NodeWar.MatchLog
 
             MatchFactory.Configure(Balance, read.board);
             SimulationState rebuilt = MatchFactory.Build(Balance, read.board, read.draft, Setups(read.loadouts));
-            Assert.AreEqual(19, rebuilt.nodes.Length);
+            Assert.AreEqual(7, rebuilt.nodes.Length);
             Assert.AreEqual(startHash, SimulationStateHasher.ComputeHash(rebuilt));
 
             ReplayOutcome replay = MatchReplay.Run(read, Balance);
@@ -86,7 +120,7 @@ namespace NodeWar.MatchLog
             MatchLog expected = TestLogs.Full();
             byte[] bytes = MatchLogFormat.Write(expected);
 
-            Assert.GreaterOrEqual(TestLogs.Find(bytes, 10), 6);
+            Assert.GreaterOrEqual(TestLogs.Find(bytes, 12), 6);
             Assert.GreaterOrEqual(TestLogs.Find(bytes, 11), 6);
             Assert.Throws<InvalidOperationException>(() => TestLogs.Find(bytes, 2), "A current log has no tag 2.");
 
@@ -209,11 +243,11 @@ namespace NodeWar.MatchLog
         public void MalformedBoardV2_IsRefused()
         {
             byte[] good = MatchLogFormat.Write(TestLogs.Full());
-            int terrainCount = TestLogs.Find(good, 10) + 6 + 48 + 4 + 2 * 20;
+            int terrainCount = TestLogs.Find(good, 12) + 6 + 48 + 4 + 2 * 20;
             Assert.AreEqual(45, TestLogs.IntAt(good, terrainCount));
 
             byte[] badTerrain = (byte[])good.Clone();
-            badTerrain[terrainCount + 4] = 3;
+            badTerrain[terrainCount + 4] = 4;
             TestLogs.Refused(badTerrain, "unknown terrain");
 
             byte[] badSlot = (byte[])good.Clone();
@@ -238,14 +272,14 @@ namespace NodeWar.MatchLog
                     TestLogs.Find(MatchLogFormat.Write(TestLogs.FullV2History()), 2) + 2)));
             TestLogs.Refused(both, "tags 2 and 10 together");
 
-            TestLogs.Refused(TestLogs.Remove(good, 10), "no board at all");
+            TestLogs.Refused(TestLogs.Remove(good, 12), "no board at all");
         }
 
         [Test]
         public void EveryStrictPrefixOfABoardV2Chunk_IsRefused()
         {
             byte[] bytes = MatchLogFormat.Write(TestLogs.Full());
-            int start = TestLogs.Find(bytes, 10);
+            int start = TestLogs.Find(bytes, 12);
             int end = start + 6 + TestLogs.IntAt(bytes, start + 2);
             for (int length = start; length < end; length++)
                 TestLogs.Refused(TestLogs.Segment(bytes, 0, length), "prefix " + length);

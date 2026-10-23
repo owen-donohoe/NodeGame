@@ -159,7 +159,7 @@ namespace NodeWar.MatchLog
             TestLogs.Refused(bytes);
         }
 
-        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
+        [TestCase(1)] [TestCase(12)] [TestCase(3)] [TestCase(4)]
         [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void DuplicateKnownChunk_IsRefused(int tag)
         {
@@ -169,13 +169,13 @@ namespace NodeWar.MatchLog
                 TestLogs.Segment(bytes, start, 6 + TestLogs.IntAt(bytes, start + 2))));
         }
 
-        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(5)] [TestCase(11)]
+        [TestCase(1)] [TestCase(12)] [TestCase(3)] [TestCase(5)] [TestCase(11)]
         public void MissingRequiredChunk_IsRefused(int tag)
         {
             TestLogs.Refused(TestLogs.Remove(MatchLogFormat.Write(TestLogs.Full()), tag));
         }
 
-        [TestCase(1)] [TestCase(10)] [TestCase(3)] [TestCase(4)]
+        [TestCase(1)] [TestCase(12)] [TestCase(3)] [TestCase(4)]
         [TestCase(5)] [TestCase(6)] [TestCase(7)] [TestCase(11)]
         public void KnownChunkTrailingByte_IsRefused(int tag)
         {
@@ -187,7 +187,7 @@ namespace NodeWar.MatchLog
             TestLogs.Refused(bytes);
         }
 
-        [TestCase(10, 48)] [TestCase(3, 0)] [TestCase(3, 16)]
+        [TestCase(12, 48)] [TestCase(3, 0)] [TestCase(3, 16)]
         [TestCase(3, 28)] [TestCase(3, 40)] [TestCase(4, 0)]
         [TestCase(5, 0)] [TestCase(6, 0)]
         public void InvalidCounts_AreRefusedBeforeAllocation(int tag, int countOffset)
@@ -289,7 +289,7 @@ namespace NodeWar.MatchLog
             int header = TestLogs.Find(bytes, 1) + 6;
             CollectionAssert.AreEqual(new byte[] { 0x34, 0x12, 0x78, 0x56, 0xEB, 0x32, 0xA4, 0xF8 },
                 TestLogs.Segment(bytes, header, 8));
-            int headerEnd = TestLogs.Find(bytes, 10);
+            int headerEnd = TestLogs.Find(bytes, 12);
             CollectionAssert.AreEqual(new byte[] { 8, 7, 6, 5, 4, 3, 2, 1, 2 },
                 TestLogs.Segment(bytes, headerEnd - 9, 9));
             int command = TestLogs.Find(bytes, 5) + 6 + 4 + 6;

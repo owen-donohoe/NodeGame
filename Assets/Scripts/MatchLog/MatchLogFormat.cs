@@ -24,6 +24,8 @@ namespace NodeWar.MatchLog
         internal const ushort SkinsTag = 9;
         internal const ushort BoardV2Tag = 10;
         internal const ushort SetupTag = 11;
+        internal const ushort BoardV3Tag = 12;
+        private const ushort BoardV3FromSim = 5;
 
         /// <summary>First simulation version whose boards carry terrain and so use BOARD_V2.</summary>
         private const ushort BoardV2FromSim = 3;
@@ -82,7 +84,14 @@ namespace NodeWar.MatchLog
                 foreach (bool slot in b.districtSlots) payload.U8(slot ? (byte)1 : (byte)0);
                 WritePool(payload, b.baseDraftDistrictsP0);
                 WritePool(payload, b.baseDraftDistrictsP1);
-                file.Chunk(BoardV2Tag, payload);
+                                if (h.sim >= BoardV3FromSim)
+                {
+                    if (b.symmetry != MapSymmetry.FlipZ && b.symmetry != MapSymmetry.HalfTurn)
+                        throw new ArgumentException("Invalid map symmetry.", nameof(log));
+                    payload.U8((byte)b.symmetry);
+                    file.Chunk(BoardV3Tag, payload);
+                }
+                else file.Chunk(BoardV2Tag, payload);
             }
             else file.Chunk(BoardTag, payload);
 
@@ -209,7 +218,7 @@ namespace NodeWar.MatchLog
                     uint length = unchecked((uint)file.I32());
                     if (length > (uint)file.Remaining) throw new FormatException("Chunk payload is truncated.");
                     Reader payload = file.Slice((int)length);
-                    if (tag < HeaderTag || tag > SetupTag) continue;
+                    if (tag < HeaderTag || tag > BoardV3Tag) continue;
                     int bit = 1 << tag;
                     if ((seen & bit) != 0) throw new FormatException("Duplicate known chunk.");
                     seen |= bit;
@@ -218,12 +227,14 @@ namespace NodeWar.MatchLog
                 }
                 const int required = (1 << HeaderTag) | (1 << LoadoutsTag) | (1 << TicksTag);
                 if ((seen & required) != required) throw new FormatException("Missing required chunk.");
-                const int boards = (1 << BoardTag) | (1 << BoardV2Tag);
+                const int boards = (1 << BoardTag) | (1 << BoardV2Tag) | (1 << BoardV3Tag);
                 if ((seen & boards) == 0) throw new FormatException("Missing required chunk.");
-                if ((seen & boards) == boards) throw new FormatException("Conflicting BOARD chunks.");
+                if (((seen & boards) & ((seen & boards) - 1)) != 0) throw new FormatException("Conflicting BOARD chunks.");
                 // SETUP belongs to a terrain board: required beside BOARD_V2, meaningless beside BOARD.
                 bool hasSetup = (seen & (1 << SetupTag)) != 0;
-                bool v2Board = (seen & (1 << BoardV2Tag)) != 0;
+                bool v2Board = (seen & ((1 << BoardV2Tag) | (1 << BoardV3Tag))) != 0;
+                if (parsed.header.sim >= BoardV3FromSim && (seen & (1 << BoardV3Tag)) == 0)
+                    throw new FormatException("Simulation 5 onward requires BOARD_V3.");
                 if (v2Board && !hasSetup) throw new FormatException("Missing required chunk.");
                 if (!v2Board && hasSetup) throw new FormatException("Conflicting BOARD and SETUP chunks.");
                 if (parsed.header.sim >= 3)
@@ -277,6 +288,7 @@ namespace NodeWar.MatchLog
                     break;
                 case BoardTag:
                 case BoardV2Tag:
+                case BoardV3Tag:
                     BoardConfigData b = new BoardConfigData
                     {
                         gridCols = r.I32(), gridRows = r.I32(), defaultLinkWeight = r.I32(),
@@ -293,7 +305,7 @@ namespace NodeWar.MatchLog
                             gridX = r.I32(), gridZ = r.I32(), districtType = (DistrictType)r.I32(),
                             ownerID = r.I32(), claimBar = r.I32()
                         };
-                    if (tag == BoardV2Tag)
+                    if (tag == BoardV2Tag || tag == BoardV3Tag)
                     {
                         long cells = (long)b.gridCols * b.gridRows;
                         b.terrain = new TerrainType[r.Count(1)];
@@ -301,7 +313,7 @@ namespace NodeWar.MatchLog
                         for (int i = 0; i < b.terrain.Length; i++)
                         {
                             byte t = r.U8();
-                            if (t > (byte)TerrainType.Ocean) throw new FormatException("Invalid terrain.");
+                            if (t > (byte)TerrainType.DeepLake) throw new FormatException("Invalid terrain.");
                             b.terrain[i] = (TerrainType)t;
                         }
                         b.districtSlots = new bool[r.Count(1)];
@@ -314,6 +326,12 @@ namespace NodeWar.MatchLog
                         }
                         b.baseDraftDistrictsP0 = ReadPool(r);
                         b.baseDraftDistrictsP1 = ReadPool(r);
+                    }
+                    if (tag == BoardV3Tag)
+                    {
+                        byte symmetry = r.U8();
+                        if (symmetry > (byte)MapSymmetry.HalfTurn) throw new FormatException("Invalid map symmetry.");
+                        b.symmetry = (MapSymmetry)symmetry;
                     }
                     log.board = b;
                     break;

@@ -556,12 +556,13 @@ namespace NodeWar.Tests
             for (int i = 0; i < baseline.terrain.Length; i++)
             {
                 int cell = i;
-                foreach (TerrainType other in new[] { TerrainType.Land, TerrainType.Lake, TerrainType.Ocean })
+                foreach (TerrainType other in new[] { TerrainType.Land, TerrainType.Lake, TerrainType.Ocean, TerrainType.DeepLake })
                     if (other != baseline.terrain[cell])
                         Changes("terrain " + cell + "->" + other, (ref BoardConfigData b) => b.terrain[cell] = other);
                 Changes("slot " + cell, (ref BoardConfigData b) => b.districtSlots[cell] = !b.districtSlots[cell]);
             }
 
+            Changes("symmetry", (ref BoardConfigData b) => b.symmetry = MapSymmetry.HalfTurn);
             Changes("gridCols", (ref BoardConfigData b) => b.gridCols++);
             Changes("gridRows", (ref BoardConfigData b) => b.gridRows++);
             Changes("defaultLinkWeight", (ref BoardConfigData b) => b.defaultLinkWeight++);
