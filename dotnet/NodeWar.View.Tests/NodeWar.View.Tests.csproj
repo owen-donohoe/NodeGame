@@ -130,6 +130,9 @@
          reads them needs a Camera and a panel and stays in Unity. -->
     <Compile Include="DisconnectPresentationTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/DisconnectPresentation.cs" Link="View/DisconnectPresentation.cs" />
+    <Compile Include="WaterTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/ShoreField.cs" Link="View/Water/ShoreField.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/WaterMeshBuilder.cs" Link="View/Water/WaterMeshBuilder.cs" />
     <Compile Include="TerrainPresentationTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/TerrainPresentation.cs"
              Link="View/TerrainPresentation.cs" />
@@ -148,3 +151,4 @@
   </ItemGroup>
 
 </Project>
+
