@@ -7,7 +7,7 @@ namespace NodeWar.View
 {
     /// <summary>
     /// The board's terrain as plain runtime geometry, so the map reads before any art exists:
-    /// ocean and lake as flat tiles, a draft-only cue on the empty pier slot, a highlight on
+    /// land tiles and shore-driven water, a draft-only cue on the empty pier slot, a highlight on
     /// every cell the piece in hand may legally take, and a bridge where a Pier stands.
     ///
     /// Every decision comes from <see cref="TerrainPresentation"/>, which asks
@@ -20,8 +20,6 @@ namespace NodeWar.View
     /// </summary>
     public sealed class BoardTerrainView : MonoBehaviour
     {
-        private static readonly Color OceanColor = new Color(0.05f, 0.16f, 0.30f, 1f);
-        private static readonly Color LakeColor = new Color(0.16f, 0.46f, 0.66f, 1f);
         private static readonly Color LandColor = new Color(0.38f, 0.43f, 0.29f, 1f);
         private static readonly Color LegalTint = new Color(0.30f, 0.90f, 0.45f, 0.38f);
         private static readonly Color LegalOutline = new Color(1f, 0.95f, 0.35f, 1f);
@@ -38,6 +36,7 @@ namespace NodeWar.View
         private Material material;
         private Transform tiles;
         private Transform bridges;
+        private WaterSurfaceView water;
         private GameObject[] highlightByCell;
         private bool[] bridgeByCell;
         private readonly List<Mesh> ownedMeshes = new List<Mesh>();
@@ -97,6 +96,9 @@ namespace NodeWar.View
             material = new Material(Shader.Find("Sprites/Default"));
             tiles = NewChild("Tiles");
             bridges = NewChild("Bridges");
+            water = NewChild("Water").gameObject.AddComponent<WaterSurfaceView>();
+            water.Initialize(board.gridCols, board.gridRows, nodeScale, GroundY - 0.02f);
+            water.SetTerrain(board.terrain); // PR-A: ResolveTerrain
 
             int cells = board.gridCols * board.gridRows;
             highlightByCell = new GameObject[cells];
@@ -106,10 +108,8 @@ namespace NodeWar.View
                 int x = cell % board.gridCols;
                 int z = cell / board.gridCols;
                 TerrainType terrain = board.terrain[cell];
-                Color color = terrain == TerrainType.Ocean ? OceanColor : terrain == TerrainType.Lake ? LakeColor : LandColor;
-                MakeQuad(terrain + "_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, color);
-
-
+                if (terrain == TerrainType.Land)
+                    MakeQuad(terrain + "_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, LandColor);
             }
         }
 
@@ -120,6 +120,7 @@ namespace NodeWar.View
         public void ShowDraft(DraftPlacement[] placed, bool hasPick, DistrictType pick)
         {
             if (highlightByCell == null) return;
+            water.SetTerrain(board.terrain); // PR-A: ResolveTerrain
 
             CellDescriptor[] cells = TerrainPresentation.Describe(board, placed, hasPick, pick);
             for (int i = 0; i < cells.Length; i++)
