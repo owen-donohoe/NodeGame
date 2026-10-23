@@ -12,6 +12,104 @@ namespace NodeWar.Tests
     /// </summary>
     public class TerrainMapTests
     {
+        private static BoardConfigData LakeFixture(int cols = 7, int rows = 7)
+        {
+            var board = BoardFixtures.LandGrid(cols, rows);
+            for (int i = 0; i < board.terrain.Length; i++) board.terrain[i] = TerrainType.Lake;
+            foreach (var p in board.initialPlacements) board.terrain[p.gridZ * cols + p.gridX] = TerrainType.Land;
+            return board;
+        }
+
+        [Test]
+        public void Shoals_CentreIslandStraightSymmetricAndRepeatable()
+        {
+            var board = LakeFixture();
+            board.terrain[24] = TerrainType.Land;
+            bool[] path = ShoalPath.Derive(board);
+            for (int i = 0; i < path.Length; i++)
+                Assert.AreEqual(i == 10 || i == 17 || i == 31 || i == 38, path[i], "cell " + i);
+            for (int run = 0; run < 10; run++) CollectionAssert.AreEqual(path, ShoalPath.Derive(board));
+        }
+
+        [Test]
+        public void Shoals_TwoIslandsKeepRoutesApart()
+        {
+            var board = LakeFixture(11, 9);
+            for (int x = 0; x < 11; x++)
+            {
+                board.terrain[x] = TerrainType.Land;
+                board.terrain[8 * 11 + x] = TerrainType.Land;
+            }
+            board.terrain[4 * 11 + 1] = TerrainType.Land;
+            board.terrain[4 * 11 + 9] = TerrainType.Land;
+            bool[] path = ShoalPath.Derive(board);
+            Assert.IsNotNull(path);
+            // Remove anchors: each carved component belongs to one separate route.
+            var group = new int[path.Length];
+            int groups = 0;
+            for (int i = 0; i < path.Length; i++)
+            {
+                if (!path[i] || group[i] != 0) continue;
+                groups++;
+                var queue = new System.Collections.Generic.List<int> { i };
+                group[i] = groups;
+                for (int q = 0; q < queue.Count; q++)
+                    foreach (int j in new[] { queue[q] - 1, queue[q] + 1, queue[q] - 11, queue[q] + 11 })
+                        if (j >= 0 && j < path.Length && path[j] && group[j] == 0
+                            && Math.Abs(j % 11 - queue[q] % 11) + Math.Abs(j / 11 - queue[q] / 11) == 1)
+                        { group[j] = groups; queue.Add(j); }
+            }
+            Assert.GreaterOrEqual(groups, 2);
+            for (int i = 0; i < path.Length; i++)
+            {
+                Assert.AreEqual(path[i], path[(8 - i / 11) * 11 + i % 11]);
+                for (int j = i + 1; j < path.Length; j++)
+                    if (path[i] && path[j] && group[i] != group[j])
+                        Assert.IsFalse(Math.Abs(i % 11 - j % 11) <= 1 && Math.Abs(i / 11 - j / 11) <= 1,
+                            "Separate routes touch at " + i + "," + j);
+            }
+        }
+
+        [Test]
+        public void Shoals_ImpassableWaterIsNeverCarvedAndUnreachableReturnsNull()
+        {
+            var board = LakeFixture();
+            board.terrain[22] = TerrainType.DeepLake;
+            board.terrain[26] = TerrainType.Ocean;
+            bool[] path = ShoalPath.Derive(board);
+            Assert.IsNotNull(path);
+            Assert.IsFalse(path[22]); Assert.IsFalse(path[26]);
+            for (int x = 0; x < 7; x++) board.terrain[21 + x] = TerrainType.DeepLake;
+            Assert.IsNull(ShoalPath.Derive(board));
+        }
+
+        [Test]
+        public void ResolvedTerrain_DraftRaisesLandAndCompletionRaisesOnlyShoalsWithoutMutation()
+        {
+            var board = LakeFixture();
+            var original = (TerrainType[])board.terrain.Clone();
+            var placed = new[]
+            {
+                new DraftPlacement { districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
+                new DraftPlacement { districtType = DistrictType.Pier, gridX = 6, gridZ = 1 }
+            };
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 0, 1));
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 6, 1));
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 3, 1));
+            var during = MatchFactory.ResolveTerrain(board, placed, false);
+            var after = MatchFactory.ResolveTerrain(board, placed, true);
+            Assert.AreEqual(TerrainType.Land, during[7]);
+            Assert.AreEqual(TerrainType.Lake, during[13]);
+            Assert.AreEqual(TerrainType.Lake, during[10]);
+            Assert.AreEqual(TerrainType.Land, after[10]);
+            var built = Build(board, placed);
+            var mapping = MatchFactory.CellToNode(board, placed);
+            Assert.AreEqual(TerrainType.Land, built.nodes[mapping[7]].terrain);
+            Assert.AreEqual(TerrainType.Lake, built.nodes[mapping[13]].terrain);
+            Assert.AreEqual(TerrainType.Land, built.nodes[mapping[10]].terrain);
+            CollectionAssert.AreEqual(original, board.terrain);
+        }
+
         private delegate void MutateBoard(ref BoardConfigData board);
 
         private static GameBalanceData Balance()

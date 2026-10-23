@@ -18,6 +18,7 @@ namespace NodeWar.Simulation
 
         public int gridCols;
         public int gridRows;
+        public MapSymmetry symmetry; // default FlipZ (0)
 
         public int defaultLinkWeight;
 

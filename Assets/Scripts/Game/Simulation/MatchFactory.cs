@@ -106,13 +106,30 @@ namespace NodeWar.Simulation
         /// there is none: ocean, open lake, and any Lake cell no Pier was drafted
         /// on. IDs run in ascending cell order. The board must be buildable.
         /// </summary>
+        public static TerrainType[] ResolveTerrain(BoardConfigData board, DraftPlacement[] placed, bool draftComplete)
+        {
+            var resolved = (TerrainType[])board.terrain.Clone();
+            if (placed != null)
+                for (int i = 0; i < placed.Length; i++)
+                    if (placed[i].districtType != DistrictType.Pier)
+                        resolved[placed[i].gridZ * board.gridCols + placed[i].gridX] = TerrainType.Land;
+            if (draftComplete)
+            {
+                bool[] shoal = ShoalPath.Derive(board);
+                if (shoal != null)
+                    for (int i = 0; i < resolved.Length; i++)
+                        if (shoal[i]) resolved[i] = TerrainType.Land;
+            }
+            return resolved;
+        }
         public static int[] CellToNode(BoardConfigData board, DraftPlacement[] draft)
         {
             RequireBuildable(board, draft);
 
+            TerrainType[] resolved = ResolveTerrain(board, draft, true);
             int[] cellToNode = new int[board.terrain.Length];
             for (int cell = 0; cell < cellToNode.Length; cell++)
-                cellToNode[cell] = board.terrain[cell] == TerrainType.Land ? 0 : -1;
+                cellToNode[cell] = resolved[cell] == TerrainType.Land ? 0 : -1;
 
             // Only a Pier turns a Lake cell into a node, and PlacementLegality has
             // already established that a Pier stands on a Lake slot.
@@ -151,6 +168,7 @@ namespace NodeWar.Simulation
         {
             int[] cellToNode = CellToNode(board, draft);
             int[] nodeToCell = NodeToCell(cellToNode);
+            TerrainType[] resolved = ResolveTerrain(board, draft, true);
             int cols = board.gridCols;
             int rows = board.gridRows;
             state.nodes = new NodeData[nodeToCell.Length];
@@ -169,7 +187,7 @@ namespace NodeWar.Simulation
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
-                    terrain = board.terrain[cell],
+                    terrain = resolved[cell],
                     claimBar = 0,
                     ownerID = -1,
                     townPaidMask = 0,
