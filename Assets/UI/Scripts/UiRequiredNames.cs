@@ -124,6 +124,8 @@ namespace NodeWar.UI
             public const string SettingsBattery = "settings-battery";
             public const string SettingsSize = "settings-size";
             public const string SettingsFramecap = "settings-framecap";
+            public const string SettingsGraphics = "settings-graphics";
+            public const string SettingsRowGraphics = "settings-row-graphics";
             public const string SettingsRowSize = "settings-row-size";
             public const string SettingsRowFramecap = "settings-row-framecap";
             public const string SettingsRowControls = "settings-row-controls";
@@ -151,6 +153,8 @@ namespace NodeWar.UI
                 SettingsBattery,
                 SettingsSize,
                 SettingsFramecap,
+                SettingsGraphics,
+                SettingsRowGraphics,
                 SettingsRowSize,
                 SettingsRowFramecap,
                 SettingsRowControls,
@@ -171,6 +175,8 @@ namespace NodeWar.UI
             public const string HudSettingsRoutes = "hud-settings-routes";
             public const string HudSettingsEmotes = "hud-settings-emotes";
             public const string HudSettingsFramecap = "hud-settings-framecap";
+            public const string HudSettingsGraphics = "hud-settings-graphics";
+            public const string HudSettingsRowGraphics = "hud-settings-row-graphics";
             public const string HudSettingsRowRoutes = "hud-settings-row-routes";
             public const string HudSettingsRowEmotes = "hud-settings-row-emotes";
             public const string HudSettingsRowFramecap = "hud-settings-row-framecap";
@@ -198,6 +204,8 @@ namespace NodeWar.UI
                 HudSettingsRoutes,
                 HudSettingsEmotes,
                 HudSettingsFramecap,
+                HudSettingsGraphics,
+                HudSettingsRowGraphics,
                 HudSettingsRowRoutes,
                 HudSettingsRowEmotes,
                 HudSettingsRowFramecap,

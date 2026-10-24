@@ -46,6 +46,7 @@ namespace NodeWar.Lobby
 
         private readonly Label sizeLabel;
         private readonly Label frameCapLabel;
+        private readonly Label graphicsLabel;
 
         // Controls live in their own overlay, opened by one button. The panel owns
         // its rows; this page owns the value and the save.
@@ -64,6 +65,7 @@ namespace NodeWar.Lobby
         private GameSettingsData current;
         private int sizeIndex;
         private int frameCapIndex;
+        private int graphicsIndex;
 
         /// <summary>
         /// True while saved values are being pushed into the controls. The
@@ -124,6 +126,7 @@ namespace NodeWar.Lobby
 
             sizeLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsSize, nameof(SettingsPage));
             frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsFramecap, nameof(SettingsPage));
+            graphicsLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsGraphics, nameof(SettingsPage));
 
             BindSlider(masterSlider);
             BindSlider(musicSlider);
@@ -141,6 +144,8 @@ namespace NodeWar.Lobby
 
             Button frameCapRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowFramecap, nameof(SettingsPage));
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
+            Button graphicsRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowGraphics, nameof(SettingsPage));
+            if (graphicsRow != null) graphicsRow.clicked += CycleGraphics;
 
             controlsPanel = new ControlsPanel(Root, () => current, EditControls, EditHoldTime);
             Button controlsOpen = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowControls, nameof(SettingsPage));
@@ -251,6 +256,7 @@ namespace NodeWar.Lobby
             current = GameSettingsData.Normalized(current);
             sizeIndex = current.interfaceSize;
             frameCapIndex = current.frameCap;
+            graphicsIndex = current.graphicsQuality;
 
             loading = true;
 
@@ -267,6 +273,7 @@ namespace NodeWar.Lobby
 
             UpdateSizeLabel();
             UpdateFrameCapLabel();
+            UpdateGraphicsLabel();
             controlsPanel.Close();
             controlsPanel.Render();
 
@@ -344,6 +351,18 @@ namespace NodeWar.Lobby
             if (frameCapLabel != null) frameCapLabel.text = GameSettingsData.FrameCapLabel(frameCapIndex);
         }
 
+        private void CycleGraphics()
+        {
+            graphicsIndex = GameSettingsData.NextGraphicsQuality(graphicsIndex);
+            UpdateGraphicsLabel();
+            OnValueChanged(commitNow: true);
+        }
+
+        private void UpdateGraphicsLabel()
+        {
+            if (graphicsLabel != null) graphicsLabel.text = GameSettingsData.GraphicsQualityLabel(graphicsIndex);
+        }
+
         private void UpdateSizeLabel()
         {
             if (sizeLabel == null) return;
@@ -386,6 +405,7 @@ namespace NodeWar.Lobby
             captured.reducedMotion = ReadSwitch(motionSwitch, current.reducedMotion);
             captured.interfaceSize = sizeIndex;
             captured.frameCap = frameCapIndex;
+            captured.graphicsQuality = graphicsIndex;
 
             captured.cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed);
             captured.confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand);
