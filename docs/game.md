@@ -18,7 +18,7 @@ sources:
   - Assets/Data/Game/Balance/Resources/DefaultGameBalance.asset
   - Assets/Scripts/Game/Simulation/DistrictHealth.cs
   - Assets/Scripts/Game/Simulation/NodeActionRules.cs
-verified: 0d22d7d8
+verified: fe53da40
 ---
 
 # Node War
@@ -29,13 +29,13 @@ The game advances at 10 ticks per second. Numbers below describe the shipped bal
 
 ## Board and opening
 
-A map contains Land, Lake and Ocean cells. Land carries nodes; Ocean never does. Lake carries a node only where a drafted Pier occupies a designated district slot. Connections join orthogonally adjacent node-bearing cells, making open water impassable.
+A map contains Land, Lake, DeepLake and Ocean cells. Ocean is the edge and DeepLake is inland water; neither ever carries a node. The board starts as water around authored land: Cores, islands and fixed districts. Drafting an ordinary district onto a Lake slot turns that cell into Land. A Pier keeps its Lake cell and carries a node there. A shoal path, derived from the starting land alone, links every land piece without paths touching each other where possible; it is shown from the first draft turn and rises into Land when the draft ends. Connections join orthogonally adjacent node-bearing cells, making open water impassable.
 
-The shipped `hourglass-01` map is a mirrored 7×7 grid ringed by ocean. Cores sit on the second row from each player's edge. A central lake separates two land banks that meet at the Core rows. One Lake slot interrupts the left bank: placing a Pier bridges it. A land-only route always remains between Cores; a Pier is never the only crossing. Authored maps have 14–20 possible nodes counting legal Piers.
+The shipped `hourglass-01` map is a mirrored 7×7 grid ringed by ocean. Cores sit on the second row from each player's edge, with an island between them flanked by DeepLake. The shoal path runs straight down the middle, Core to island to Core. Every other playable cell is a Lake slot, so each side's land is built during the draft, and Piers can make crossings away from the middle. A land-only route always exists after the draft; a Pier is never the only crossing. Authored maps have 14–20 possible nodes.
 
 Each player begins with one owned Core and three villagers. Other districts begin neutral. A player may have at most 25 units; dead bodies still occupy population, permanently consumed units do not.
 
-Before play, both players agree to the same map and rules, then place districts in a turn-based draft. Every loadout has five district slots and three suit slots. Era index equals arena index: era 0 fixes Farm/Mine/Town and Warrior, leaving two choices per side; era 1 fixes Farm/Mine, leaving three district and three suit choices; era 2+ fixes nothing. Fresh presets start with Farm/Mine/Town and Warrior, which remain ordinary choices after unlocking. Clear keeps only the current era's fixed items. Queue entry requires each side full or no further owned, currently usable item to choose. Human drafts use that list without extra grants. P0 places first. Ordinary districts require empty Land slots; Pier requires an empty Lake slot; Cores and Ocean refuse picks. Unplaceable pieces are skipped; drafting ends when neither player has a playable piece.
+Before play, both players agree to the same map and rules, then place districts in a turn-based draft. Every loadout has five district slots and three suit slots. Era index equals arena index: era 0 fixes Farm/Mine/Town and Warrior, leaving two choices per side; era 1 fixes Farm/Mine, leaving three district and three suit choices; era 2+ fixes nothing. Fresh presets start with Farm/Mine/Town and Warrior, which remain ordinary choices after unlocking. Clear keeps only the current era's fixed items. Queue entry requires each side full or no further owned, currently usable item to choose. Human drafts use that list without extra grants. P0 places first. Ordinary districts require an empty Land or Lake slot; Pier requires an empty Lake slot off the shoal path; Cores, Ocean and DeepLake refuse picks. Unplaceable pieces are skipped; drafting ends when neither player has a playable piece.
 
 On timeout, a still-legal parked piece is confirmed. Otherwise the lowest playable pick receives a legal fallback placement. Drafted districts use their placer's era and keep their type/era when captured. They do not transform into the capturing player's loadout choice. Rules also support upgrade-category slots whose full capture selects the claimer's drafted district, falling back to the base district.
 

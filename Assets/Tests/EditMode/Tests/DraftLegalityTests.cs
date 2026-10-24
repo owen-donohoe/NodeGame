@@ -33,6 +33,15 @@ namespace NodeWar.Tests
         }
 
         private static int Cell(int x, int z) => z * 7 + x;
+        private static void CloseOtherPierSlots(DraftState state)
+        {
+            // A fixture with one remaining land slot isolates the no-Pier-cell rule.
+            for (int i = 0; i < state.board.districtSlots.Length; i++)
+                if (i != Cell(1, 1)) state.board.districtSlots[i] = false;
+            state.board.terrain[Cell(1, 1)] = TerrainType.Land;
+            state.board.districtSlots[Cell(2, 1)] = true;
+            state.board.terrain[Cell(2, 1)] = TerrainType.Land;
+        }
 
         [Test]
         public void EveryEntryPathUsesSameLegalCells()
@@ -79,9 +88,9 @@ namespace NodeWar.Tests
         {
             DraftState state = DraftWith(new[] { DistrictType.Farm, DistrictType.Pier }, new[] { DistrictType.Farm });
 
-            Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Farm, 1, 3), "Farm on the pier slot");
+            Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Farm, 2, 3), "Farm on DeepLake");
             Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Farm, 0, 0), "Farm on ocean");
-            Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Pier, 1, 1), "Pier on land");
+            Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Pier, 3, 1), "Pier on Core");
             Assert.AreEqual(-1, state.AcceptReceived(0, DistrictType.Village, 1, 1), "a type the player does not hold");
             Assert.AreEqual(-1, state.AcceptLocal(0, 5, 1, 1), "no such pick");
             Assert.AreEqual(-1, state.AcceptLocal(0, -1, 1, 1));
@@ -108,6 +117,7 @@ namespace NodeWar.Tests
             DraftState state = DraftWith(new[] { DistrictType.Pier, DistrictType.Farm },
                                          new[] { DistrictType.Pier });
             state.Apply(1, 0, 1, 3, false);
+            CloseOtherPierSlots(state);
             state.consecutiveTimeouts[0] = 1;
 
             Assert.IsFalse(state.HasLegalCell(DistrictType.Pier));
@@ -136,6 +146,7 @@ namespace NodeWar.Tests
             Assert.IsFalse(state.IsDraftFinished());
 
             state.Apply(0, 0, 1, 3, false);
+            CloseOtherPierSlots(state);
             Assert.IsTrue(state.PlayerHasPlayablePick(1) == false, "P1's Pier has no slot left");
             Assert.IsTrue(state.IsDraftFinished(), "Neither player has a playable pick.");
             Assert.AreEqual(0, state.consecutiveTimeouts[0] + state.consecutiveTimeouts[1]);
@@ -145,7 +156,8 @@ namespace NodeWar.Tests
         public void NoLegalPierSkipsOnlyThatPick_TurnPassesPastAPlayerWithNothingPlayable()
         {
             DraftState state = DraftWith(new[] { DistrictType.Pier }, new[] { DistrictType.Farm, DistrictType.Mine });
-            state.Apply(0, 0, 1, 3, false); // P0 used the only slot... with their own Pier
+            state.Apply(0, 0, 1, 3, false);
+            CloseOtherPierSlots(state); // P0 used the only slot... with their own Pier
 
             state.currentTurnPlayerID = 0;
             Assert.IsTrue(state.AdvanceToNextValidTurn(), "P1 can still play");
@@ -156,7 +168,7 @@ namespace NodeWar.Tests
             Assert.AreEqual(1, state.currentTurnPlayerID, "P1 stays on turn while it has picks and P0 has none.");
 
             state.Apply(1, 0, 1, 1, false);
-            state.Apply(1, 1, 4, 2, false);
+            state.Apply(1, 1, 5, 2, false);
             Assert.IsFalse(state.AdvanceToNextValidTurn(), "nobody is left to play");
         }
 
@@ -167,6 +179,7 @@ namespace NodeWar.Tests
             DraftState state = DraftWith(new[] { DistrictType.Pier, DistrictType.Farm, DistrictType.Farm },
                                          new[] { DistrictType.Pier });
             state.Apply(1, 0, 1, 3, false);
+            CloseOtherPierSlots(state);
 
             for (int turn = 0; turn < 40; turn++)
             {
@@ -175,7 +188,7 @@ namespace NodeWar.Tests
                 Assert.AreEqual(1, slot, "the lowest PLAYABLE pick, not the lowest pick");
                 Assert.IsTrue(state.CanPlace(DistrictType.Farm, x, z), "a legal land slot at " + x + "," + z);
                 Assert.AreNotEqual(TerrainType.Ocean, state.board.terrain[Cell(x, z)]);
-                Assert.AreNotEqual(TerrainType.Lake, state.board.terrain[Cell(x, z)], "never water");
+                Assert.IsTrue(PlacementLegality.CanPlace(state.board, state.occupied, DistrictType.Farm, x, z));
             }
 
             // Seeded from replicated state only: the same turn picks the same cell.
@@ -228,13 +241,13 @@ namespace NodeWar.Tests
             int farm = 0, pier = 0;
             foreach (bool b in state.LegalCells(DistrictType.Farm)) if (b) farm++;
             foreach (bool b in state.LegalCells(DistrictType.Pier)) if (b) pier++;
-            Assert.AreEqual(16, farm, "18 land cells minus two Cores");
-            Assert.AreEqual(1, pier, "the one pier slot");
+            Assert.AreEqual(14, farm, "14 lake slots");
+            Assert.AreEqual(14, pier, "every lake slot avoids the middle shoal");
 
             state.Apply(0, 0, 1, 1, false);
             farm = 0;
             foreach (bool b in state.LegalCells(DistrictType.Farm)) if (b) farm++;
-            Assert.AreEqual(15, farm);
+            Assert.AreEqual(13, farm);
         }
 
         [Test]
@@ -246,7 +259,7 @@ namespace NodeWar.Tests
             Assert.AreEqual(1, System.Math.Abs(x - 3) + System.Math.Abs(z - 5));
             Assert.AreEqual((2, 5), (x, z), "of the equidistant (2,5) and (4,5) the lower cell index wins");
             Assert.IsTrue(state.FindNearestLegalCell(DistrictType.Pier, 3, 5, out x, out z));
-            Assert.AreEqual((1, 3), (x, z));
+            Assert.AreEqual((2, 5), (x, z));
         }
 
         [Test]
@@ -277,7 +290,7 @@ namespace NodeWar.Tests
             MatchFactory.Configure(balance, board);
             SimulationState state = MatchFactory.Build(balance, board, a,
                 new[] { new PlayerSetup(), new PlayerSetup() });
-            Assert.AreEqual(18, state.nodes.Length);
+            Assert.AreEqual(11, state.nodes.Length);
         }
 
         [Test]
@@ -288,8 +301,8 @@ namespace NodeWar.Tests
             DraftState state = DraftWith(new[] { DistrictType.Farm, DistrictType.Pier },
                                          new[] { DistrictType.Village });
             state.Apply(0, 1, 1, 3, false);
-            state.Apply(1, 0, 4, 2, false);
-            state.Apply(0, 0, 4, 4, true);
+            state.Apply(1, 0, 5, 2, false);
+            state.Apply(0, 0, 5, 4, true);
 
             Assert.AreEqual(3, state.confirmedPlacements.Count);
             Assert.AreEqual(1, state.consecutiveTimeouts[0]);
@@ -298,7 +311,7 @@ namespace NodeWar.Tests
             SimulationState built = null;
             Assert.DoesNotThrow(() => built = MatchFactory.Build(balance, board,
                 state.confirmedPlacements.ToArray(), new[] { new PlayerSetup(), new PlayerSetup() }));
-            Assert.AreEqual(19, built.nodes.Length, "18 land nodes and the Pier");
+            Assert.AreEqual(8, built.nodes.Length, "five resolved nodes plus three districts");
         }
     }
 }

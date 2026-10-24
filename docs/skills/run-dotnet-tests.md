@@ -6,7 +6,7 @@ tags: [testing, executor, dotnet, ci, receipt]
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5-5, at: 2026-10-22T04:40:00Z }
-verified_at_commit: 56ab2583
+verified_at_commit: 14c9b9f5
 status: draft
 sources:
   - id: solution
@@ -54,10 +54,10 @@ gate with a freshly migrated client balance/export before shipping.
 
 | Project | Cases | Covers |
 |---|---|---|
-| `NodeWar.Simulation.Tests` | 720 | `Assets/Tests/EditMode/Tests/` by linked reference: the version-4 determinism baseline, movement, combat, claiming, production, districts, banks, gates, eras, respawns, tick order, command refusal and balance hashing; also the dotnet-only balance-asset text guard |
+| `NodeWar.Simulation.Tests` | 728 | `Assets/Tests/EditMode/Tests/` by linked reference: the version-5 determinism baseline, movement, combat, claiming, production, districts, banks, gates, eras, respawns, tick order, command refusal and balance hashing; also the dotnet-only balance-asset text guard |
 | `NodeWar.Lobby.Tests` | 1288 | UnityEngine-free lobby logic: loadout wire format, editor, capacity and migration rules, Workshop stage/replacement/session gates, routing, motion, paper maths, stats and summaries, crates, modes, party wait, private lobby, ranked queue presenter and rendezvous, in-match command checks, handshake/emote/setup packets, settings and bindings, node-action and bank-action models |
-| `NodeWar.View.Tests` | 1753 | UnityEngine-free view maths: camera, indicators, routes, resource rings, production readout, board art and framing, terrain and order presentation, district fallbacks, icons, required UXML names, draft handover and match startup sequence |
-| `NodeWar.MatchLog.Tests` | 103 | the match log format, recorder, `MatchReplay`, ERAS/SKINS/BOARD_V2/SETUP chunks, core-rules and bank-rules replays, command round trips and refusals |
+| `NodeWar.View.Tests` | 1754 | UnityEngine-free view maths: camera, indicators, routes, resource rings, production readout, board art and framing, terrain and order presentation, district fallbacks, icons, required UXML names, draft handover and match startup sequence |
+| `NodeWar.MatchLog.Tests` | 107 | the match log format, recorder, `MatchReplay`, ERAS/SKINS/BOARD_V2/BOARD_V3/SETUP chunks, core-rules and bank-rules replays, command round trips and refusals |
 | `NodeWar.Network.Tests` | 128 | `LockstepCore` and `InputDelayController` under an in-memory lossy link (loss, duplication, reordering, latency, outages, late start) judged against a perfect link, plus the 1,500-tick acceptance boards with rollback |
 | `NodeWar.Progression.Tests` | 149 | Glicko-2, RR, arenas, catalog validation, era unlocks, match settlement |
 | `NodeWar.BalanceRig.Tests` | 53 | the headless balance rig: scenario validation, repeatable execution against an exported balance, diagnostics and timeline metrics |

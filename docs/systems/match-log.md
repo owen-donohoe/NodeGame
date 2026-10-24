@@ -8,7 +8,7 @@ sources:
   - dotnet/NodeWarCloud/NodeWarCloud/Referee.cs
   - dotnet/NodeWarCloud/NodeWarCloud/RefereeModule.cs
   - dotnet/NodeWarCloud/NodeWarCloud/BalanceCatalog.cs
-verified: a1da5182
+verified: b2a42caf
 ---
 
 # Match log
@@ -49,9 +49,9 @@ Known chunk tags never change meaning. Framing compatibility does not imply simu
 ## How it works
 The file starts with `NWML` and little-endian u16 `FormatVersion` (1). Each chunk is u16 tag, u32 byte length, payload. Unknown tags skip by length; truncation, duplicate known chunks, missing required data and conflicting boards fail parsing.
 
-Tags are HEADER=1, BOARD=2, LOADOUTS=3, DRAFT=4, TICKS=5, HASHES=6, RESULT=7, ERAS=8, SKINS=9, BOARD_V2=10, SETUP=11. Empty command ticks are omitted. RESULT may be absent in a parsed file, but replay requires it. ERAS and SKINS augment loadouts independently of chunk order. There is no SIGNATURES chunk implementation.
+Tags are HEADER=1, BOARD=2, LOADOUTS=3, DRAFT=4, TICKS=5, HASHES=6, RESULT=7, ERAS=8, SKINS=9, BOARD_V2=10, SETUP=11, BOARD_V3=12. Empty command ticks are omitted. RESULT may be absent in a parsed file, but replay requires it. ERAS and SKINS augment loadouts independently of chunk order. There is no SIGNATURES chunk implementation.
 
-Simulation version 3 onward requires BOARD_V2 plus SETUP together. BOARD_V2 adds cell terrain, district-slot mask and both base draft pools to BOARD's configuration. Older logs use BOARD without SETUP. Current referee verification requires a known map ID and compares the recorded board and setup hash with its own catalog board.
+Simulation versions 3–4 write BOARD_V2 plus SETUP; version 5 onward requires BOARD_V3 plus SETUP. BOARD_V2 adds terrain (including DeepLake), slots and both base draft pools to BOARD. BOARD_V3 appends a validated symmetry byte; old board readers retain their layouts. Older logs use BOARD without SETUP. Current referee verification requires a known map ID and compares the recorded board and setup hash with its own catalog board.
 
 Replay checks simulation version, setup consistency, tick/checkpoint ordering, every logged checkpoint and the final hash. A Win must reach simulation game-over with the declared winner. A consistent unfinished log can return breaches without inventing a winner. Referee instances serialize replay through one process-wide lock because factory configuration mutates simulation statics.
 

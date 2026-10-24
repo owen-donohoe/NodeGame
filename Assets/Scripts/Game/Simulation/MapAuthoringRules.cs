@@ -13,7 +13,7 @@ namespace NodeWar.Simulation
     /// </summary>
     public static class MapAuthoringRules
     {
-        /// <summary>Fewest and most nodes an authored map may reach, counting every legal Pier.</summary>
+        /// <summary>Bounds on the maximum node count, counting Land, shoals and Lake slots once.</summary>
         public const int MinNodes = 14;
         public const int MaxNodes = 20;
 
@@ -23,6 +23,8 @@ namespace NodeWar.Simulation
         {
             if (board.gridCols <= 0 || board.gridRows <= 0)
                 return Fail("Board has no cells.", out error);
+            if (board.symmetry != MapSymmetry.FlipZ && board.symmetry != MapSymmetry.HalfTurn)
+                return Fail("Unknown map symmetry.", out error);
             long cells = (long)board.gridCols * board.gridRows;
 
             if (board.terrain == null || board.terrain.Length != cells)
@@ -31,7 +33,7 @@ namespace NodeWar.Simulation
                 return Fail("Board district slots must hold one entry per cell (" + cells + ").", out error);
             for (int i = 0; i < board.terrain.Length; i++)
                 if (board.terrain[i] != TerrainType.Land && board.terrain[i] != TerrainType.Lake
-                    && board.terrain[i] != TerrainType.Ocean)
+                    && board.terrain[i] != TerrainType.Ocean && board.terrain[i] != TerrainType.DeepLake)
                     return Fail("Unknown terrain " + (int)board.terrain[i] + " at " + CellName(board, i) + ".", out error);
 
             BoardConfigData.InitialDistrictPlacement[] placements = board.initialPlacements;
@@ -110,10 +112,11 @@ namespace NodeWar.Simulation
             {
                 int x = cell % cols;
                 int z = cell / cols;
-                if (board.districtSlots[cell] && board.terrain[cell] == TerrainType.Ocean)
-                    return Fail("Ocean at " + CellName(board, cell) + " is marked as a district slot.", out error);
+                if (board.districtSlots[cell] && (board.terrain[cell] == TerrainType.Ocean || board.terrain[cell] == TerrainType.DeepLake))
+                    return Fail("Impassable water at " + CellName(board, cell) + " is marked as a district slot.", out error);
 
-                int mirror = (rows - 1 - z) * cols + x;
+                PremadeMaps.Mirror(board.symmetry, cols, rows, x, z, out int mx, out int mz);
+                int mirror = mz * cols + mx;
                 if (board.terrain[cell] != board.terrain[mirror])
                     return Fail("Terrain at " + CellName(board, cell) + " differs from its mirror "
                         + CellName(board, mirror) + ".", out error);
@@ -129,9 +132,10 @@ namespace NodeWar.Simulation
                 if (board.districtSlots[p.gridZ * cols + p.gridX])
                     return Fail("Fixed placement at (" + p.gridX + "," + p.gridZ + ") is marked as a district slot.", out error);
 
+                PremadeMaps.Mirror(board.symmetry, cols, rows, p.gridX, p.gridZ, out int mx, out int mz);
                 int mirrored = -1;
                 for (int j = 0; j < placements.Length && mirrored < 0; j++)
-                    if (placements[j].gridX == p.gridX && placements[j].gridZ == rows - 1 - p.gridZ) mirrored = j;
+                    if (placements[j].gridX == mx && placements[j].gridZ == mz) mirrored = j;
                 if (mirrored < 0)
                     return Fail("Fixed placement at (" + p.gridX + "," + p.gridZ + ") has no mirror.", out error);
 
@@ -150,14 +154,16 @@ namespace NodeWar.Simulation
             if (!SamePool(board.baseDraftDistrictsP0, board.baseDraftDistrictsP1))
                 return Fail("The two players' base draft pools differ.", out error);
 
+            bool[] shoal = ShoalPath.Derive(board);
+            if (shoal == null) return Fail("No derivable shoal route joins all land anchors.", out error);
             int landNodes = 0;
             int pierSlots = 0;
             for (int cell = 0; cell < board.terrain.Length; cell++)
             {
-                if (board.terrain[cell] == TerrainType.Land) landNodes++;
+                if (board.terrain[cell] == TerrainType.Land || shoal[cell]) landNodes++;
                 else if (board.terrain[cell] == TerrainType.Lake && board.districtSlots[cell]) pierSlots++;
             }
-            if (landNodes < MinNodes || landNodes + pierSlots > MaxNodes)
+            if (landNodes + pierSlots < MinNodes || landNodes + pierSlots > MaxNodes)
                 return Fail("The board reaches " + landNodes + " to " + (landNodes + pierSlots)
                     + " nodes; an authored map needs " + MinNodes + " to " + MaxNodes + ".", out error);
 
@@ -184,6 +190,8 @@ namespace NodeWar.Simulation
             int start = from.gridZ * cols + from.gridX;
             int goal = to.gridZ * cols + to.gridX;
 
+            BoardConfigData resolvedBoard = board;
+            resolvedBoard.terrain = MatchFactory.ResolveTerrain(board, null, true);
             var seen = new bool[cols * rows];
             var queue = new int[cols * rows];
             int head = 0;
@@ -196,10 +204,10 @@ namespace NodeWar.Simulation
                 if (cell == goal) return true;
                 int x = cell % cols;
                 int z = cell / cols;
-                if (x > 0) tail = Visit(board, seen, queue, tail, cell - 1);
-                if (x < cols - 1) tail = Visit(board, seen, queue, tail, cell + 1);
-                if (z > 0) tail = Visit(board, seen, queue, tail, cell - cols);
-                if (z < rows - 1) tail = Visit(board, seen, queue, tail, cell + cols);
+                if (x > 0) tail = Visit(resolvedBoard, seen, queue, tail, cell - 1);
+                if (x < cols - 1) tail = Visit(resolvedBoard, seen, queue, tail, cell + 1);
+                if (z > 0) tail = Visit(resolvedBoard, seen, queue, tail, cell - cols);
+                if (z < rows - 1) tail = Visit(resolvedBoard, seen, queue, tail, cell + cols);
             }
             return false;
         }

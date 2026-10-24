@@ -30,10 +30,13 @@ namespace NodeWar.Simulation
             if (IsFixedCell(board, x, z)) return false;
             if (!board.districtSlots[cell]) return false;
 
-            // A Pier needs water to stand in; everything else needs dry land.
-            return district == DistrictType.Pier
-                ? board.terrain[cell] == TerrainType.Lake
-                : board.terrain[cell] == TerrainType.Land;
+            if (district == DistrictType.Pier)
+            {
+                if (board.terrain[cell] != TerrainType.Lake) return false;
+                bool[] shoal = ShoalPath.Derive(board);
+                return shoal != null && !shoal[cell];
+            }
+            return board.terrain[cell] == TerrainType.Land || board.terrain[cell] == TerrainType.Lake;
         }
 
         /// <summary>

@@ -8,9 +8,39 @@ namespace NodeWar.Tests
     {
         public const string MapId="hourglass-01-acceptance";
         public static GameBalanceData Balance => GameBalanceData.Default();
+        public static BoardConfigData LegacyHourglassBoard()
+        {
+            // Test-only geometry: preserve the command scripts and numeric witnesses.
+            var b = new BoardConfigData
+            {
+                gridCols = 7, gridRows = 7, symmetry = MapSymmetry.FlipZ,
+                defaultLinkWeight = BoardConfigData.DefaultLinkWeight, startingVillagersPerPlayer = 3,
+                ownedMultiplier = 50, partiallyOwnedMultiplier = 75, unownedMultiplier = 100,
+                enemyPartiallyOwnedMultiplier = 150, enemyOwnedMultiplier = 200,
+                terrain = new TerrainType[49], districtSlots = new bool[49],
+                initialPlacements = new[]
+                {
+                    Placement(3,5,DistrictType.Core,0,10000),
+                    Placement(3,1,DistrictType.Core,1,-10000)
+                },
+                baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Village },
+                baseDraftDistrictsP1 = new[] { DistrictType.Farm, DistrictType.Mine, DistrictType.Village }
+            };
+            string[] rows = { "OOOOOOO", "OLLCLLO", "OLWWLLO", "OPWWLLO", "OLWWLLO", "OLLCLLO", "OOOOOOO" };
+            for (int z = 0; z < 7; z++)
+                for (int x = 0; x < 7; x++)
+                {
+                    char c = rows[z][x];
+                    int cell = z * 7 + x;
+                    b.terrain[cell] = c == 'O' ? TerrainType.Ocean : c == 'W' || c == 'P' ? TerrainType.Lake : TerrainType.Land;
+                    b.districtSlots[cell] = c == 'L' || c == 'P';
+                }
+            Assert.That(ShoalPath.Derive(b), Is.All.False, "Historical land is already connected.");
+            return b;
+        }
         public static BoardConfigData Board()
         {
-            var b=PremadeMaps.Hourglass01();
+            var b=LegacyHourglassBoard();
             b.startingFood=30; b.startingMaterials=30; b.startingMetal=10;
             var p=new System.Collections.Generic.List<BoardConfigData.InitialDistrictPlacement>(b.initialPlacements);
             p.Add(Placement(4,4,DistrictType.Village,0,10000));

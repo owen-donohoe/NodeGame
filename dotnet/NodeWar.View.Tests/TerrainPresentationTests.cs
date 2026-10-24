@@ -20,6 +20,36 @@ namespace NodeWar.View.Tests
         private static DraftPlacement Pier() =>
             new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 1, gridZ = 3 };
 
+        [Test]
+        public void ShoalsAppearFromFirstTurnAndRiseOnlyOnCompletion()
+        {
+            var placed = new[]
+            {
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 1 },
+                Pier()
+            };
+            var first = TerrainPresentation.Describe(Board, null, false, DistrictType.None);
+            var during = TerrainPresentation.Describe(Board, placed, false, DistrictType.None, false);
+            var after = TerrainPresentation.Describe(Board, placed, false, DistrictType.None, true);
+            CollectionAssert.AreEqual(first.Select(c => c.shoal), during.Select(c => c.shoal));
+            Assert.AreEqual(2, first.Count(c => c.shoal));
+            Assert.IsTrue(At(first, 3, 2).shoal && At(first, 3, 4).shoal);
+            Assert.AreEqual(TerrainType.Lake, At(during, 3, 2).terrain);
+            Assert.IsFalse(At(during, 3, 2).hasNodeTarget);
+            Assert.AreEqual(TerrainType.Land, At(after, 3, 2).terrain);
+            Assert.IsTrue(At(after, 3, 2).hasNodeTarget);
+            Assert.IsFalse(after.Any(c => c.shoal));
+            Assert.AreEqual(TerrainType.Lake, At(first, 2, 3).terrain, "DeepLake draws as Lake");
+            Assert.IsFalse(At(first, 2, 3).hasNodeTarget);
+            Assert.AreEqual(TerrainType.Land, At(during, 1, 1).terrain);
+            Assert.IsTrue(At(during, 1, 1).hasNodeTarget);
+            Assert.AreEqual(TerrainType.Lake, At(during, 1, 3).terrain);
+            Assert.IsTrue(At(during, 1, 3).bridge);
+            int[] map = MatchFactory.CellToNode(Board, placed);
+            for (int i = 0; i < map.Length; i++) Assert.AreEqual(map[i] >= 0, after[i].hasNodeTarget, "cell " + i);
+            Assert.AreEqual(TerrainType.Lake, Board.terrain[1 * 7 + 1], "Presentation never mutates the board");
+        }
+
         private static string Source(string path)
         {
             DirectoryInfo root = new DirectoryInfo(TestContext.CurrentContext.TestDirectory);
@@ -99,8 +129,8 @@ namespace NodeWar.View.Tests
             CellDescriptor[] cells = TerrainPresentation.Describe(Board, null, false, DistrictType.None);
 
             Assert.AreEqual(49, cells.Length);
-            Assert.AreEqual(18, cells.Count(c => c.hasNodeTarget), "one target per land node");
-            Assert.AreEqual(18, TerrainPresentation.NodeTargetCount(cells));
+            Assert.AreEqual(3, cells.Count(c => c.hasNodeTarget), "three authored land targets during draft");
+            Assert.AreEqual(3, TerrainPresentation.NodeTargetCount(cells));
             foreach (CellDescriptor c in cells)
             {
                 if (c.terrain == TerrainType.Ocean) Assert.IsFalse(c.hasNodeTarget, "ocean " + c.x + "," + c.z);
@@ -112,7 +142,7 @@ namespace NodeWar.View.Tests
             Assert.IsFalse(At(cells, 2, 2).isSlot, "open lake is no slot");
 
             CellDescriptor[] withPier = TerrainPresentation.Describe(Board, new[] { Pier() }, false, DistrictType.None);
-            Assert.AreEqual(19, TerrainPresentation.NodeTargetCount(withPier));
+            Assert.AreEqual(4, TerrainPresentation.NodeTargetCount(withPier));
             Assert.IsTrue(At(withPier, 1, 3).hasNodeTarget);
             Assert.IsTrue(At(withPier, 1, 3).bridge, "A Pier is drawn as a bridge to its neighbours.");
             Assert.AreEqual(1, withPier.Count(c => c.bridge));
@@ -132,15 +162,15 @@ namespace NodeWar.View.Tests
                 Assert.AreEqual(c.legalForPick, c.outline, "so does the outline, which does not rely on colour");
                 if (c.legalForPick) legal++;
             }
-            Assert.AreEqual(16, legal);
+            Assert.AreEqual(14, legal);
             Assert.IsTrue(At(farm, 1, 1).legalForPick);
             Assert.IsFalse(At(farm, 3, 5).legalForPick, "a Core is taken");
             Assert.IsFalse(At(farm, 0, 0).legalForPick, "Ocean is never legal");
             Assert.IsFalse(At(farm, 2, 2).legalForPick, "open lake is never legal");
-            Assert.IsFalse(At(farm, 1, 3).legalForPick, "a Farm cannot go on the pier slot");
+            Assert.IsTrue(At(farm, 1, 3).legalForPick, "a Farm can raise a lake slot");
 
             CellDescriptor[] pier = TerrainPresentation.Describe(Board, null, true, DistrictType.Pier);
-            Assert.AreEqual(1, pier.Count(c => c.legalForPick));
+            Assert.AreEqual(14, pier.Count(c => c.legalForPick));
             Assert.IsTrue(At(pier, 1, 3).legalForPick);
             Assert.IsTrue(At(pier, 1, 3).outline);
         }
@@ -155,7 +185,7 @@ namespace NodeWar.View.Tests
             CellDescriptor[] cells = TerrainPresentation.Describe(Board, placed, true, DistrictType.Mine);
             Assert.IsTrue(At(cells, 1, 1).occupied);
             Assert.IsFalse(At(cells, 1, 1).legalForPick, "an occupied cell is not offered");
-            Assert.AreEqual(15, cells.Count(c => c.legalForPick));
+            Assert.AreEqual(13, cells.Count(c => c.legalForPick));
             Assert.IsTrue(At(cells, 3, 5).occupied, "the Core's cell is occupied from the start");
         }
 

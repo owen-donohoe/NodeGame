@@ -16,8 +16,8 @@ namespace NodeWar.MatchLog
         private static readonly DraftPlacement[] Draft =
         {
             new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 1, gridZ = 3 },
-            new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 4, gridZ = 2 },
-            new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 4, gridZ = 4 }
+            new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 5, gridZ = 2 },
+            new DraftPlacement { playerID = 0, districtType = DistrictType.Village, gridX = 5, gridZ = 4 }
         };
 
         private static GameCommand Move(int villager, int player, int node) => new GameCommand
@@ -61,7 +61,7 @@ namespace NodeWar.MatchLog
                 new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts },
                 new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
-            Assert.AreEqual(19, state.nodes.Length, "18 land nodes and the Pier");
+            Assert.AreEqual(8, state.nodes.Length, "five resolved cells and three districts");
 
             var hashes = new System.Collections.Generic.List<int>();
             var ticks = new System.Collections.Generic.List<int>();
