@@ -13,7 +13,7 @@ sources:
   - Assets/Scripts/Game/Simulation/PlacementLegality.cs
   - Assets/Scripts/Game/Simulation/PremadeMaps.cs
   - Assets/Scripts/Game/Simulation/ShoalPath.cs
-verified: a1da5182
+verified: b2a42caf
 ---
 
 # Board
