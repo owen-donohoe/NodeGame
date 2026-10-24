@@ -23,6 +23,7 @@ namespace NodeWar.View
         private static readonly Color LandColor = new Color(0.38f, 0.43f, 0.29f, 1f);
         private static readonly Color LegalTint = new Color(0.30f, 0.90f, 0.45f, 0.38f);
         private static readonly Color LegalOutline = new Color(1f, 0.95f, 0.35f, 1f);
+        private static readonly Color ShoalOutline = new Color(0.75f, 0.90f, 0.95f, 1f);
         private static readonly Color PlankColor = new Color(0.55f, 0.38f, 0.20f, 1f);
 
         private const float GroundY = -0.12f;
@@ -38,6 +39,9 @@ namespace NodeWar.View
         private Transform bridges;
         private WaterSurfaceView water;
         private GameObject[] highlightByCell;
+        private GameObject[] shoalByCell;
+        private Renderer[] groundByCell;
+        private bool[] targetByCell;
         private bool[] bridgeByCell;
         private readonly List<Mesh> ownedMeshes = new List<Mesh>();
 
@@ -98,19 +102,23 @@ namespace NodeWar.View
             bridges = NewChild("Bridges");
             water = NewChild("Water").gameObject.AddComponent<WaterSurfaceView>();
             water.Initialize(board.gridCols, board.gridRows, nodeScale, GroundY - 0.02f);
-            water.SetTerrain(board.terrain); // PR-A: ResolveTerrain
 
             int cells = board.gridCols * board.gridRows;
             highlightByCell = new GameObject[cells];
+            shoalByCell = new GameObject[cells];
+            groundByCell = new Renderer[cells];
+            targetByCell = new bool[cells];
             bridgeByCell = new bool[cells];
             for (int cell = 0; cell < cells; cell++)
             {
                 int x = cell % board.gridCols;
                 int z = cell / board.gridCols;
                 TerrainType terrain = board.terrain[cell];
-                if (terrain == TerrainType.Land)
-                    MakeQuad(terrain + "_" + x + "_" + z, tiles, Center(x, z, GroundY), nodeScale, LandColor);
+                // Every cell gets a quad so drafted land can appear; water cells keep it hidden.
+                groundByCell[cell] = MakeQuad(terrain + "_" + x + "_" + z, tiles,
+                    Center(x, z, GroundY), nodeScale, GroundColor(terrain)).GetComponent<Renderer>();
             }
+            ShowDraft(null, false, DistrictType.None);
         }
 
         /// <summary>
@@ -119,17 +127,36 @@ namespace NodeWar.View
         /// </summary>
         public void ShowDraft(DraftPlacement[] placed, bool hasPick, DistrictType pick)
         {
-            if (highlightByCell == null) return;
-            water.SetTerrain(board.terrain); // PR-A: ResolveTerrain
+            Show(placed, hasPick, pick, false);
+        }
 
-            CellDescriptor[] cells = TerrainPresentation.Describe(board, placed, hasPick, pick);
+        private void Show(DraftPlacement[] placed, bool hasPick, DistrictType pick, bool draftComplete)
+        {
+            if (highlightByCell == null) return;
+
+            CellDescriptor[] cells = TerrainPresentation.Describe(board, placed, hasPick, pick, draftComplete);
             for (int i = 0; i < cells.Length; i++)
+            {
                 SetHighlight(cells[i]);
+                SetShoal(cells[i]);
+                // Land draws as a ground quad; every other cell is the water surface's.
+                bool land = cells[i].terrain == TerrainType.Land;
+                groundByCell[i].enabled = land;
+                if (!land) continue;
+                // Recolour the existing mesh without cloning it on every draft preview.
+                var block = new MaterialPropertyBlock();
+                groundByCell[i].GetPropertyBlock(block);
+                block.SetColor("_Color", GroundColor(cells[i].terrain));
+                groundByCell[i].SetPropertyBlock(block);
+            }
+            // The water reads resolved terrain itself: descriptors draw DeepLake as Lake.
+            water.SetTerrain(MatchFactory.ResolveTerrain(board, placed, draftComplete));
             bool changed = false;
             for (int i = 0; i < cells.Length; i++)
             {
-                if (bridgeByCell[i] != cells[i].bridge) changed = true;
+                if (bridgeByCell[i] != cells[i].bridge || targetByCell[i] != cells[i].hasNodeTarget) changed = true;
                 bridgeByCell[i] = cells[i].bridge;
+                targetByCell[i] = cells[i].hasNodeTarget;
             }
             if (changed) RebuildBridges(cells);
         }
@@ -137,7 +164,25 @@ namespace NodeWar.View
         /// <summary>The bridges for a built match: the same shapes, with no piece in hand.</summary>
         public void ShowMatch(DraftPlacement[] placed)
         {
-            ShowDraft(placed, false, DistrictType.None);
+            Show(placed, false, DistrictType.None, true);
+        }
+
+        private static Color GroundColor(TerrainType terrain)
+        {
+            return terrain == TerrainType.Ocean ? OceanColor : terrain == TerrainType.Land ? LandColor : LakeColor;
+        }
+
+        private void SetShoal(CellDescriptor cell)
+        {
+            GameObject existing = shoalByCell[cell.cell];
+            if (cell.shoal && existing == null)
+            {
+                existing = new GameObject("Shoal_" + cell.x + "_" + cell.z);
+                existing.transform.SetParent(transform, false);
+                MakeOutline("Path", existing.transform, Center(cell.x, cell.z, HighlightY), ShoalOutline, OutlineWidth);
+                shoalByCell[cell.cell] = existing;
+            }
+            if (existing != null) existing.SetActive(cell.shoal);
         }
 
         private void SetHighlight(CellDescriptor cell)

@@ -126,7 +126,7 @@ namespace NodeWar.BalanceRig
 
                         MatchFactory.Configure(match.setup.balance, match.setup.board);
                         SimulationState built = MatchFactory.Build(match.setup.balance, match.setup.board, match.draft, match.players);
-                        Assert.That(built.nodes.Length, Is.InRange(18, 19), "the hourglass has 18 nodes, 19 with a Pier");
+                        Assert.AreEqual(5 + match.draft.Length, built.nodes.Length, "five resolved nodes plus one per drafted lake slot");
 
                         MatchResult r = MatchRunner.Run(match, 600, 0, null, new RunHooks { timeline = true });
                         Assert.IsNotNull(r.timeline);

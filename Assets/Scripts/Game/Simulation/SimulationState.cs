@@ -42,7 +42,8 @@ namespace NodeWar.Simulation
     {
         Land = 0,
         Lake = 1,
-        Ocean = 2
+        Ocean = 2,
+        DeepLake = 3
     }
 
     public enum DistrictUpgradeCategory

@@ -3,11 +3,12 @@ system: draft
 summary: Turn-based district placement that produces the agreed match board before real-time play begins.
 sources:
   - Assets/Scripts/Game/Simulation/DraftState.cs
+  - Assets/Scripts/Game/Simulation/PlacementLegality.cs
   - Assets/Scripts/Game/Core/DraftManager.cs
   - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
   - Assets/Scripts/Game/Core/IDraftPresenter.cs
   - Assets/Scripts/Game/Network/DraftSerializer.cs
-verified: 3c1b562c
+verified: b2a42caf
 ---
 
 # Draft
@@ -45,7 +46,7 @@ Let each player choose district positions on a shared map before ticks begin. De
 - `match-log`: resolved loadouts and ordered placements are recorded to rebuild tick-zero state.
 
 ## Invariants
-No placement before map/rules agreement. A valid cell is an empty district slot, never a Core: Land for ordinary districts, Lake for Pier, never Ocean. Inactive district values are refused without runtime aliases. A refused choice consumes nothing. A pick with no legal cell is unplayable rather than forced. Presentation cannot choose rule exceptions.
+No placement before map/rules agreement. A valid cell is an empty district slot, never a Core: Land or Lake for ordinary districts, Lake outside the starting shoal path for Pier, never Ocean or DeepLake. Inactive district values are refused without runtime aliases. A refused choice consumes nothing. A pick with no legal cell is unplayable rather than forced. Presentation cannot choose rule exceptions.
 
 ## How it works
 Phases are WaitingForReady → InitialReveal → ActiveDraft → Complete. P0 drafts first. Initial fixed placements occupy their cells. Human pools come only from loadout arrays, including Farm/Mine/Town defaults; match setup skips blanks, deduplicates and never appends map pieces or Warrior. Legacy 2/2 input migrates to 3/5 before pool construction. Draft wire readers accept both shapes. Configured bots retain independent map/configured pools. Turns skip players without playable picks; drafting ends when neither has one.

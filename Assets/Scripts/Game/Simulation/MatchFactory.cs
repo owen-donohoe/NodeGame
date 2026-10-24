@@ -35,8 +35,8 @@ namespace NodeWar.Simulation
     /// drift, and a referee whose starting board differed from the players'
     /// would reject every honest log.
     ///
-    /// The board is sparse. Only traversable cells become nodes: every Land
-    /// cell, and a Lake cell once a Pier is drafted on it. Node IDs are
+    /// The board is sparse. Only traversable cells become nodes: every resolved Land
+    /// cell, and unresolved Lake once a Pier is drafted on it. Node IDs are
     /// assigned to those cells in ascending cell order, so they follow the
     /// board's row-major authoring order with the gaps closed up. A board or
     /// draft that is not legal is refused with an <see cref="ArgumentException"/>
@@ -106,15 +106,33 @@ namespace NodeWar.Simulation
         /// there is none: ocean, open lake, and any Lake cell no Pier was drafted
         /// on. IDs run in ascending cell order. The board must be buildable.
         /// </summary>
+        public static TerrainType[] ResolveTerrain(BoardConfigData board, DraftPlacement[] placed, bool draftComplete)
+        {
+            var resolved = (TerrainType[])board.terrain.Clone();
+            if (placed != null)
+                for (int i = 0; i < placed.Length; i++)
+                    if (placed[i].districtType != DistrictType.Pier)
+                        resolved[placed[i].gridZ * board.gridCols + placed[i].gridX] = TerrainType.Land;
+            if (draftComplete)
+            {
+                bool[] shoal = ShoalPath.Derive(board);
+                if (shoal != null)
+                    for (int i = 0; i < resolved.Length; i++)
+                        if (shoal[i]) resolved[i] = TerrainType.Land;
+            }
+            return resolved;
+        }
+        /// <summary>Ascending node IDs for resolved Land and drafted Lake Piers; -1 elsewhere.</summary>
         public static int[] CellToNode(BoardConfigData board, DraftPlacement[] draft)
         {
             RequireBuildable(board, draft);
 
+            TerrainType[] resolved = ResolveTerrain(board, draft, true);
             int[] cellToNode = new int[board.terrain.Length];
             for (int cell = 0; cell < cellToNode.Length; cell++)
-                cellToNode[cell] = board.terrain[cell] == TerrainType.Land ? 0 : -1;
+                cellToNode[cell] = resolved[cell] == TerrainType.Land ? 0 : -1;
 
-            // Only a Pier turns a Lake cell into a node, and PlacementLegality has
+            // Only a Pier keeps an unresolved Lake cell as a node; PlacementLegality has
             // already established that a Pier stands on a Lake slot.
             if (draft != null)
                 for (int i = 0; i < draft.Length; i++)
@@ -151,6 +169,7 @@ namespace NodeWar.Simulation
         {
             int[] cellToNode = CellToNode(board, draft);
             int[] nodeToCell = NodeToCell(cellToNode);
+            TerrainType[] resolved = ResolveTerrain(board, draft, true);
             int cols = board.gridCols;
             int rows = board.gridRows;
             state.nodes = new NodeData[nodeToCell.Length];
@@ -169,7 +188,7 @@ namespace NodeWar.Simulation
                     districtType = DistrictType.None,
                     baseDistrictType = DistrictType.None,
                     upgradeCategory = DistrictUpgradeCategory.Fixed,
-                    terrain = board.terrain[cell],
+                    terrain = resolved[cell],
                     claimBar = 0,
                     ownerID = -1,
                     townPaidMask = 0,

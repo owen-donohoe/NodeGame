@@ -55,6 +55,7 @@ namespace NodeWar.Simulation
                 if (board.districtSlots != null)
                     for (int i = 0; i < board.districtSlots.Length; i++) h = Mix(h, board.districtSlots[i] ? 1 : 0);
 
+                h = Mix(h, (int)board.symmetry);
                 h = HashPool(h, board.baseDraftDistrictsP0);
                 h = HashPool(h, board.baseDraftDistrictsP1);
                 return h;

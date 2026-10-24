@@ -12,7 +12,154 @@ namespace NodeWar.Tests
     /// </summary>
     public class TerrainMapTests
     {
+        private static BoardConfigData LakeFixture(int cols = 7, int rows = 7)
+        {
+            var board = BoardFixtures.LandGrid(cols, rows);
+            for (int i = 0; i < board.terrain.Length; i++) board.terrain[i] = TerrainType.Lake;
+            foreach (var p in board.initialPlacements) board.terrain[p.gridZ * cols + p.gridX] = TerrainType.Land;
+            return board;
+        }
+
+        [Test]
+        public void Shoals_CentreIslandStraightSymmetricAndRepeatable()
+        {
+            var board = LakeFixture();
+            board.terrain[24] = TerrainType.Land;
+            bool[] path = ShoalPath.Derive(board);
+            for (int i = 0; i < path.Length; i++)
+                Assert.AreEqual(i == 10 || i == 17 || i == 31 || i == 38, path[i], "cell " + i);
+            for (int run = 0; run < 10; run++) CollectionAssert.AreEqual(path, ShoalPath.Derive(board));
+        }
+
+        [Test]
+        public void Shoals_TwoIslandsKeepRoutesApart()
+        {
+            var board = LakeFixture(11, 9);
+            for (int x = 0; x < 11; x++)
+            {
+                board.terrain[x] = TerrainType.Land;
+                board.terrain[8 * 11 + x] = TerrainType.Land;
+            }
+            board.terrain[4 * 11 + 1] = TerrainType.Land;
+            board.terrain[4 * 11 + 9] = TerrainType.Land;
+            bool[] path = ShoalPath.Derive(board);
+            Assert.IsNotNull(path);
+            // Remove anchors: each carved component belongs to one separate route.
+            var group = new int[path.Length];
+            int groups = 0;
+            for (int i = 0; i < path.Length; i++)
+            {
+                if (!path[i] || group[i] != 0) continue;
+                groups++;
+                var queue = new System.Collections.Generic.List<int> { i };
+                group[i] = groups;
+                for (int q = 0; q < queue.Count; q++)
+                    foreach (int j in new[] { queue[q] - 1, queue[q] + 1, queue[q] - 11, queue[q] + 11 })
+                        if (j >= 0 && j < path.Length && path[j] && group[j] == 0
+                            && Math.Abs(j % 11 - queue[q] % 11) + Math.Abs(j / 11 - queue[q] / 11) == 1)
+                        { group[j] = groups; queue.Add(j); }
+            }
+            Assert.GreaterOrEqual(groups, 2);
+            for (int i = 0; i < path.Length; i++)
+            {
+                Assert.AreEqual(path[i], path[(8 - i / 11) * 11 + i % 11]);
+                for (int j = i + 1; j < path.Length; j++)
+                    if (path[i] && path[j] && group[i] != group[j])
+                        Assert.IsFalse(Math.Abs(i % 11 - j % 11) <= 1 && Math.Abs(i / 11 - j / 11) <= 1,
+                            "Separate routes touch at " + i + "," + j);
+            }
+        }
+
+        [Test]
+        public void Shoals_ImpassableWaterIsNeverCarvedAndUnreachableReturnsNull()
+        {
+            var board = LakeFixture();
+            board.terrain[22] = TerrainType.DeepLake;
+            board.terrain[26] = TerrainType.Ocean;
+            bool[] path = ShoalPath.Derive(board);
+            Assert.IsNotNull(path);
+            Assert.IsFalse(path[22]); Assert.IsFalse(path[26]);
+            for (int x = 0; x < 7; x++) board.terrain[21 + x] = TerrainType.DeepLake;
+            Assert.IsNull(ShoalPath.Derive(board));
+        }
+
+        [Test]
+        public void ResolvedTerrain_DraftRaisesLandAndCompletionRaisesOnlyShoalsWithoutMutation()
+        {
+            var board = LakeFixture();
+            var original = (TerrainType[])board.terrain.Clone();
+            var placed = new[]
+            {
+                new DraftPlacement { districtType = DistrictType.Farm, gridX = 0, gridZ = 1 },
+                new DraftPlacement { districtType = DistrictType.Pier, gridX = 6, gridZ = 1 }
+            };
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 0, 1));
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 6, 1));
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 3, 1));
+            var during = MatchFactory.ResolveTerrain(board, placed, false);
+            var after = MatchFactory.ResolveTerrain(board, placed, true);
+            Assert.AreEqual(TerrainType.Land, during[7]);
+            Assert.AreEqual(TerrainType.Lake, during[13]);
+            Assert.AreEqual(TerrainType.Lake, during[10]);
+            Assert.AreEqual(TerrainType.Land, after[10]);
+            var built = Build(board, placed);
+            var mapping = MatchFactory.CellToNode(board, placed);
+            Assert.AreEqual(TerrainType.Land, built.nodes[mapping[7]].terrain);
+            Assert.AreEqual(TerrainType.Lake, built.nodes[mapping[13]].terrain);
+            Assert.AreEqual(TerrainType.Land, built.nodes[mapping[10]].terrain);
+            CollectionAssert.AreEqual(original, board.terrain);
+        }
+
         private delegate void MutateBoard(ref BoardConfigData board);
+
+        [Test]
+        public void SimulationFive_BoardContentPin()
+        {
+            Assert.AreEqual(-826362826, BoardHasher.Hash(PremadeMaps.Hourglass01()));
+        }
+
+        [Test]
+        public void DeepLake_IsNeverLegalOrANode_EvenIfMarkedAsSlot()
+        {
+            var board = PremadeMaps.Hourglass01();
+            int cell = Cell(board, 2, 3);
+            board.districtSlots[cell] = true;
+            Assert.IsTrue(MapAuthoringRules.ValidateBoard(board, out string error), error);
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 2, 3));
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 2, 3));
+            Assert.AreEqual(-1, MatchFactory.CellToNode(board, null)[cell]);
+            Assert.IsFalse(MapAuthoringRules.ValidateAuthoredMap(board, out error));
+            StringAssert.Contains("water", error);
+        }
+
+        [Test]
+        public void ShoalSlot_RejectsPierButAcceptsOrdinaryDistrict()
+        {
+            var board = PremadeMaps.Hourglass01();
+            board.districtSlots[Cell(board, 3, 2)] = true;
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 3, 2));
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 3, 2));
+        }
+
+        [Test]
+        public void Hourglass_ApprovedLayoutHasTwoShoalsAndNineteenPossibleNodes()
+        {
+            var board = PremadeMaps.Hourglass01();
+            var shoal = ShoalPath.Derive(board);
+            int slots = 0;
+            for (int i = 0; i < shoal.Length; i++)
+            {
+                Assert.AreEqual(i == Cell(board, 3, 2) || i == Cell(board, 3, 4), shoal[i], "cell " + i);
+                if (board.districtSlots[i]) slots++;
+            }
+            Assert.AreEqual(14, slots);
+            Assert.IsTrue(MapAuthoringRules.ValidateAuthoredMap(board, out string error), error);
+            var placed = new System.Collections.Generic.List<DraftPlacement>();
+            for (int i = 0; i < board.districtSlots.Length; i++)
+                if (board.districtSlots[i]) placed.Add(new DraftPlacement
+                { districtType = DistrictType.Farm, gridX = i % 7, gridZ = i / 7 });
+            Assert.AreEqual(19, Build(board, placed.ToArray()).nodes.Length);
+        }
 
         private static GameBalanceData Balance()
         {
@@ -48,26 +195,26 @@ namespace NodeWar.Tests
         // --- the sparse board ---
 
         [Test]
-        public void Hourglass_NoPierHas18Nodes_WithPierHas19()
+        public void Hourglass_NoDraftHas5Nodes_WithPierHas6()
         {
             BoardConfigData board = PremadeMaps.Hourglass01();
             Assert.AreEqual(49, board.gridCols * board.gridRows);
 
             SimulationState noPier = Build(board);
             int[] noPierMap = MatchFactory.CellToNode(board, null);
-            Assert.AreEqual(18, noPier.nodes.Length);
+            Assert.AreEqual(5, noPier.nodes.Length);
             Assert.AreEqual(49, noPierMap.Length);
             for (int i = 0; i < noPier.nodes.Length; i++) Assert.AreEqual(i, noPier.nodes[i].nodeID);
-            Assert.AreEqual(31, CountAbsent(noPierMap), "18 of 49 cells carry a node.");
+            Assert.AreEqual(44, CountAbsent(noPierMap), "5 of 49 cells carry a node.");
             Assert.AreEqual(-1, noPierMap[Cell(board, 1, 3)], "The empty Pier slot is not a node.");
             Assert.AreEqual(-1, noPierMap[Cell(board, 0, 0)], "Ocean is never a node.");
             Assert.AreEqual(-1, noPierMap[Cell(board, 2, 2)], "Open lake is never a node.");
 
             SimulationState withPier = Build(board, PierAt13());
             int[] pierMap = MatchFactory.CellToNode(board, new[] { PierAt13() });
-            Assert.AreEqual(19, withPier.nodes.Length);
+            Assert.AreEqual(6, withPier.nodes.Length);
             for (int i = 0; i < withPier.nodes.Length; i++) Assert.AreEqual(i, withPier.nodes[i].nodeID);
-            Assert.AreEqual(30, CountAbsent(pierMap));
+            Assert.AreEqual(43, CountAbsent(pierMap));
 
             int pier = pierMap[Cell(board, 1, 3)];
             Assert.GreaterOrEqual(pier, 0);
@@ -132,12 +279,7 @@ namespace NodeWar.Tests
                 }
             }
 
-            // The west bank cannot cross the open lake: (1,2) and (1,4) never touch.
-            NodeData south = state.nodes[cellToNode[Cell(board, 1, 2)]];
-            NodeData north = state.nodes[cellToNode[Cell(board, 1, 4)]];
-            Assert.AreEqual(withPier ? 2 : 1, south.links.Length);
-            Assert.AreEqual(withPier ? 2 : 1, north.links.Length);
-            foreach (Link link in south.links) Assert.AreNotEqual(north.nodeID, link.toNodeID);
+            Assert.AreEqual(-1, cellToNode[Cell(board, 2, 3)], "DeepLake is never a node.");
         }
 
         // --- the authored map ---
@@ -190,8 +332,8 @@ namespace NodeWar.Tests
             Assert.IsTrue(MapAuthoringRules.HasLandRoute(board));
 
             BoardConfigData cut = PremadeMaps.Hourglass01();
-            cut.terrain[Cell(cut, 4, 3)] = TerrainType.Lake;
-            cut.terrain[Cell(cut, 5, 3)] = TerrainType.Lake;
+            cut.terrain[Cell(cut, 3, 2)] = TerrainType.DeepLake;
+            cut.terrain[Cell(cut, 3, 4)] = TerrainType.DeepLake;
             Assert.IsFalse(MapAuthoringRules.HasLandRoute(cut),
                 "The pier slot at (1,3) is lake and must not rescue the land route.");
             Assert.IsFalse(MapAuthoringRules.ValidateAuthoredMap(cut, out string error));
@@ -293,7 +435,7 @@ namespace NodeWar.Tests
             Assert.Throws<ArgumentException>(() => MatchFactory.Build(Balance(), shortSlots, null, Players()));
 
             BoardConfigData unknownTerrain = BoardFixtures.LandGrid3x3();
-            unknownTerrain.terrain[0] = (TerrainType)3;
+            unknownTerrain.terrain[0] = (TerrainType)4;
             Assert.Throws<ArgumentException>(() => MatchFactory.Build(Balance(), unknownTerrain, null, Players()));
         }
 
@@ -303,8 +445,8 @@ namespace NodeWar.Tests
             BoardConfigData board = PremadeMaps.Hourglass01();
             var cases = new[]
             {
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 3 },  // lake slot
-                new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 1, gridZ = 1 },  // pier on land
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Pier, gridX = 3, gridZ = 2 },  // shoal
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 2, gridZ = 3 },  // deep lake
                 new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 0, gridZ = 0 },  // ocean
                 new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 3, gridZ = 5 },  // core
                 new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 7, gridZ = 0 }   // outside
@@ -334,8 +476,8 @@ namespace NodeWar.Tests
             Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 1, 1), "Farm on free land");
             Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Barracks, 5, 4), "Barracks on free land");
             Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 1, 3), "Pier on the pier slot");
-            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 1, 3), "Farm on the pier slot");
-            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 1, 1), "Pier on ordinary land");
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 1, 3), "Farm raises a lake slot");
+            Assert.IsTrue(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 1, 1), "Pier on a lake slot");
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 2, 2), "Pier on lake without a slot");
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 2, 2), "Farm on open lake");
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Farm, 0, 0), "Farm on ocean");
@@ -360,7 +502,7 @@ namespace NodeWar.Tests
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Core, 1, 1), "Core is not a district to draft");
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, (DistrictType)99, 1, 1), "unknown type");
             Assert.IsFalse(PlacementLegality.CanPlace(board, null, (DistrictType)(-1), 1, 1), "negative type");
-            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 1, 1));
+            Assert.IsFalse(PlacementLegality.CanPlace(board, null, DistrictType.Pier, 3, 1));
 
             // A land cell the board does not mark as a slot is not draftable.
             BoardConfigData closed = PremadeMaps.Hourglass01();
@@ -420,12 +562,13 @@ namespace NodeWar.Tests
             for (int i = 0; i < baseline.terrain.Length; i++)
             {
                 int cell = i;
-                foreach (TerrainType other in new[] { TerrainType.Land, TerrainType.Lake, TerrainType.Ocean })
+                foreach (TerrainType other in new[] { TerrainType.Land, TerrainType.Lake, TerrainType.Ocean, TerrainType.DeepLake })
                     if (other != baseline.terrain[cell])
                         Changes("terrain " + cell + "->" + other, (ref BoardConfigData b) => b.terrain[cell] = other);
                 Changes("slot " + cell, (ref BoardConfigData b) => b.districtSlots[cell] = !b.districtSlots[cell]);
             }
 
+            Changes("symmetry", (ref BoardConfigData b) => b.symmetry = MapSymmetry.HalfTurn);
             Changes("gridCols", (ref BoardConfigData b) => b.gridCols++);
             Changes("gridRows", (ref BoardConfigData b) => b.gridRows++);
             Changes("defaultLinkWeight", (ref BoardConfigData b) => b.defaultLinkWeight++);
@@ -541,7 +684,7 @@ namespace NodeWar.Tests
             {
                 BoardConfigData board = PremadeMaps.Hourglass01();
                 DraftPlacement[] draft = withPier
-                    ? new[] { PierAt13(), new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 4, gridZ = 2 } }
+                    ? new[] { PierAt13(), new DraftPlacement { playerID = 1, districtType = DistrictType.Farm, gridX = 5, gridZ = 2 } }
                     : new DraftPlacement[0];
                 GameBalanceData balance = Balance();
                 MatchFactory.Configure(balance, board);
@@ -587,7 +730,12 @@ namespace NodeWar.Tests
         private static int AcrossTheLake(bool pier)
         {
             BoardConfigData board = PremadeMaps.Hourglass01();
-            DraftPlacement[] draft = pier ? new[] { PierAt13() } : new DraftPlacement[0];
+                        var pockets = new[]
+            {
+                new DraftPlacement { districtType = DistrictType.Farm, gridX = 1, gridZ = 4 },
+                new DraftPlacement { districtType = DistrictType.Farm, gridX = 1, gridZ = 2 }
+            };
+            DraftPlacement[] draft = pier ? new[] { pockets[0], pockets[1], PierAt13() } : pockets;
             SimulationState state = Build(board, draft);
             int[] cells = MatchFactory.CellToNode(board, draft);
             int from = cells[Cell(board, 1, 4)], to = cells[Cell(board, 1, 2)];

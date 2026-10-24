@@ -18,6 +18,7 @@ namespace NodeWar.Simulation
 
         public int gridCols;
         public int gridRows;
+        public MapSymmetry symmetry; // default FlipZ (0)
 
         public int defaultLinkWeight;
 
@@ -34,13 +35,13 @@ namespace NodeWar.Simulation
 
         public InitialDistrictPlacement[] initialPlacements;
 
-        /// <summary>What each cell is: Land, Lake or Ocean. Row-major.</summary>
+        /// <summary>What each cell is: Land, Lake, Ocean or DeepLake. Row-major.</summary>
         public TerrainType[] terrain;
 
         /// <summary>
         /// Which cells may take a drafted district: a Land slot takes any
-        /// ordinary district, a Lake slot takes only a Pier. Row-major. Open
-        /// lake and ocean are never slots, and a Core's cell is not one.
+        /// ordinary district; a Lake slot takes an ordinary district or a Pier outside shoals. Row-major. Open
+        /// water without a slot and impassable water reject placement, and a Core's cell is not one.
         /// </summary>
         public bool[] districtSlots;
 

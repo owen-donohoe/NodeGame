@@ -18,7 +18,7 @@ namespace NodeWar.MatchLog
             b.districtSlots = new bool[45];
             for (int i = 0; i < 45; i++)
             {
-                b.terrain[i] = (TerrainType)(i % 3);
+                b.terrain[i] = (TerrainType)(i % 4);
                 b.districtSlots[i] = i % 4 == 1;
             }
             b.baseDraftDistrictsP0 = new[] { DistrictType.Farm, DistrictType.Pier };

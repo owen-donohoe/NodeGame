@@ -22,7 +22,7 @@ namespace NodeWar.Cloud.Tests
         private static readonly DraftPlacement[] HourglassDraft =
         {
             new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 1 },
-            new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 4, gridZ = 2 }
+            new DraftPlacement { playerID = 1, districtType = DistrictType.Village, gridX = 5, gridZ = 2 }
         };
 
         private static Log HourglassLog(GameBalanceData balance, BoardConfigData? board = null, MatchSetup setup = null)

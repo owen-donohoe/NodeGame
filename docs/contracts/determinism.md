@@ -2,7 +2,7 @@
 summary: Rules that preserve identical match state from identical setup and ordered commands across peers and replay.
 sources:
   - Assets/Scripts/Game/Simulation/
-verified: a1da5182
+verified: b2a42caf
 ---
 
 # Determinism contract
@@ -40,7 +40,7 @@ Tempo timer integration uses cumulative scaled ticks 1 through t; decrement is `
 
 ## State hashing and rollback
 
-`SimulationStateHasher.ComputeHash` folds mutable fields in fixed order: players, nodes, villagers and fixed field sequence. Register every added mutable field on state/entity types in the same change. Exclude immutable node grid coordinates/links; hash node terrain and `state.boardHash` unconditionally. `BoardHasher` covers dimensions, terrain, slots, placements, base pools, starting values and link/path tuning.
+`SimulationStateHasher.ComputeHash` folds mutable fields in fixed order: players, nodes, villagers and fixed field sequence. Register every added mutable field on state/entity types in the same change. Exclude immutable node grid coordinates/links; hash node terrain and `state.boardHash` unconditionally. `BoardHasher` covers dimensions, terrain, symmetry, slots, placements, base pools, starting values and link/path tuning.
 
 Neutral extensions may hash conditionally only with explicit neutral defaults and distinct tags/indexes. Era tables hash nonzero index/value pairs, keeping suit/district tables separate; node district era hashes when nonzero. Missing/short player era tables mean era 0. Era additions may avoid a version bump only when existing inputs retain results and hashes.
 
@@ -86,15 +86,15 @@ New commands require processor case plus serializer/log acceptance in the same c
 
 ## Setup and build identity
 
-`MatchFactory.Configure` installs simulation/processor balance and path settings. `Build`/`Fill` alone build every recorded tick-0 board, including testing, live and referee. Validate board/draft through shared legality before mutation; reject with `ArgumentException`. Require exactly two Cores on different rows. Only Land and drafted Lake Piers become nodes, in ascending cell order; link adjacent node-bearing cells. Drafted districts are Fixed at placer's era; fixed board placements use era 0. Minimal unit fixtures are not alternate recorded-match builders.
+`MatchFactory.Configure` installs simulation/processor balance and path settings. `Build`/`Fill` alone build every recorded tick-0 board, including testing, live and referee. Validate board/draft through shared legality before mutation; reject with `ArgumentException`. Require exactly two Cores on different rows. Resolve starting terrain before construction: non-Pier placements raise Lake slots to Land, completion raises derived shoals, and remaining drafted Lake Piers carry Lake nodes. Ocean and DeepLake never carry nodes. Assign ascending cell IDs and link adjacent nodes. Drafted districts are Fixed at placer's era; fixed board placements use era 0. Minimal unit fixtures are not alternate recorded-match builders.
 
 Agree immutable `MatchSetup` (map ID, board hash, simulation version, balance hash) before accepting draft packets. Host proposes, guest verifies against catalog; live wire sends no board arrays. Lobby refreshes/freezes effective local arena/loadout, refuses empty chosen slots and rechecks the frozen arena. Never resize remote canonical shapes to local rank. This validates setup without changing tick semantics.
 
 Handshake compares protocol, simulation version and balance content hash. Protocol is wire layout; bump `SimulationVersion.Current` in the same commit as changed same-input behavior, result-affecting state or deliberate baseline re-pin. Balance-only/per-era tuning changes move content hash and need no simulation bump. Balance hashing includes ordered suit/district entries and tempo/breach/cap tuning, separately from state hashing. Coverage tests enforce added tuning fields. Validate bank groups, minion tuning, Workshop cooldown and safe schedules; preserve absent-field behavior.
 
-Current simulation/baseline version is 4; pins are `EmptyTick100Hash = 2084609368`, `MoveAndCombat4Hash = -1780012649`. Baseline tests check pinned version equality, not unauthorised hash-only edits; coordination remains a review obligation. Never re-pin differing platform hashes to hide divergence.
+Current simulation/baseline version is 5; pins are `EmptyTick100Hash = 2084609368`, `MoveAndCombat4Hash = -1780012649`. Baseline tests check pinned version equality, not unauthorised hash-only edits; coordination remains a review obligation. Never re-pin differing platform hashes to hide divergence.
 
-Logs record identities, board (BOARD_V2 tag 10) and setup (SETUP tag 11). Preserve frozen BOARD layout; unsupported fields need newer tags. Replay refuses another simulation version and inconsistent setup/board/balance. Referee additionally requires catalog board identity and content-addressed balance export; export every shipped balance and check client/catalog parity. Static configuration prohibits concurrent matches in a process; referee serialises replay behind a lock.
+Logs record identities, board and SETUP (tag 11). BOARD_V3 (tag 12, simulation 5 onward) appends symmetry to BOARD_V2 (tag 10). Preserve BOARD and BOARD_V2 layouts; unsupported fields need newer tags. Replay refuses another simulation version and inconsistent setup/board/balance. Referee additionally requires catalog board identity and content-addressed balance export; export every shipped balance and check client/catalog parity. Static configuration prohibits concurrent matches in a process; referee serialises replay behind a lock.
 
 ## Checkpoints and verification
 

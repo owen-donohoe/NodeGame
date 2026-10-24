@@ -19,6 +19,7 @@ namespace NodeWar.View
             switch (terrain)
             {
                 case TerrainType.Ocean: return 0;
+                case TerrainType.DeepLake: return 128;
                 default: return 255;
             }
         }

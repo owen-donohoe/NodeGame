@@ -100,7 +100,7 @@ namespace NodeWar.BalanceRig
             SimulationState state = MatchFactory.Build(setup.balance, setup.board, new DraftPlacement[0],
                 new[] { new PlayerSetup(), new PlayerSetup() });
             Assert.AreEqual(matchSetup.BoardHash, state.boardHash);
-            Assert.AreEqual(18, state.nodes.Length);
+            Assert.AreEqual(5, state.nodes.Length);
 
             // Its symmetry is the map's own: top to bottom, not a half turn.
             Assert.AreEqual((2, 5), setup.mirror(2, 1));

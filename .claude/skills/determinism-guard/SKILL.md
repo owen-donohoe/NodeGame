@@ -115,7 +115,7 @@ Read the changed or proposed code, then check each item:
      they did when eras were added? If not, bump SimulationVersion.Current
      and review the pinned baseline version with the change. The version
      test checks equality with that pin, not whether hash constants were edited.
-     Current and BaselinesPinnedAtSimVersion are both 4. E1 removed the two
+     Current and BaselinesPinnedAtSimVersion are both 5. E1 removed the two
      unconditional structure terms per node; districtHealth uses zero-neutral tag
      2028, and D4's unconditional leg-clock term remains. Pins are 2084609368 and
      -1780012649. All bank/health fields are initialized, hashed, copied and
