@@ -90,7 +90,6 @@ float3 WaterNormal(Varyings input)
 half4 WaterFragment(Varyings input) : SV_Target
 {
     float4 shore = Shore(input.shoreUV);
-    clip(shore.a - 0.5);
     float lake = step(0.25, shore.b);
     float deepLake = lake * (1 - step(0.75, shore.b));
     float3 deep = lerp(_OceanDeep.rgb, _LakeDeep.rgb, lake);
@@ -142,13 +141,11 @@ half4 WaterFragment(Varyings input) : SV_Target
 
 half4 WaterDepth(Varyings input) : SV_Target
 {
-    clip(Shore(input.shoreUV).a - 0.5);
     return 0;
 }
 
 half4 WaterDepthNormals(Varyings input) : SV_Target
 {
-    clip(Shore(input.shoreUV).a - 0.5);
     float3 normal = WaterNormal(input);
 #if defined(_GBUFFER_NORMALS_OCT)
     float2 oct = PackNormalOctQuadEncode(normal);
