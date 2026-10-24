@@ -16,7 +16,7 @@ namespace NodeWar.View
         private TerrainType[] terrain;
         private MaterialPropertyBlock properties;
         private Vector4 shoreST;
-        private bool generatedFoam;
+        private bool generatedSurfaceFoam, generatedIntersectionFoam, generatedNormals;
         private Mesh mesh;
         private MeshFilter filter;
         private MeshRenderer surfaceRenderer;
@@ -131,7 +131,10 @@ namespace NodeWar.View
         private void Update()
         {
             if (surfaceRenderer == null) return;
-            if (WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial) != generatedFoam) ApplyProperties();
+            Material material = surfaceRenderer.sharedMaterial;
+            if (WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex") != generatedSurfaceFoam
+                || WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex") != generatedIntersectionFoam
+                || WaterMaterialFactory.NeedsNormals(material) != generatedNormals) ApplyProperties();
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
             ApplyProperties();
@@ -152,8 +155,13 @@ namespace NodeWar.View
             if (previous != null) properties.SetTexture("_ShorePrevTex", previous);
             properties.SetFloat("_ShoreBlend", blend);
             properties.SetVector("_ShoreST", shoreST);
-            generatedFoam = WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial);
-            if (generatedFoam) properties.SetTexture("_FoamTex", WaterMaterialFactory.Foam());
+            Material material = surfaceRenderer.sharedMaterial;
+            generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex");
+            generatedIntersectionFoam = WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex");
+            generatedNormals = WaterMaterialFactory.NeedsNormals(material);
+            if (generatedSurfaceFoam) properties.SetTexture("_SurfaceFoamTex", WaterMaterialFactory.SurfaceFoam());
+            if (generatedIntersectionFoam) properties.SetTexture("_IntersectionFoamTex", WaterMaterialFactory.IntersectionFoam());
+            if (generatedNormals) properties.SetTexture("_NormalsTex", WaterMaterialFactory.Normals());
             surfaceRenderer.SetPropertyBlock(properties);
         }
 
