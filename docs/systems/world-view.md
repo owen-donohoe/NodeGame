@@ -7,7 +7,7 @@ sources:
   - Assets/Scripts/Game/UI/Worldspace/
   - Assets/Resources/UI/PaintCoverage.shader
   - Assets/Resources/Water/
-verified: 794baded
+verified: 01beef2e
 ---
 
 # World view
