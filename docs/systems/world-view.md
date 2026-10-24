@@ -7,7 +7,10 @@ sources:
   - Assets/Scripts/Game/UI/Worldspace/
   - Assets/Resources/UI/PaintCoverage.shader
   - Assets/Resources/Water/
-verified: 01beef2e
+  - Assets/Resources/Board/NodeWarPlinth.shader
+  - Assets/Art/Board/Plinth.fbx
+  - tools/blender/make_plinth.py
+verified: f380528c
 ---
 
 # World view
@@ -26,7 +29,7 @@ Render deterministic state as a readable board without changing results. Share g
 
 `IndicatorDirector(state, tickProvider, settings, opponentSettings, localPlayer)` exposes `Active` indicators and `TryGetAnchor`; bind positioners/transforms and `Dispose` subscriptions. `IndicatorPlacement` is pure placement maths; HUD `IndicatorLayer` renders/clicks them. `ScreenShakeDirector` subscribes to ticks, invokes a supplied shake callback and is disposable.
 
-`DistrictVisual`/`DistrictVisualTable` provide shared per-district board prefab, flat icon and art metadata. `BoardArtPlacer` applies offsets/rotation/scale. `DistrictFallback`/`DistrictFallbackArt` provide descriptors, monograms and missing-art glyphs/bridges. `TerrainPresentation.Describe(board, placed, hasPick, pick, draftComplete)` uses resolved terrain; its four-argument overload describes drafting. Cells expose unresolved `shoal` cues. `BoardTerrainView` retains and recolours ground quads on `ShowDraft`/`ShowMatch`, outlines shoals from the first turn, draws DeepLake as Lake, shows ground quads only on resolved Land and feeds `MatchFactory.ResolveTerrain` to `WaterSurfaceView.SetTerrain`; pure `ShoreField.Bake` and `WaterMeshBuilder.Build` supply the field and shared-edge mesh.
+`DistrictVisual`/`DistrictVisualTable` share district prefabs, icons and metadata. `BoardArtPlacer` applies offsets/rotation/scale; `DistrictFallback`/`DistrictFallbackArt` supply missing-art glyphs/bridges. `TerrainPresentation.Describe(board, placed, hasPick, pick, draftComplete)` uses resolved terrain; its four-argument overload describes drafting. `BoardTerrainView.ShowDraft`/`ShowMatch` outline unresolved shoals and enable lazy plinths only on Land. `PlinthFactory` loads `Board/DistrictPlinth` from Resources or builds a cube with the plinth shader. `PlinthLayout` supplies top-centre positions; `PlinthMotion` supplies clamped cubic rise maths. Resolved terrain feeds `WaterSurfaceView.SetTerrain`; `ShoreField.Bake` and `WaterMeshBuilder.Build` supply the field and shared-edge mesh.
 
 Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers)` supplies one silhouette; `SetIntent`, `SetTint` and renderer rebuild/exclusion methods update it. `OutlineDriver` alone decides intents from hover, selection, inspected node and presence. `OutlineRegistry` exposes active groups to URP mask/composite passes and allocates IDs only while style is non-None. `OutlineStyle` numeric order is priority; ownership tint is separate. `OutlineRendererFeature` must be installed in both Mobile_Renderer and PC_Renderer assets.
 
@@ -58,7 +61,9 @@ Local routes merge identical remaining paths and fade with order age. Interrupte
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water uses baked shore distance, damping and body channels, without camera depth/colour samples or alpha tests; the mesh omits land. Field changes blend over 0.4 seconds, instantly with reduced motion. Shore textures, mesh and material are disposed by the view. `WaterMaterialFactory` loads the opaque shader from Resources; forward, depth and depth-normals passes share displacement. `WaterQuality.Current` reads saved graphics quality, falling back to Medium on mobile and High elsewhere without a profile. `WaterSurfaceView.RefreshAll` swaps active materials and rebuilds mesh density while preserving shore fields/blends; re-enabled views refresh too.
+Water uses baked shore distance, damping and body channels without camera samples; its mesh omits land. Field changes blend over 0.4 seconds or snap with reduced motion. The view disposes textures, mesh and material. `WaterMaterialFactory` loads the Resources shader; forward/depth/normals share displacement. `WaterQuality.Current` reads saved quality, defaulting to Medium/mobile or High/desktop. `WaterSurfaceView.RefreshAll` swaps materials and mesh density, preserving shore fields/blends; re-enabled views refresh too.
+
+Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.25 below GroundY. Initial land snaps; later Land transitions rise over 0.35 unscaled seconds or snap with reduced motion. Art/node heights stay fixed. The board disposes fallback resources; the shader tints submerged sides.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
