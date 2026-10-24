@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using UnityEngine;
 using NodeWar.Config;
+using NodeWar.Lobby;
 using NodeWar.Simulation;
 
 namespace NodeWar.View
 {
     /// <summary>
     /// The board's terrain as plain runtime geometry, so the map reads before any art exists:
-    /// land tiles and shore-driven water, a draft-only cue on the empty pier slot, a highlight on
+    /// land plinths and shore-driven water, a draft-only cue on the empty pier slot, a highlight on
     /// every cell the piece in hand may legally take, and a bridge where a Pier stands.
     ///
     /// Every decision comes from <see cref="TerrainPresentation"/>, which asks
@@ -40,7 +41,13 @@ namespace NodeWar.View
         private WaterSurfaceView water;
         private GameObject[] highlightByCell;
         private GameObject[] shoalByCell;
-        private Renderer[] groundByCell;
+        private GameObject[] plinthByCell;
+        private bool[] landByCell;
+        private float[] riseByCell;
+        private PlinthFactory plinthFactory;
+        private bool hasShown;
+        private float WaterY => GroundY - 0.25f;
+        private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
         private bool[] targetByCell;
         private bool[] bridgeByCell;
         private readonly List<Mesh> ownedMeshes = new List<Mesh>();
@@ -101,23 +108,18 @@ namespace NodeWar.View
             tiles = NewChild("Tiles");
             bridges = NewChild("Bridges");
             water = NewChild("Water").gameObject.AddComponent<WaterSurfaceView>();
-            water.Initialize(board.gridCols, board.gridRows, nodeScale, GroundY - 0.02f);
+            water.Initialize(board.gridCols, board.gridRows, nodeScale, WaterY);
+            plinthFactory = new PlinthFactory(LandColor, WaterY);
 
             int cells = board.gridCols * board.gridRows;
             highlightByCell = new GameObject[cells];
             shoalByCell = new GameObject[cells];
-            groundByCell = new Renderer[cells];
+            plinthByCell = new GameObject[cells];
+            landByCell = new bool[cells];
+            riseByCell = new float[cells];
+            hasShown = false;
             targetByCell = new bool[cells];
             bridgeByCell = new bool[cells];
-            for (int cell = 0; cell < cells; cell++)
-            {
-                int x = cell % board.gridCols;
-                int z = cell / board.gridCols;
-                TerrainType terrain = board.terrain[cell];
-                // Every cell gets a quad so drafted land can appear; water cells keep it hidden.
-                groundByCell[cell] = MakeQuad(terrain + "_" + x + "_" + z, tiles,
-                    Center(x, z, GroundY), nodeScale, GroundColor(terrain)).GetComponent<Renderer>();
-            }
             ShowDraft(null, false, DistrictType.None);
         }
 
@@ -139,16 +141,9 @@ namespace NodeWar.View
             {
                 SetHighlight(cells[i]);
                 SetShoal(cells[i]);
-                // Land draws as a ground quad; every other cell is the water surface's.
-                bool land = cells[i].terrain == TerrainType.Land;
-                groundByCell[i].enabled = land;
-                if (!land) continue;
-                // Recolour the existing mesh without cloning it on every draft preview.
-                var block = new MaterialPropertyBlock();
-                groundByCell[i].GetPropertyBlock(block);
-                block.SetColor("_Color", GroundColor(cells[i].terrain));
-                groundByCell[i].SetPropertyBlock(block);
+                SetPlinth(cells[i]);
             }
+            hasShown = true;
             // The water reads resolved terrain itself: descriptors draw DeepLake as Lake.
             water.SetTerrain(MatchFactory.ResolveTerrain(board, placed, draftComplete));
             bool changed = false;
@@ -167,9 +162,37 @@ namespace NodeWar.View
             Show(placed, false, DistrictType.None, true);
         }
 
-        private static Color GroundColor(TerrainType terrain)
+        private void SetPlinth(CellDescriptor cell)
         {
-            return terrain == TerrainType.Ocean ? OceanColor : terrain == TerrainType.Land ? LandColor : LakeColor;
+            int i = cell.cell;
+            bool land = cell.terrain == TerrainType.Land;
+            if (land && plinthByCell[i] == null)
+                plinthByCell[i] = plinthFactory.Create(tiles, "Plinth_" + cell.x + "_" + cell.z, nodeScale);
+            if (land && !landByCell[i])
+            {
+                riseByCell[i] = hasShown && !ReducedMotion ? 0f : 1f;
+                PositionPlinth(i);
+            }
+            landByCell[i] = land;
+            if (plinthByCell[i] != null) plinthByCell[i].SetActive(land);
+        }
+
+        private void Update()
+        {
+            if (plinthByCell == null) return;
+            for (int i = 0; i < plinthByCell.Length; i++)
+            {
+                if (!landByCell[i] || riseByCell[i] >= 1f) continue;
+                riseByCell[i] = ReducedMotion ? 1f : Mathf.Min(1f, riseByCell[i] + Time.unscaledDeltaTime / PlinthMotion.Duration);
+                PositionPlinth(i);
+            }
+        }
+
+        private void PositionPlinth(int cell)
+        {
+            float topY = PlinthMotion.RiseY(riseByCell[cell], WaterY - PlinthLayout.Height, GroundY);
+            var centre = PlinthLayout.WorldCentre(cell % board.gridCols, cell / board.gridCols, nodeScale, topY);
+            plinthByCell[cell].transform.position = new Vector3(centre.x, centre.y, centre.z);
         }
 
         private void SetShoal(CellDescriptor cell)
@@ -336,6 +359,7 @@ namespace NodeWar.View
 
         private void OnDestroy()
         {
+            plinthFactory?.Dispose();
             for (int i = 0; i < ownedMeshes.Count; i++) DisposeObject(ownedMeshes[i]);
             if (material != null) DisposeObject(material);
         }
