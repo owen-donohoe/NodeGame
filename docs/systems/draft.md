@@ -8,7 +8,7 @@ sources:
   - Assets/Scripts/Lobby/Data/LoadoutMatchSetup.cs
   - Assets/Scripts/Game/Core/IDraftPresenter.cs
   - Assets/Scripts/Game/Network/DraftSerializer.cs
-verified: 3c1b562c
+verified: b2a42caf
 ---
 
 # Draft
