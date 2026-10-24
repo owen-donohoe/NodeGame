@@ -2,7 +2,7 @@
 summary: Rules that preserve identical match state from identical setup and ordered commands across peers and replay.
 sources:
   - Assets/Scripts/Game/Simulation/
-verified: a1da5182
+verified: b2a42caf
 ---
 
 # Determinism contract
