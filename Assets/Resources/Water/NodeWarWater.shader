@@ -13,12 +13,12 @@ Shader "NodeWar/Water"
         _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
         _BandThresholds("Band thresholds", Vector) = (0.15,0.45,0,0)
         _BandSoftness("Band softness", Float) = 0.02
-        _InkWidth("Ink width (cells)", Float) = 0.06
+        _InkWidth("Ink width (cells)", Float) = 0.08
         _FoamTex("Packed foam", 2D) = "black" {}
-        _FoamTiling("Foam tiling", Float) = 0.25
+        _FoamTiling("Foam tiling", Float) = 0.06
         _FoamSpeed("Foam speed", Float) = 0.03
-        _FoamCutoff("Foam cutoff", Range(0,1)) = 0.6
-        _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.25
+        _FoamCutoff("Foam cutoff", Range(0,1)) = 0.97
+        _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.2
         _ShoreTex("Shore field", 2D) = "white" {}
         _ShorePrevTex("Previous shore field", 2D) = "white" {}
         _ShoreBlend("Shore blend", Range(0,1)) = 1
@@ -29,7 +29,7 @@ Shader "NodeWar/Water"
         _WaveD("Wave D", Vector) = (0.2,-1,0.025,1)
         _NormalTex("Normal", 2D) = "bump" {}
         _NormalStrength("Normal strength", Float) = 0.2
-        _SpecHardness("Specular threshold", Range(0,1)) = 0.6
+        _SpecHardness("Specular threshold", Range(0,1)) = 0.97
         _SpecColor("Specular", Color) = (0.909804,0.956863,1,1)
         _FresnelPower("Fresnel power", Float) = 4
     }
