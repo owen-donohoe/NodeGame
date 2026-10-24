@@ -52,6 +52,52 @@ namespace NodeWar.Lobby.Tests
             Assert.IsFalse(GameSettingsData.Normalized(stored).opponentEmotes);
         }
 
+        [TestCase(1)] [TestCase(2)] [TestCase(3)] [TestCase(4)] [TestCase(5)] [TestCase(6)]
+        public void Normalized_OlderSave_GetsGraphicsDefaultAndKeepsPreferences(int version)
+        {
+            var stored = GameSettingsData.CreateDefault();
+            stored.version = version;
+            stored.graphicsQuality = 0; // Absent in old JSON, not a deliberate Low choice.
+            stored.musicVolume = 0.12f;
+            stored.reducedMotion = true;
+            stored.frameCap = 3;
+            var result = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(7, result.version);
+            Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, result.graphicsQuality);
+            Assert.AreEqual(0.12f, result.musicVolume);
+            Assert.IsTrue(result.reducedMotion);
+            if (version >= 4) Assert.AreEqual(3, result.frameCap);
+            Assert.IsFalse(GameSettingsData.Differ(result, GameSettingsData.Normalized(result)));
+        }
+
+        [Test]
+        public void GraphicsDefaultAppliesToNewAndVersionZeroSettings()
+        {
+            Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, GameSettingsData.CreateDefault().graphicsQuality);
+            Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, GameSettingsData.Normalized(default).graphicsQuality);
+        }
+
+        [TestCase(0, "Low")] [TestCase(1, "Medium")] [TestCase(2, "High")] [TestCase(3, "Ultra")]
+        public void GraphicsQualityPreservesChoicesLabelsAndCycles(int tier, string label)
+        {
+            var settings = GameSettingsData.CreateDefault();
+            settings.graphicsQuality = tier;
+            Assert.AreEqual(tier, GameSettingsData.Normalized(settings).graphicsQuality);
+            Assert.AreEqual(label, GameSettingsData.GraphicsQualityLabel(tier));
+            Assert.AreEqual((tier + 1) % 4, GameSettingsData.NextGraphicsQuality(tier));
+            var changed = settings;
+            changed.graphicsQuality = (tier + 1) % 4;
+            Assert.IsTrue(GameSettingsData.Differ(settings, changed));
+        }
+
+        [TestCase(-1)] [TestCase(4)] [TestCase(int.MinValue)] [TestCase(int.MaxValue)]
+        public void InvalidGraphicsQualityFallsBackToDefault(int tier)
+        {
+            var settings = GameSettingsData.CreateDefault();
+            settings.graphicsQuality = tier;
+            Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, GameSettingsData.Normalized(settings).graphicsQuality);
+        }
+
         // ===== FRAME CAP =====
 
         [Test]
@@ -490,9 +536,9 @@ namespace NodeWar.Lobby.Tests
             Assert.Greater(checkedCount, 0, "no settable fields were exercised");
         }
         [Test]
-        public void V4AndV5MigrateToV6WithoutResettingPreferences()
+        public void OlderControlsMigrateWithoutResettingPreferences()
         {
-            Assert.AreEqual(6, GameSettingsData.CurrentVersion);
+            Assert.AreEqual(7, GameSettingsData.CurrentVersion);
             GameSettingsData stored = GameSettingsData.CreateDefault();
             stored.version = 5;
             System.Array.Resize(ref stored.inputBindings, 13);
@@ -509,7 +555,7 @@ namespace NodeWar.Lobby.Tests
             stored.tooltips = false;
             stored.cameraButtonTarget = 1;
             GameSettingsData migrated = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(6, migrated.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, migrated.version);
             Assert.AreEqual(15, migrated.inputBindings.Length);
             Assert.AreNotSame(stored.inputBindings, migrated.inputBindings);
             for (int i = 0; i < 13; i++) Assert.AreEqual(stored.inputBindings[i], migrated.inputBindings[i]);
@@ -521,7 +567,7 @@ namespace NodeWar.Lobby.Tests
 
             stored.version = 4;
             GameSettingsData v4 = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(6, v4.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, v4.version);
             CollectionAssert.AreEqual(InputBindings.CreateDefault(), v4.inputBindings);
             Assert.AreEqual(GameSettingsData.DefaultHoldTime, v4.holdTime);
             Assert.IsTrue(v4.showCameraButton);
@@ -536,7 +582,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(stored.frameCap, v4.frameCap);
             Assert.AreEqual(stored.cameraSpeed, v4.cameraSpeed);
             GameSettingsData absent = GameSettingsData.Normalized(default(GameSettingsData));
-            Assert.AreEqual(6, absent.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, absent.version);
             Assert.IsFalse(GameSettingsData.Differ(GameSettingsData.CreateDefault(), absent));
             migrated.inputBindings[13].enabled = false;
             migrated.inputBindings[14].enabled = false;

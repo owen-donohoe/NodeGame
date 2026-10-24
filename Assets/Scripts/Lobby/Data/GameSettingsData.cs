@@ -42,8 +42,17 @@ namespace NodeWar.Lobby
         ///     <see cref="DefaultFrameCap"/>.
         /// 5 - adds input bindings and the controls preferences.
         /// 6 - appends enabled node double/triple-tap bindings; existing entries are kept.
+        /// 7 - adds graphicsQuality, defaulting to Medium on mobile and High elsewhere.
         /// </remarks>
-        public const int CurrentVersion = 6;
+        public const int CurrentVersion = 7;
+
+        public const int GraphicsQualityCount = 4;
+        private static readonly string[] GraphicsQualityNames = { "Low", "Medium", "High", "Ultra" };
+#if UNITY_ANDROID || UNITY_IOS
+        public const int DefaultGraphicsQuality = 1;
+#else
+        public const int DefaultGraphicsQuality = 2;
+#endif
 
         public const float DefaultHoldTime = 0.3f;
         public const float MinHoldTime = 0.15f;
@@ -89,6 +98,8 @@ namespace NodeWar.Lobby
         // ---- Display.
         /// <summary>Index into <see cref="FrameCapRates"/>. Presentation only; added in version 4.</summary>
         public int frameCap;
+        /// <summary>Low, Medium, High, Ultra. Presentation only; added in version 7.</summary>
+        public int graphicsQuality;
 
         // ---- Gameplay.
         public float cameraSpeed;
@@ -143,6 +154,7 @@ namespace NodeWar.Lobby
                 reducedMotion = false,
                 interfaceSize = DefaultInterfaceSize,
                 frameCap = DefaultFrameCap,
+                graphicsQuality = DefaultGraphicsQuality,
 
                 cameraSpeed = 0.52f,
                 confirmEachCommand = false,
@@ -190,6 +202,7 @@ namespace NodeWar.Lobby
             if (source.version < 2) source.opponentRoutes = true;
             if (source.version < 3) source.opponentEmotes = true;
             if (source.version < 4) source.frameCap = DefaultFrameCap;
+            if (source.version < 7) source.graphicsQuality = DefaultGraphicsQuality;
             if (source.version < 5)
             {
                 source.inputBindings = null;
@@ -214,6 +227,7 @@ namespace NodeWar.Lobby
                 reducedMotion = source.reducedMotion,
                 interfaceSize = ClampInterfaceSize(source.interfaceSize),
                 frameCap = ClampFrameCap(source.frameCap),
+                graphicsQuality = ClampGraphicsQuality(source.graphicsQuality),
 
                 cameraSpeed = Clamp01(source.cameraSpeed),
                 confirmEachCommand = source.confirmEachCommand,
@@ -247,6 +261,7 @@ namespace NodeWar.Lobby
                 || a.reducedMotion != b.reducedMotion
                 || a.interfaceSize != b.interfaceSize
                 || a.frameCap != b.frameCap
+                || a.graphicsQuality != b.graphicsQuality
                 || a.cameraSpeed != b.cameraSpeed
                 || a.confirmEachCommand != b.confirmEachCommand
                 || a.opponentRoutes != b.opponentRoutes
@@ -278,6 +293,12 @@ namespace NodeWar.Lobby
         {
             return (ClampFrameCap(current) + 1) % FrameCapCount;
         }
+
+        public static int NextGraphicsQuality(int current) => (ClampGraphicsQuality(current) + 1) % GraphicsQualityCount;
+
+        public static string GraphicsQualityLabel(int quality) => GraphicsQualityNames[ClampGraphicsQuality(quality)];
+
+        private static int ClampGraphicsQuality(int value) => value < 0 || value >= GraphicsQualityCount ? DefaultGraphicsQuality : value;
 
         /// <summary>The Application.targetFrameRate for a stored index; -1 is uncapped.</summary>
         public static int TargetFrameRate(int frameCap)
