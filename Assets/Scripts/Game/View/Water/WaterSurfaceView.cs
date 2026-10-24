@@ -2,6 +2,7 @@ using NodeWar.Lobby;
 using NodeWar.Simulation;
 using UnityEngine;
 using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace NodeWar.View
 {
@@ -9,15 +10,50 @@ namespace NodeWar.View
     public sealed class WaterSurfaceView : MonoBehaviour
     {
         private const int Padding = 4;
+        private static readonly List<WaterSurfaceView> active = new List<WaterSurfaceView>();
         private int cols, rows, subdivisions;
         private float scale, surfaceY, blend = 1f;
         private TerrainType[] terrain;
         private Material material;
         private Mesh mesh;
         private MeshFilter filter;
+        private MeshRenderer surfaceRenderer;
         private Texture2D current, previous;
 
         private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetRegistry() => active.Clear();
+
+        private void OnEnable()
+        {
+            if (!active.Contains(this)) active.Add(this);
+            RefreshQuality();
+        }
+
+        private void OnDisable() => active.Remove(this);
+
+        public static void RefreshAll()
+        {
+            for (int i = 0; i < active.Count; i++) active[i].RefreshQuality();
+        }
+
+        private void RefreshQuality()
+        {
+            if (material == null) return; // AddComponent enables before Initialize.
+            int next = WaterMeshBuilder.SubdivisionsForTier(WaterQuality.Current);
+            if (next == subdivisions) return;
+            subdivisions = next;
+            Material replacement = WaterMaterialFactory.Create(WaterQuality.Current);
+            replacement.SetTexture("_ShoreTex", current);
+            replacement.SetTexture("_ShorePrevTex", previous);
+            replacement.SetFloat("_ShoreBlend", blend);
+            replacement.SetVector("_ShoreST", material.GetVector("_ShoreST"));
+            surfaceRenderer.sharedMaterial = replacement;
+            Release(material);
+            material = replacement;
+            if (terrain != null) RebuildMesh(terrain);
+        }
 
         public void Initialize(int columns, int rowCount, float cellScale, float y)
         {
@@ -26,10 +62,10 @@ namespace NodeWar.View
             subdivisions = WaterMeshBuilder.SubdivisionsForTier(tier);
             material = WaterMaterialFactory.Create(tier);
             filter = gameObject.AddComponent<MeshFilter>();
-            var renderer = gameObject.AddComponent<MeshRenderer>();
-            renderer.sharedMaterial = material;
-            renderer.shadowCastingMode = ShadowCastingMode.Off;
-            renderer.receiveShadows = true;
+            surfaceRenderer = gameObject.AddComponent<MeshRenderer>();
+            surfaceRenderer.sharedMaterial = material;
+            surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
+            surfaceRenderer.receiveShadows = true;
         }
 
         public void SetTerrain(TerrainType[] resolved)
@@ -65,6 +101,13 @@ namespace NodeWar.View
             material.SetVector("_ShoreST", new Vector4(origin.x, origin.z,
                 1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale)));
 
+            RebuildMesh(resolved);
+            terrain = (TerrainType[])resolved.Clone();
+            if (blend == 1f) FinishBlend();
+        }
+
+        private void RebuildMesh(TerrainType[] resolved)
+        {
             var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding);
             var vertices = new Vector3[data.positions.Length / 3];
             for (int i = 0; i < vertices.Length; i++)
@@ -80,8 +123,6 @@ namespace NodeWar.View
             filter.sharedMesh = nextMesh;
             Release(mesh);
             mesh = nextMesh;
-            terrain = (TerrainType[])resolved.Clone();
-            if (blend == 1f) FinishBlend();
         }
 
         private bool SameTerrain(TerrainType[] resolved)

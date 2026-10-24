@@ -17,7 +17,9 @@ namespace NodeWar.Lobby
         private ShopMarketFrame marketFrame;
         private float marketAspect;
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
-        private static readonly Color Sea = new Color(0.42f, 0.61f, 0.72f);
+        private static readonly Color Sea = new Color(46f / 255f, 42f / 255f, 107f / 255f);
+        private WaterSurfaceView water;
+        private readonly List<LobbyLandBounds> landFootprints = new List<LobbyLandBounds>();
 
 
         private StagePaperArt paper;
@@ -102,9 +104,6 @@ namespace NodeWar.Lobby
             stageCamera.transparencySortMode = TransparencySortMode.Perspective;
             // TODO: add the URP Volume depth-of-field hook during the visual pass.
 
-            Primitive("Ocean (unplaceable edge)", PrimitiveType.Plane, transform,
-                new Vector3(0f, -0.18f, 0f), new Vector3(12f, 1f, 12f), Sea);
-
             var slots = StageSlots.Layout(0);
             for (int i = 0; i < slots.Length; i++)
             {
@@ -119,6 +118,7 @@ namespace NodeWar.Lobby
                 var ground = Primitive("Unclaimed ground", PrimitiveType.Quad, plots[i],
                     new Vector3(0f, 0.02f, 0f), new Vector3(2.78f, 2.78f, 1f), PlayerColors.Neutral);
                 ground.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                AddLandFootprint(ground);
                 outlines[i] = Cutout("Selection ink", plots[i], PaperKind.House,
                     new Vector3(0f, 0.03f, 0.38f), new Vector2(2.06f, 1.79f), Color.white, true);
                 outlines[i].SetActive(false);
@@ -136,6 +136,7 @@ namespace NodeWar.Lobby
             }
 
             CacheClusterEnvelope();
+            RebuildWater();
 
             // The market (about 15 textures) builds on first Shop visit; see EnsureMarket.
             var reserved = new GameObject("Reserved ground - Social and Guild");
@@ -157,9 +158,11 @@ namespace NodeWar.Lobby
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
             market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
-            Primitive("Market ground", PrimitiveType.Plane, market.transform,
+            var ground = Primitive("Market ground", PrimitiveType.Plane, market.transform,
                 new Vector3(0f, -0.01f, -12f), new Vector3(0.36f, 1f, 3f),
                 new Color(0.77f, 0.70f, 0.55f));
+            AddLandFootprint(ground);
+            RebuildWater();
             string[] names = { "Daily", "Crates", "Weekly skins", "Bundle", "Bank" };
             for (int i = 0; i < names.Length; i++)
             {
@@ -716,8 +719,43 @@ namespace NodeWar.Lobby
             return obj;
         }
 
+        private void AddLandFootprint(GameObject ground)
+        {
+            Bounds meshBounds = ground.GetComponent<MeshFilter>().sharedMesh.bounds;
+            Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = new Vector3((i & 1) == 0 ? meshBounds.min.x : meshBounds.max.x,
+                    (i & 2) == 0 ? meshBounds.min.y : meshBounds.max.y,
+                    (i & 4) == 0 ? meshBounds.min.z : meshBounds.max.z);
+                Vector3 local = transform.InverseTransformPoint(ground.transform.TransformPoint(corner));
+                min = Vector3.Min(min, local); max = Vector3.Max(max, local);
+            }
+            landFootprints.Add(new LobbyLandBounds(min.x, min.z, max.x, max.z));
+        }
+
+        private void RebuildWater()
+        {
+            // One-unit cells keep the combined home/market field small; the shader still bakes 16 texels per cell.
+            LobbyWaterGridData grid = LobbyWaterGrid.Build(landFootprints.ToArray());
+            if (water != null)
+            {
+                water.gameObject.SetActive(false);
+                Destroy(water.gameObject);
+            }
+            var ocean = new GameObject("Ocean (unplaceable edge)");
+            ocean.layer = StageLayer;
+            ocean.transform.SetParent(transform, false);
+            ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
+            water = ocean.AddComponent<WaterSurfaceView>();
+            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f);
+            water.SetTerrain(grid.terrain);
+        }
+
         private void OnDestroy()
         {
+            // WaterSurfaceView owns and disposes its material, shore textures and mesh.
+            if (water != null) Destroy(water.gameObject);
             for (int i = 0; i < materials.Count; i++) Destroy(materials[i]);
             paper?.Dispose();
         }
