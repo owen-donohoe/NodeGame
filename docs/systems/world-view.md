@@ -7,7 +7,7 @@ sources:
   - Assets/Scripts/Game/UI/Worldspace/
   - Assets/Resources/UI/PaintCoverage.shader
   - Assets/Resources/Water/
-verified: 4810e199
+verified: 794baded
 ---
 
 # World view
@@ -58,7 +58,7 @@ Local routes merge identical remaining paths and fade with order age. Interrupte
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water uses baked shore distance, damping and body channels, without camera depth/colour samples. Field changes blend over 0.4 seconds, instantly with reduced motion. Shore textures, mesh and material are disposed by the view. `WaterMaterialFactory` loads the opaque water shader from Resources; forward, depth and depth-normals passes share displacement. `WaterQuality.Current` selects Medium on mobile and High elsewhere; four tiers control mesh density and shader features.
+Water uses baked shore distance, damping and body channels, without camera depth/colour samples or alpha tests; the mesh omits land. Field changes blend over 0.4 seconds, instantly with reduced motion. Shore textures, mesh and material are disposed by the view. `WaterMaterialFactory` loads the opaque shader from Resources; forward, depth and depth-normals passes share displacement. `WaterQuality.Current` reads saved graphics quality, falling back to Medium on mobile and High elsewhere without a profile. `WaterSurfaceView.RefreshAll` swaps active materials and rebuilds mesh density while preserving shore fields/blends; re-enabled views refresh too.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.

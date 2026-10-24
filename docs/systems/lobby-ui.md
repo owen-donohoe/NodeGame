@@ -126,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 1da38209
+verified: 794baded
 ---
 
 # Lobby UI
@@ -155,7 +155,7 @@ Other surfaces:
 - `SocialPage.Bind` supplies TV, friends/guild and history ledgers. Offline friends expand separately; unknown historical handles use cached profiles or Unknown. Requests cannot cross visits/accounts.
 - `GuildPage` raises search on Enter/typing pause/caret, preserving result taps. Filters constrain RR/membership. Membership supplies announcements, sortable members and chat; officer actions confirm kicks and log reports.
 - `ProfilePage.Open/OpenFor/Close` presents self/other sheets through IProfileService. BindPanels wires reporting/confirmed Kick; InviteRequested opens Multiplayer. Null stats show dashes. Rename uses Handles.SetHandleAsync.
-- `SettingsPage.Changed/Flush` persists preferences; ControlsPanel shares match bindings. Match history lives on the Social page; Replay is still a stub. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
+- `SettingsPage.Changed/Flush` persists preferences; Graphics cycles Low/Medium/High/Ultra beside frame cap. ControlsPanel shares match bindings. Match history lives on Social; Replay is a stub. AccountFlow handles linking/notifications; LobbyDeepLink routes pages, profiles and stalls.
 
 `LoadoutCatalog.CurrentLoadout` resolves equipment/choices. `LoadoutRules` shares completeness and missing-item messages. LoadoutEditor protects locks; clearing confirms. Failed saves retain state with retry/backoff. `PlayerProfile` persists preferences/presets; `LoadoutData.Normalized` maintains 3/5 slots. LobbyChrome renders server handle, rank and balances; RankDisplay/RankTable supply progress. Premium displays as Laurels.
 
@@ -177,6 +177,8 @@ Backend owns rank/inventory. Local changes never resize opponents' decks. Preser
 
 ## How it works
 LobbyManager selects Toolkit or legacy fallback; UIToolkitLobbySetup authors layouts/PanelSettings through Editor tools. Era locks constrain editable choices; missing ownership never trims choices. Launch refreshes/freezes state and rechecks completeness. Ranked requires returned rank; offline/private uses arena 1. Rendezvous supplies record/slot order. Only confirmed resizing persists.
+
+LobbyStage derives `LobbyWaterGrid` from stage-local home ground bounds and lazy market ground bounds. Its child `WaterSurfaceView` owns shore textures, mesh and factory material; the camera uses ocean deep. `PlayerProfile.SetSettings` refreshes active water quality live.
 
 ## Decisions
 - Share navigation, room views, sheet and menu components rather than duplicate presentation logic.
