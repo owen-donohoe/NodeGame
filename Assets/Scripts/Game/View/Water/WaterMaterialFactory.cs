@@ -6,20 +6,25 @@ namespace NodeWar.View
     {
         private static Texture2D packedFoam;
 
-        public static Material Create(int tier)
+        private static Material fallback;
+
+        public static Material Shared()
         {
-            var material = new Material(Resources.Load<Shader>("Water/NodeWarWater"));
-            material.name = "NodeWarWater";
-            material.DisableKeyword("_WATER_MEDIUM");
-            material.DisableKeyword("_WATER_HIGH");
-            material.DisableKeyword("_WATER_ULTRA");
-            if (tier > 0) material.EnableKeyword(tier == 1 ? "_WATER_MEDIUM" : tier == 2 ? "_WATER_HIGH" : "_WATER_ULTRA");
-            // Shader properties define the shared defaults, including both exact palettes.
-            material.SetTexture("_FoamTex", Foam());
-            return material;
+            Material asset = Resources.Load<Material>("Water/NodeWarWater");
+            if (asset != null) return asset;
+            if (fallback == null)
+                fallback = new Material(Resources.Load<Shader>("Water/NodeWarWater"))
+                { name = "NodeWarWater fallback", hideFlags = HideFlags.HideAndDontSave };
+            return fallback;
         }
 
-        private static Texture2D Foam()
+        public static bool NeedsFoam(Material material)
+        {
+            Texture texture = material.GetTexture("_FoamTex");
+            return texture == null || texture == Texture2D.blackTexture || texture.name == "black";
+        }
+
+        public static Texture2D Foam()
         {
             if (packedFoam != null) return packedFoam;
             const int size = 128;
@@ -50,6 +55,8 @@ namespace NodeWar.View
         {
             if (packedFoam != null) Object.Destroy(packedFoam);
             packedFoam = null;
+            if (fallback != null) Object.Destroy(fallback);
+            fallback = null;
         }
     }
 }

@@ -49,7 +49,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
-            #pragma multi_compile_local _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             ENDHLSL
         }
@@ -62,7 +62,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepth
-            #pragma multi_compile_local _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
             ENDHLSL
         }
         Pass
@@ -73,7 +73,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepthNormals
-            #pragma multi_compile_local _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             ENDHLSL
         }

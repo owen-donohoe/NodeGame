@@ -14,7 +14,9 @@ namespace NodeWar.View
         private int cols, rows, subdivisions, skirtCells;
         private float scale, surfaceY, blend = 1f;
         private TerrainType[] terrain;
-        private Material material;
+        private MaterialPropertyBlock properties;
+        private Vector4 shoreST;
+        private bool generatedFoam;
         private Mesh mesh;
         private MeshFilter filter;
         private MeshRenderer surfaceRenderer;
@@ -40,18 +42,11 @@ namespace NodeWar.View
 
         private void RefreshQuality()
         {
-            if (material == null) return; // AddComponent enables before Initialize.
+            WaterQuality.Apply();
+            if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
             int next = WaterMeshBuilder.SubdivisionsForTier(WaterQuality.Current);
             if (next == subdivisions) return;
             subdivisions = next;
-            Material replacement = WaterMaterialFactory.Create(WaterQuality.Current);
-            replacement.SetTexture("_ShoreTex", current);
-            replacement.SetTexture("_ShorePrevTex", previous);
-            replacement.SetFloat("_ShoreBlend", blend);
-            replacement.SetVector("_ShoreST", material.GetVector("_ShoreST"));
-            surfaceRenderer.sharedMaterial = replacement;
-            Release(material);
-            material = replacement;
             if (terrain != null) RebuildMesh(terrain);
         }
 
@@ -61,10 +56,12 @@ namespace NodeWar.View
             this.skirtCells = skirtCells;
             int tier = WaterQuality.Current;
             subdivisions = WaterMeshBuilder.SubdivisionsForTier(tier);
-            material = WaterMaterialFactory.Create(tier);
+            WaterQuality.Apply();
+            properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();
             surfaceRenderer = gameObject.AddComponent<MeshRenderer>();
-            surfaceRenderer.sharedMaterial = material;
+            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Shared();
+            ApplyProperties();
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
             surfaceRenderer.receiveShadows = true;
         }
@@ -95,12 +92,10 @@ namespace NodeWar.View
             previous = current != null ? current : texture;
             current = texture;
             blend = previous == current || ReducedMotion ? 1f : 0f;
-            material.SetTexture("_ShoreTex", current);
-            material.SetTexture("_ShorePrevTex", previous);
-            material.SetFloat("_ShoreBlend", blend);
             Vector3 origin = transform.TransformPoint(new Vector3(field.originX * scale, surfaceY, field.originZ * scale));
-            material.SetVector("_ShoreST", new Vector4(origin.x, origin.z,
-                1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale)));
+            shoreST = new Vector4(origin.x, origin.z,
+                1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale));
+            ApplyProperties();
 
             RebuildMesh(resolved);
             terrain = (TerrainType[])resolved.Clone();
@@ -135,23 +130,37 @@ namespace NodeWar.View
 
         private void Update()
         {
+            if (WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial) != generatedFoam) ApplyProperties();
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
-            material.SetFloat("_ShoreBlend", blend);
+            ApplyProperties();
             if (blend == 1f) FinishBlend();
         }
 
         private void FinishBlend()
         {
-            material.SetTexture("_ShorePrevTex", current);
+
             if (previous != current) Release(previous);
             previous = current;
+            ApplyProperties();
+        }
+
+        private void ApplyProperties()
+        {
+            properties.Clear();
+            properties.SetTexture("_ShoreTex", current);
+            properties.SetTexture("_ShorePrevTex", previous);
+            properties.SetFloat("_ShoreBlend", blend);
+            properties.SetVector("_ShoreST", shoreST);
+            generatedFoam = WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial);
+            if (generatedFoam) properties.SetTexture("_FoamTex", WaterMaterialFactory.Foam());
+            surfaceRenderer.SetPropertyBlock(properties);
         }
 
         private void OnDestroy()
         {
             if (previous != current) Release(previous);
-            Release(current); Release(mesh); Release(material);
+            Release(current); Release(mesh);
         }
 
         private static void Release(Object value)

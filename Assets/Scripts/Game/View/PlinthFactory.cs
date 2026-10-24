@@ -9,13 +9,17 @@ namespace NodeWar.View
         private readonly GameObject prefab;
         private readonly Material material;
         private Mesh fallback;
+        private readonly bool ownsMaterial;
+        private readonly float waterY;
 
         public PlinthFactory(Color topColor, float waterY)
         {
             prefab = Resources.Load<GameObject>("Board/DistrictPlinth");
-            material = new Material(Resources.Load<Shader>("Board/NodeWarPlinth")) { name = "District plinth" };
-            material.SetColor("_TopColor", topColor);
-            material.SetFloat("_WaterY", waterY);
+            material = Resources.Load<Material>("Board/DistrictPlinth");
+            ownsMaterial = material == null;
+            if (ownsMaterial)
+                material = new Material(Resources.Load<Shader>("Board/NodeWarPlinth")) { name = "District plinth fallback" };
+            this.waterY = waterY;
         }
 
         public GameObject Create(Transform parent, string name, float cellScale)
@@ -39,6 +43,10 @@ namespace NodeWar.View
                 var slots = new Material[count];
                 for (int i = 0; i < count; i++) slots[i] = material;
                 renderer.sharedMaterials = slots;
+                var properties = new MaterialPropertyBlock();
+                renderer.GetPropertyBlock(properties);
+                properties.SetFloat("_WaterY", waterY);
+                renderer.SetPropertyBlock(properties);
                 renderer.shadowCastingMode = ShadowCastingMode.On;
                 renderer.receiveShadows = false;
             }
@@ -83,7 +91,7 @@ namespace NodeWar.View
         public void Dispose()
         {
             Release(fallback);
-            Release(material);
+            if (ownsMaterial) Release(material);
         }
 
         private static void Release(Object value)
