@@ -10,7 +10,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: f380528c
+verified: 0fc344ab
 ---
 
 # World view
@@ -61,7 +61,7 @@ Local routes merge identical remaining paths and fade with order age. Interrupte
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water uses baked shore distance, damping and body channels without camera samples; its mesh omits land. Field changes blend over 0.4 seconds or snap with reduced motion. The view disposes textures, mesh and material. `WaterMaterialFactory` loads the Resources shader; forward/depth/normals share displacement. `WaterQuality.Current` reads saved quality, defaulting to Medium/mobile or High/desktop. `WaterSurfaceView.RefreshAll` swaps materials and mesh density, preserving shore fields/blends; re-enabled views refresh too.
+Water bakes shore distance/damping/body without camera samples. Its mesh omits land and stitches a coarse horizon skirt to padding: 40 cells in matches, 80 in lobby. Texture edges clamp to open ocean. Fields blend over 0.4 seconds or snap with reduced motion. The view disposes textures/mesh/material. `WaterMaterialFactory` loads the Resources shader; forward/depth/normals share displacement. `WaterQuality.Current` reads saved quality, defaulting to Medium/mobile or High/desktop. `WaterSurfaceView.RefreshAll` swaps materials/mesh density, preserving fields/blends; re-enabled views refresh too.
 
 Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.25 below GroundY. Initial land snaps; later Land transitions rise over 0.35 unscaled seconds or snap with reduced motion. Art/node heights stay fixed. The board disposes fallback resources; the shader tints submerged sides.
 
