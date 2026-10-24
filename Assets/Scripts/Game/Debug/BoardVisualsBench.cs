@@ -24,6 +24,10 @@ namespace NodeWar.View
         private int next;
         private float elapsed;
         private bool matched;
+        private bool panelVisible = true, paused;
+        private Vector2 panelScroll;
+        private float frameSeconds, frameSum;
+        private int frameCount;
 
         private void Start() => ReplayDraft();
 
@@ -65,7 +69,21 @@ namespace NodeWar.View
         private void Update()
         {
             ApplyTier();
-            if (view == null) return;
+#if ENABLE_INPUT_SYSTEM
+            if (UnityEngine.InputSystem.Keyboard.current != null
+                && UnityEngine.InputSystem.Keyboard.current.f1Key.wasPressedThisFrame) panelVisible = !panelVisible;
+#elif ENABLE_LEGACY_INPUT_MANAGER
+            if (Input.GetKeyDown(KeyCode.F1)) panelVisible = !panelVisible;
+#endif
+            frameSum += Time.unscaledDeltaTime;
+            frameCount++;
+            if (frameSum >= 0.5f)
+            {
+                frameSeconds = frameSum / frameCount;
+                frameSum = 0f;
+                frameCount = 0;
+            }
+            if (view == null || paused) return;
             elapsed += Time.unscaledDeltaTime;
             if (elapsed < Mathf.Max(0.05f, stepSeconds)) return;
             elapsed = 0f;
@@ -91,6 +109,102 @@ namespace NodeWar.View
             }
             else Debug.LogWarning($"Skipping illegal bench placement: {placement.districtType} at ({placement.gridX},{placement.gridZ}).", this);
             ShowDraft();
+        }
+
+        private void OnGUI()
+        {
+            if (!Application.isPlaying || !panelVisible) return;
+            GUILayout.BeginArea(new Rect(12, 12, 330, Mathf.Max(120, Mathf.Min(Screen.height - 24, 740))), GUI.skin.box);
+            panelScroll = GUILayout.BeginScrollView(panelScroll);
+            GUILayout.Label($"Water tuning (F1)   {frameSeconds * 1000f:F2} ms");
+            GUILayout.BeginHorizontal();
+            string[] tiers = { "Low", "Medium", "High", "Ultra" };
+            for (int i = 0; i < tiers.Length; i++)
+            {
+                bool selected = WaterQuality.Current == i;
+                if (GUILayout.Button(selected ? $"[{tiers[i]}]" : tiers[i]))
+                {
+                    tierOverride = i;
+                    ApplyTier();
+                }
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Replay draft")) ReplayDraft();
+            if (GUILayout.Button(paused ? "Resume" : "Pause")) paused = !paused;
+            GUILayout.EndHorizontal();
+            GUILayout.Label($"Step seconds: {stepSeconds:F2}");
+            stepSeconds = GUILayout.HorizontalSlider(stepSeconds, 0.05f, 3f);
+            Material material = WaterMaterialFactory.Shared();
+            MaterialSlider(material, "_DepthRange", "Depth range", 0.1f, 3f);
+            MaterialSlider(material, "_ColorSteps", "Colour steps", 0f, 16f, true);
+            MaterialSlider(material, "_SurfaceFoamCutoff", "Surface foam cutoff", 0f, 1f);
+            MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);
+            MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);
+            MaterialSlider(material, "_IntersectionFoamDepth", "Intersection foam depth", 0.01f, 2f);
+            MaterialSlider(material, "_IntersectionFoamCutoff", "Intersection foam cutoff", 0f, 1f);
+            MaterialSlider(material, "_InkWidth", "Ink width", 0f, 0.3f);
+            MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 2f);
+            MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
+            MaterialSlider(material, "_NormalsStrength", "Normals strength", 0f, 2f);
+            if (GUILayout.Button("Reset to shader defaults")) ResetMaterial(material);
+            GUILayout.EndScrollView();
+            GUILayout.EndArea();
+        }
+
+        private static void MaterialSlider(Material material, string property, string label,
+            float min, float max, bool integer = false)
+        {
+            float value = material.GetFloat(property);
+            GUILayout.Label($"{label}: {value:F2}");
+            // Preserve authored values outside the slider range until the user changes the slider.
+            bool previousChange = GUI.changed;
+            GUI.changed = false;
+            float nextValue = GUILayout.HorizontalSlider(value, min, max);
+            bool sliderChanged = GUI.changed;
+            GUI.changed |= previousChange;
+            if (integer) nextValue = Mathf.Round(nextValue);
+            if (!sliderChanged || Mathf.Approximately(value, nextValue)) return;
+            material.SetFloat(property, nextValue);
+            MarkMaterialDirty(material);
+        }
+
+        private static void ResetMaterial(Material material)
+        {
+            var defaults = new Material(material.shader);
+            // Copy only shader properties: keep the asset's shader and render settings.
+            Shader shader = material.shader;
+            for (int i = 0; i < shader.GetPropertyCount(); i++)
+            {
+                string property = shader.GetPropertyName(i);
+                switch (shader.GetPropertyType(i))
+                {
+                    case UnityEngine.Rendering.ShaderPropertyType.Color:
+                        material.SetColor(property, defaults.GetColor(property));
+                        break;
+                    case UnityEngine.Rendering.ShaderPropertyType.Vector:
+                        material.SetVector(property, defaults.GetVector(property));
+                        break;
+                    case UnityEngine.Rendering.ShaderPropertyType.Float:
+                    case UnityEngine.Rendering.ShaderPropertyType.Range:
+                        material.SetFloat(property, defaults.GetFloat(property));
+                        break;
+                    case UnityEngine.Rendering.ShaderPropertyType.Texture:
+                        material.SetTexture(property, defaults.GetTexture(property));
+                        material.SetTextureScale(property, defaults.GetTextureScale(property));
+                        material.SetTextureOffset(property, defaults.GetTextureOffset(property));
+                        break;
+                }
+            }
+            Destroy(defaults);
+            MarkMaterialDirty(material);
+        }
+
+        private static void MarkMaterialDirty(Material material)
+        {
+#if UNITY_EDITOR
+            UnityEditor.EditorUtility.SetDirty(material);
+#endif
         }
 
         private void ShowDraft()
