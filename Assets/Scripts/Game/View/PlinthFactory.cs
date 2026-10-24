@@ -6,6 +6,9 @@ namespace NodeWar.View
     /// <summary>Board-owned shared resources, with a prefab-independent mesh fallback.</summary>
     public sealed class PlinthFactory : System.IDisposable
     {
+        private static Material fallbackMaterial;
+        private static int fallbackUsers;
+        private bool disposed;
         private readonly GameObject prefab;
         private readonly Material material;
         private Mesh fallback;
@@ -18,7 +21,12 @@ namespace NodeWar.View
             material = Resources.Load<Material>("Board/DistrictPlinth");
             ownsMaterial = material == null;
             if (ownsMaterial)
-                material = new Material(Resources.Load<Shader>("Board/NodeWarPlinth")) { name = "District plinth fallback" };
+            {
+                if (fallbackMaterial == null)
+                    fallbackMaterial = new Material(Resources.Load<Shader>("Board/NodeWarPlinth")) { name = "District plinth fallback" };
+                material = fallbackMaterial;
+                fallbackUsers++;
+            }
             this.waterY = waterY;
         }
 
@@ -90,8 +98,14 @@ namespace NodeWar.View
 
         public void Dispose()
         {
+            if (disposed) return;
+            disposed = true;
             Release(fallback);
-            if (ownsMaterial) Release(material);
+            if (ownsMaterial && --fallbackUsers == 0)
+            {
+                Release(fallbackMaterial);
+                fallbackMaterial = null;
+            }
         }
 
         private static void Release(Object value)

@@ -130,6 +130,7 @@ namespace NodeWar.View
 
         private void Update()
         {
+            if (surfaceRenderer == null) return;
             if (WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial) != generatedFoam) ApplyProperties();
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
@@ -139,7 +140,6 @@ namespace NodeWar.View
 
         private void FinishBlend()
         {
-
             if (previous != current) Release(previous);
             previous = current;
             ApplyProperties();
@@ -148,8 +148,8 @@ namespace NodeWar.View
         private void ApplyProperties()
         {
             properties.Clear();
-            properties.SetTexture("_ShoreTex", current);
-            properties.SetTexture("_ShorePrevTex", previous);
+            if (current != null) properties.SetTexture("_ShoreTex", current);
+            if (previous != null) properties.SetTexture("_ShorePrevTex", previous);
             properties.SetFloat("_ShoreBlend", blend);
             properties.SetVector("_ShoreST", shoreST);
             generatedFoam = WaterMaterialFactory.NeedsFoam(surfaceRenderer.sharedMaterial);
