@@ -6,7 +6,7 @@ sources:
   - Assets/Scripts/Game/UI/Selection/
   - Assets/Scripts/Game/UI/Worldspace/
   - Assets/Resources/UI/PaintCoverage.shader
-verified: a1da5182
+verified: b2a42caf
 ---
 
 # World view
