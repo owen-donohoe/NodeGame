@@ -748,7 +748,7 @@ namespace NodeWar.Lobby
             ocean.transform.SetParent(transform, false);
             ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
             water = ocean.AddComponent<WaterSurfaceView>();
-            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f);
+            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f, skirtCells: 80);
             water.SetTerrain(grid.terrain);
         }
 

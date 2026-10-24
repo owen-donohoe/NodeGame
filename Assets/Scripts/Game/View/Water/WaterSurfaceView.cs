@@ -11,7 +11,7 @@ namespace NodeWar.View
     {
         private const int Padding = 4;
         private static readonly List<WaterSurfaceView> active = new List<WaterSurfaceView>();
-        private int cols, rows, subdivisions;
+        private int cols, rows, subdivisions, skirtCells;
         private float scale, surfaceY, blend = 1f;
         private TerrainType[] terrain;
         private Material material;
@@ -55,9 +55,10 @@ namespace NodeWar.View
             if (terrain != null) RebuildMesh(terrain);
         }
 
-        public void Initialize(int columns, int rowCount, float cellScale, float y)
+        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40)
         {
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
+            this.skirtCells = skirtCells;
             int tier = WaterQuality.Current;
             subdivisions = WaterMeshBuilder.SubdivisionsForTier(tier);
             material = WaterMaterialFactory.Create(tier);
@@ -108,7 +109,7 @@ namespace NodeWar.View
 
         private void RebuildMesh(TerrainType[] resolved)
         {
-            var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding);
+            var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding, skirtCells);
             var vertices = new Vector3[data.positions.Length / 3];
             for (int i = 0; i < vertices.Length; i++)
                 vertices[i] = new Vector3(data.positions[i * 3] * scale, surfaceY, data.positions[i * 3 + 2] * scale);
@@ -116,9 +117,9 @@ namespace NodeWar.View
             nextMesh.vertices = vertices;
             nextMesh.triangles = data.indices;
             nextMesh.RecalculateBounds();
-            // Gerstner displacement happens on the GPU, so CPU culling needs its envelope.
+            // Recalculated bounds include the whole skirt; expand further for GPU Gerstner displacement.
             Bounds bounds = nextMesh.bounds;
-            bounds.Expand(2f);
+            bounds.Expand(4f);
             nextMesh.bounds = bounds;
             filter.sharedMesh = nextMesh;
             Release(mesh);

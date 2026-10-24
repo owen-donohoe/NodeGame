@@ -8,9 +8,10 @@ namespace NodeWar.View
         public static int SubdivisionsForTier(int tier) => tier <= 0 ? 1 : tier == 1 ? 4 : tier == 2 ? 6 : 8;
 
         public static (float[] positions, int[] indices) Build(int cols, int rows, TerrainType[] resolved,
-            int subdivisionsPerCell, int padCells)
+            int subdivisionsPerCell, int padCells, int skirtCells)
         {
             ShoreField.Validate(cols, rows, resolved, subdivisionsPerCell, padCells);
+            if (skirtCells < padCells) throw new System.ArgumentOutOfRangeException(nameof(skirtCells));
             int n = subdivisionsPerCell, lattice = n * 2;
             var vertices = new Dictionary<(int, int), int>();
             var positions = new List<float>();
@@ -24,6 +25,11 @@ namespace NodeWar.View
                 return id;
             }
             void Triangle(int a, int b, int c) { indices.Add(a); indices.Add(b); indices.Add(c); }
+            void Quad(int x0, int z0, int x1, int z1)
+            {
+                int a = Vertex(x0, z0), b = Vertex(x0, z1), c = Vertex(x1, z1), d = Vertex(x1, z0);
+                Triangle(a, b, c); Triangle(a, c, d);
+            }
             bool Water(int x, int z) => x >= 0 && x < cols && z >= 0 && z < rows && resolved[z * cols + x] != TerrainType.Land;
             for (int z = -padCells; z < rows + padCells; z++)
                 for (int x = -padCells; x < cols + padCells; x++)
@@ -62,6 +68,30 @@ namespace NodeWar.View
                         }
                     }
                 }
+            if (skirtCells > padCells)
+            {
+                int left = -padCells * lattice, right = (cols + padCells) * lattice;
+                int bottom = -padCells * lattice, top = (rows + padCells) * lattice;
+                int outerLeft = -skirtCells * lattice, outerRight = (cols + skirtCells) * lattice;
+                int outerBottom = -skirtCells * lattice, outerTop = (rows + skirtCells) * lattice;
+                // Long, unsubdivided strips share every padding-edge vertex. Four corner quads
+                // close the ring; cost depends on the inner perimeter, never the skirt's area.
+                int step = padCells == 0 ? 2 : lattice;
+                for (int z = bottom; z < top; z += step)
+                {
+                    Quad(outerLeft, z, left, z + step);
+                    Quad(right, z, outerRight, z + step);
+                }
+                for (int x = left; x < right; x += step)
+                {
+                    Quad(x, outerBottom, x + step, bottom);
+                    Quad(x, top, x + step, outerTop);
+                }
+                Quad(outerLeft, outerBottom, left, bottom);
+                Quad(right, outerBottom, outerRight, bottom);
+                Quad(outerLeft, top, left, outerTop);
+                Quad(right, top, outerRight, outerTop);
+            }
             return (positions.ToArray(), indices.ToArray());
         }
     }

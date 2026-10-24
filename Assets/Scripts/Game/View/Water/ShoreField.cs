@@ -49,6 +49,14 @@ namespace NodeWar.View
             for (int z = 0; z < field.height; z++)
                 for (int x = 0; x < field.width; x++)
                 {
+                    int at = (z * field.width + x) * 4;
+                    // Clamp sampling beyond the baked padding must remain deep, fully waving ocean.
+                    if (x == 0 || z == 0 || x == field.width - 1 || z == field.height - 1)
+                    {
+                        field.rgba[at] = 255; field.rgba[at + 1] = 255;
+                        field.rgba[at + 2] = 0; field.rgba[at + 3] = 255;
+                        continue;
+                    }
                     double px = field.originX + (x + 0.5) / texelsPerCell;
                     double pz = field.originZ + (z + 0.5) / texelsPerCell;
                     double distanceSquared = double.PositiveInfinity;
@@ -60,7 +68,6 @@ namespace NodeWar.View
                     int cx = x / texelsPerCell - padCells, cz = z / texelsPerCell - padCells;
                     TerrainType terrain = cx >= 0 && cx < cols && cz >= 0 && cz < rows
                         ? resolved[cz * cols + cx] : TerrainType.Ocean;
-                    int at = (z * field.width + x) * 4;
                     field.rgba[at] = Encode(distance / 3);
                     field.rgba[at + 1] = Encode(distance / 1.5);
                     field.rgba[at + 2] = WaterBodyOf(terrain);
