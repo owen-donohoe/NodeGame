@@ -2,6 +2,8 @@
 system: world-view
 summary: Read-only world presentation: board and unit art, movement, routes, status, outlines and event feedback.
 sources:
+  - Assets/Scripts/Game/Debug/BoardVisualsBench.cs
+  - Assets/Scripts/Game/Debug/BoardVisualsBenchDraft.cs
   - Assets/Scripts/Game/View/
   - Assets/Scripts/Game/UI/Selection/
   - Assets/Scripts/Game/UI/Worldspace/
@@ -10,13 +12,13 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 0fc344ab
+verified: f5c82987
 ---
 
 # World view
 
 ## Purpose
-Render deterministic state as a readable board without changing results. Share geometry between moving units, route previews and picking so immediate feedback remains faithful across input delay, catch-up ticks and rollback.
+Render deterministic state as a readable board without changing results. Share movement, preview and picking geometry across delay and rollback.
 
 ## Interface
 `NodeView.Initialize(state, id, claimThreshold)` binds a node; `TriggerHighlight(Color)` acknowledges destinations. `NodePresentation` manages district art/animation. `VillagerPositioner.Initialize(nodeID, nodeScale)`, `SetSpriteWidth` and named work positions supply standing slots; `VillagerLayoutMath` computes crowd spacing from measured sprite width.
@@ -51,19 +53,21 @@ Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers
 Rendering and effects never mutate simulation. Tick logs are reused output; retain copies only. Walking/routes share curve shape and leg boundaries. Interpolation anchors to `movePath[movePathIndex]`, including reversal, never a guessed sprite position. Hidden enemy route tails cannot influence visible grouping. Outline priority and ID lifecycle remain deterministic presentation contracts.
 
 ## How it works
-State supplies ongoing conditions; `TickSimulated` supplies moments and per-tick observations, including multiple ticks per frame. HP decreases within one life flash; a fighting cooldown reset starts a swing. First observation, respawn and combat entry/exit do not swing. Same-tick healing can hide damage from HP-diff feedback. Swing scales only the Billboard child, default 8% over 0.25 seconds; reduced motion disables it. Flash composes with state tint.
+State supplies conditions; `TickSimulated` supplies per-tick moments. HP decreases flash; fighting cooldown resets swing the Billboard child. First observation, respawn and combat entry/exit do not swing. Reduced motion disables swing.
 
 Sprites default to 20-degree pitch, while canvases/floor items stay untilted. Camera POV changes billboard facing and horizontal CustomAxis; node/draft art uses SortingGroups, internal order `height * 256 + depth rank`, ties by index. Recompute on POV/art changes rather than every frame; ground moves to its own group.
 
 Damaged living units show camera-facing health bars above sprite bounds; next-breacher ring is separate. Node indicators show claim/district-health, bank pips and Core breach progress. District health hides at full; bank pips sit outside district sorting at 402/403, Core bars at 400/401. Ocean/open Lake have no collider; legal draft cells use fill plus outline.
 
-Local routes merge identical remaining paths and fade with order age. Interrupted/Pier-gated intent is amber/dashed. Enemy routes default to two revealed legs within three hops of local territory, with screen/distance fades; there is no general fog of war.
+Local routes merge and fade with age; interrupted/Pier-gated intent is amber/dashed. Enemy routes default to two revealed legs within three hops of local territory, with screen/distance fades; there is no general fog of war.
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water bakes shore distance/damping/body without camera samples. Its mesh omits land and stitches a coarse horizon skirt to padding: 40 cells in matches, 80 in lobby. Texture edges clamp to open ocean. Fields blend over 0.4 seconds or snap with reduced motion. The view disposes textures/mesh/material. `WaterMaterialFactory` loads the Resources shader; forward/depth/normals share displacement. `WaterQuality.Current` reads saved quality, defaulting to Medium/mobile or High/desktop. `WaterSurfaceView.RefreshAll` swaps materials/mesh density, preserving fields/blends; re-enabled views refresh too.
+Water bakes shore distance/damping/body without camera samples. Its mesh omits land and stitches a coarse horizon skirt to padding: 40 cells in matches, 80 in lobby. Texture edges clamp to open ocean. Fields blend over 0.4 seconds or snap with reduced motion. The view owns textures/mesh; shore fields/blend/ST and generated foam use renderer property blocks. `WaterMaterialFactory.Shared()` loads `Water/NodeWarWater`, with one cached fallback; artist foam wins. Forward/depth/normals share displacement. `WaterQuality.Apply()` sets global tier keywords; `Override >= 0` wins over saved/platform quality. `RefreshAll` reapplies keywords and mesh density, preserving fields/blends.
 
-Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.25 below GroundY. Initial land snaps; later Land transitions rise over 0.35 unscaled seconds or snap with reduced motion. Art/node heights stay fixed. The board disposes fallback resources; the shader tints submerged sides.
+Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.25 below GroundY. Initial land snaps; later Land transitions rise over 0.35 unscaled seconds or snap with reduced motion. Art/node heights stay fixed. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height. Only fallback material/mesh are disposed. Tune both material assets globally, live in match/lobby.
+
+`BoardVisualsBench` replays a validated hourglass draft then raises shoals, with tier override, spacing multiplier, optional camera framing and replay menu; no simulation state is built.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
