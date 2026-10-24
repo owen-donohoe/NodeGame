@@ -6,7 +6,8 @@ sources:
   - Assets/Scripts/Game/UI/Selection/
   - Assets/Scripts/Game/UI/Worldspace/
   - Assets/Resources/UI/PaintCoverage.shader
-verified: a1da5182
+  - Assets/Resources/Water/
+verified: 4810e199
 ---
 
 # World view
@@ -25,7 +26,7 @@ Render deterministic state as a readable board without changing results. Share g
 
 `IndicatorDirector(state, tickProvider, settings, opponentSettings, localPlayer)` exposes `Active` indicators and `TryGetAnchor`; bind positioners/transforms and `Dispose` subscriptions. `IndicatorPlacement` is pure placement maths; HUD `IndicatorLayer` renders/clicks them. `ScreenShakeDirector` subscribes to ticks, invokes a supplied shake callback and is disposable.
 
-`DistrictVisual`/`DistrictVisualTable` provide shared per-district board prefab, flat icon and art metadata. `BoardArtPlacer` applies offsets/rotation/scale. `DistrictFallback`/`DistrictFallbackArt` provide descriptors, monograms and missing-art glyphs/bridges. `BoardTerrainView` renders pure `TerrainPresentation` cells/highlights.
+`DistrictVisual`/`DistrictVisualTable` provide shared per-district board prefab, flat icon and art metadata. `BoardArtPlacer` applies offsets/rotation/scale. `DistrictFallback`/`DistrictFallbackArt` provide descriptors, monograms and missing-art glyphs/bridges. `BoardTerrainView` renders `TerrainPresentation` land/highlights and creates `WaterSurfaceView`. Its `SetTerrain(resolved)` accepts read-only terrain; pure `ShoreField.Bake` and `WaterMeshBuilder.Build` supply the field and shared-edge mesh.
 
 Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers)` supplies one silhouette; `SetIntent`, `SetTint` and renderer rebuild/exclusion methods update it. `OutlineDriver` alone decides intents from hover, selection, inspected node and presence. `OutlineRegistry` exposes active groups to URP mask/composite passes and allocates IDs only while style is non-None. `OutlineStyle` numeric order is priority; ownership tint is separate. `OutlineRendererFeature` must be installed in both Mobile_Renderer and PC_Renderer assets.
 
@@ -57,6 +58,8 @@ Local routes merge identical remaining paths and fade with order age. Interrupte
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
+Water uses baked shore distance, damping and body channels, without camera depth/colour samples. Field changes blend over 0.4 seconds, instantly with reduced motion. Shore textures, mesh and material are disposed by the view. `WaterMaterialFactory` loads the opaque water shader from Resources; forward, depth and depth-normals passes share displacement. `WaterQuality.Current` selects Medium on mobile and High elsewhere; four tiers control mesh density and shader features.
+
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
 - Pure maths separates testable geometry from Unity rendering.
@@ -71,4 +74,4 @@ Per-tick state diffs miss damage cancelled by healing. Multiple visual systems n
 - Add outlines: use driver intents and test priority, ID release/reuse and both renderer assets.
 
 ## Tests
-`NodeWar.View.Tests` covers pure movement/route/layout/indicator/art maths. `Assets/Tests/EditMode/Outline/` tests outline lifecycle/priority separately. Compile-check covers Unity components; Unity/device checks verify render passes, sorting, paint coverage, materials and scene wiring.
+`NodeWar.View.Tests` covers pure movement/route/layout/indicator/art maths, shore channels/distances and water mesh seams/counts. `Assets/Tests/EditMode/Outline/` tests outline lifecycle/priority separately. Compile-check covers Unity components; Unity/device checks verify shaders, render passes, sorting, paint coverage, materials and scene wiring.
