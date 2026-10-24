@@ -133,6 +133,8 @@
     <Compile Include="BoardVisualsBenchDraftTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Debug/BoardVisualsBenchDraft.cs" Link="Debug/BoardVisualsBenchDraft.cs" />
     <Compile Include="WaterTests.cs" />
+    <Compile Include="FoamNoiseTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/FoamNoise.cs" Link="View/Water/FoamNoise.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/ShoreField.cs" Link="View/Water/ShoreField.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/WaterMeshBuilder.cs" Link="View/Water/WaterMeshBuilder.cs" />
     <Compile Include="TerrainPresentationTests.cs" />
