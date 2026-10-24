@@ -10,6 +10,9 @@ namespace NodeWar.View
         public int cell;
         public TerrainType terrain;
 
+        /// <summary>A starting-board path cell that rises when drafting completes.</summary>
+        public bool shoal;
+
         /// <summary>The board marks this cell as somewhere a district can be drafted.</summary>
         public bool isSlot;
 
@@ -59,7 +62,15 @@ namespace NodeWar.View
         public static CellDescriptor[] Describe(BoardConfigData board, DraftPlacement[] placed,
             bool hasPick, DistrictType pick)
         {
+            return Describe(board, placed, hasPick, pick, false);
+        }
+
+        public static CellDescriptor[] Describe(BoardConfigData board, DraftPlacement[] placed,
+            bool hasPick, DistrictType pick, bool draftComplete)
+        {
             int cells = board.gridCols * board.gridRows;
+            TerrainType[] resolved = board.terrain == null ? null : MatchFactory.ResolveTerrain(board, placed, draftComplete);
+            bool[] path = ShoalPath.Derive(board);
             var occupied = new bool[cells];
             var pier = new bool[cells];
 
@@ -78,8 +89,9 @@ namespace NodeWar.View
                 for (int x = 0; x < board.gridCols; x++)
                 {
                     int cell = z * board.gridCols + x;
-                    TerrainType terrain = board.terrain != null && cell < board.terrain.Length
-                        ? board.terrain[cell] : TerrainType.Ocean;
+                    TerrainType terrain = resolved != null && cell < resolved.Length
+                        ? resolved[cell] : TerrainType.Ocean;
+                    if (terrain == TerrainType.DeepLake) terrain = TerrainType.Lake;
                     bool legal = hasPick && PlacementLegality.CanPlace(board, occupied, pick, x, z);
 
                     result[cell] = new CellDescriptor
@@ -88,6 +100,7 @@ namespace NodeWar.View
                         z = z,
                         cell = cell,
                         terrain = terrain,
+                        shoal = !draftComplete && path != null && path[cell] && terrain != TerrainType.Land,
                         isSlot = board.districtSlots != null && cell < board.districtSlots.Length && board.districtSlots[cell],
                         occupied = occupied[cell],
                         hasNodeTarget = terrain == TerrainType.Land || (terrain == TerrainType.Lake && pier[cell]),
