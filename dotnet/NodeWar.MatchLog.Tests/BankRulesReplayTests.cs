@@ -27,7 +27,7 @@ namespace NodeWar.MatchLog
         [Test] public void Version4Script_ReplaysAllCommands()
         {
             var log=Record(out var reference); var balance=BankRulesFixture.Balance;
-            Assert.That(log.header.sim,Is.EqualTo(4));
+            Assert.That(log.header.sim,Is.EqualTo(5));
             int logged=0; foreach(var tick in log.ticks) logged+=tick.commands.Length;
             int scripted=0; for(int t=0;t<1500;t++) scripted+=BankRulesFixture.Commands(t).Length;
             Assert.That(logged,Is.EqualTo(scripted)); Assert.That(logged,Is.GreaterThan(0));

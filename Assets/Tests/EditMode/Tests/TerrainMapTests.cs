@@ -113,6 +113,12 @@ namespace NodeWar.Tests
         private delegate void MutateBoard(ref BoardConfigData board);
 
         [Test]
+        public void SimulationFive_BoardContentPin()
+        {
+            Assert.AreEqual(-826362826, BoardHasher.Hash(PremadeMaps.Hourglass01()));
+        }
+
+        [Test]
         public void DeepLake_IsNeverLegalOrANode_EvenIfMarkedAsSlot()
         {
             var board = PremadeMaps.Hourglass01();

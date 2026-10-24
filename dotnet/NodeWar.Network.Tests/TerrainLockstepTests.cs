@@ -4,7 +4,7 @@ using NUnit.Framework;
 namespace NodeWar.Network.Tests
 {
     /// <summary>
-    /// The lossy-link lockstep harness on the shipped hourglass, with and without a
+    /// The lossy-link lockstep harness on the historical test hourglass, with and without a
     /// drafted Pier: a sparse board, links that skip water, a Lake node. Held to the
     /// same standard as every other scenario: the reference is the same match on a
     /// perfect link.
@@ -32,7 +32,7 @@ namespace NodeWar.Network.Tests
             var scenario = new LockstepScenario
             {
                 Seconds = 150.1, // allow the initial input delay, then simulate exactly 1500 ticks
-                Board = PremadeMaps.Hourglass01(),
+                Board = NodeWar.Tests.CoreRulesFixture.LegacyHourglassBoard(),
                 Draft = Draft(withPier),
                 ZeroToOne = new LinkProfile { DelayAt = t => t >= 60.0 && t < 60.4 ? 0.4 : 0.065 }.Cut(90.0, 90.4),
                 OneToZero = new LinkProfile { Loss = 0.02 }
@@ -56,7 +56,7 @@ namespace NodeWar.Network.Tests
         {
             LockstepScenario s = new LockstepScenario
             {
-                Seconds = 30, Board = PremadeMaps.Hourglass01(), Draft = Draft(true), BlankReference = true
+                Seconds = 30, Board = NodeWar.Tests.CoreRulesFixture.LegacyHourglassBoard(), Draft = Draft(true), BlankReference = true
             }.Run();
             int compared = 0, different = 0;
             foreach (var pair in s.Peers[0].Hashes)
