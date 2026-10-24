@@ -84,7 +84,7 @@ namespace NodeWar.MatchLog
                 foreach (bool slot in b.districtSlots) payload.U8(slot ? (byte)1 : (byte)0);
                 WritePool(payload, b.baseDraftDistrictsP0);
                 WritePool(payload, b.baseDraftDistrictsP1);
-                                if (h.sim >= BoardV3FromSim)
+                if (h.sim >= BoardV3FromSim)
                 {
                     if (b.symmetry != MapSymmetry.FlipZ && b.symmetry != MapSymmetry.HalfTurn)
                         throw new ArgumentException("Invalid map symmetry.", nameof(log));
@@ -98,7 +98,7 @@ namespace NodeWar.MatchLog
             if (h.sim >= BoardV2FromSim)
             {
                 // SETUP names the map and rules the board claims to be, for a server to
-                // check against its own catalog. It travels with BOARD_V2, never alone.
+                // check against its own catalog. It travels with BOARD_V2 or BOARD_V3.
                 if (log.setup == null)
                     throw new ArgumentException("A current log needs its match setup.", nameof(log));
                 payload = new Writer();
@@ -230,7 +230,7 @@ namespace NodeWar.MatchLog
                 const int boards = (1 << BoardTag) | (1 << BoardV2Tag) | (1 << BoardV3Tag);
                 if ((seen & boards) == 0) throw new FormatException("Missing required chunk.");
                 if (((seen & boards) & ((seen & boards) - 1)) != 0) throw new FormatException("Conflicting BOARD chunks.");
-                // SETUP belongs to a terrain board: required beside BOARD_V2, meaningless beside BOARD.
+                // SETUP belongs to a terrain board: required beside BOARD_V2/V3, meaningless beside BOARD.
                 bool hasSetup = (seen & (1 << SetupTag)) != 0;
                 bool v2Board = (seen & ((1 << BoardV2Tag) | (1 << BoardV3Tag))) != 0;
                 if (parsed.header.sim >= BoardV3FromSim && (seen & (1 << BoardV3Tag)) == 0)

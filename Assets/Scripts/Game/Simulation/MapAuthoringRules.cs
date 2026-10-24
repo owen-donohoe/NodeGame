@@ -13,7 +13,7 @@ namespace NodeWar.Simulation
     /// </summary>
     public static class MapAuthoringRules
     {
-        /// <summary>Fewest and most nodes an authored map may reach, counting every legal Pier.</summary>
+        /// <summary>Bounds on the maximum node count, counting Land, shoals and Lake slots once.</summary>
         public const int MinNodes = 14;
         public const int MaxNodes = 20;
 

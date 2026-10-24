@@ -89,7 +89,7 @@ villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 4`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 5`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
 
