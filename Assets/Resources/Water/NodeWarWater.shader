@@ -22,9 +22,8 @@ Shader "NodeWar/Water"
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
         _IntersectionFoamTex("Intersection foam", 2D) = "black" {}
-        _IntersectionFoamDepth("Intersection foam depth (cells)", Float) = 0.3
-        _IntersectionFoamCutoff("Intersection foam cutoff", Range(0,1)) = 0.7
-        _IntersectionFoamFade("Intersection foam fade exponent", Float) = 1
+        _IntersectionFoamSolid("Intersection solid band (cells)", Float) = 0.12
+        _IntersectionFoamBreakup("Intersection breakup (cells)", Float) = 0.5
         _IntersectionFoamTiling("Intersection foam tiling", Float) = 0.6
         _IntersectionFoamSpeed("Intersection foam speed", Float) = 0.05
         _IntersectionFoamColor("Intersection foam (alpha = amount)", Color) = (0.909804,0.956863,1,1)
@@ -48,7 +47,9 @@ Shader "NodeWar/Water"
         _LapFrequency("Lap frequency", Float) = 1.5
         _LapSpeed("Lap speed", Float) = 0.25
         _LapRange("Lap range (cells)", Float) = 1.2
-        _LapWidth("Lap width", Float) = 0.04
+        _LapWidth("Lap width", Float) = 0.08
+        _LapOpacity("Lap opacity", Range(0,1)) = 0.85
+        _LapColor("Lap colour", Color) = (0.909804,0.956863,1,1)
         _CellSize("Cell size", Float) = 6
         _BoardRect("Board bounds", Vector) = (-3,-3,3,3)
         _WaveFadeStart("Wave fade start (cells)", Float) = 2

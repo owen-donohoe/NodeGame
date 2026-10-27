@@ -171,8 +171,6 @@ namespace NodeWar.View
             MaterialSlider(material, "_SurfaceFoamWidth", "Surface foam width", 0f, 0.3f);
             MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);
-            MaterialSlider(material, "_IntersectionFoamDepth", "Intersection foam depth", 0.01f, 2f);
-            MaterialSlider(material, "_IntersectionFoamCutoff", "Intersection foam cutoff", 0f, 1f);
             MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 2f);
             MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
             MaterialSlider(material, "_NormalsStrength", "Normals strength", 0f, 2f);

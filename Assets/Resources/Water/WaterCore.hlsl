@@ -14,7 +14,7 @@ float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
-float4 _BoardRect, _CrestColor;
+float4 _BoardRect, _CrestColor, _LapColor;
 float _CrestSharpness, _CrestFoamStrength;
 float _CrestStrength, _TroughStrength, _CrestFoamThreshold, _WaveScale;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
@@ -22,12 +22,12 @@ float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
 float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _ShoreNoiseScale, _ShoreNoiseSpeed;
 float _DetailNormalSamples;
-float _LapFrequency, _LapSpeed, _LapRange, _LapWidth;
+float _LapFrequency, _LapSpeed, _LapRange, _LapWidth, _LapOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _BodyStepA, _BodyStepB;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
-float _IntersectionFoamDepth, _IntersectionFoamCutoff, _IntersectionFoamFade, _IntersectionFoamTiling, _IntersectionFoamSpeed;
+float _IntersectionFoamSolid, _IntersectionFoamBreakup, _IntersectionFoamTiling, _IntersectionFoamSpeed;
 float _NormalsScale, _NormalsSpeed, _NormalsStrength;
 float _Smoothness, _Hardness, _WaveSpeed, _WaveSteepnessScale, _ReflectionStrength, _ShoreBlend;
 CBUFFER_END
@@ -252,21 +252,20 @@ half4 WaterFragment(Varyings input) : SV_Target
         color = lerp(color, float3(1, 1, 1), saturate(crestFoam));
         alpha = max(alpha, saturate(crestFoam));
     }
-    float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
     float intersection = SAMPLE_TEXTURE2D(_IntersectionFoamTex, sampler_IntersectionFoamTex,
         intersectionUV * _IntersectionFoamTex_ST.xy + _IntersectionFoamTex_ST.zw).g;
-    float coverage = FoamLine(intersection, (1 - _IntersectionFoamCutoff) * (1 - fade))
-        * pow(1 - fade, max(_IntersectionFoamFade, 0.001)) * detailFade;
-    color = FoamOverlay(color, _IntersectionFoamColor, coverage);
+    float breakup = saturate((distance - _IntersectionFoamSolid) / max(_IntersectionFoamBreakup, 0.001));
+    float coverage = (distance <= _IntersectionFoamSolid ? 1 : FoamLine(intersection, 0.35 * (1 - breakup))) * detailFade;
+    color = lerp(color, _IntersectionFoamColor.rgb, saturate(coverage * _IntersectionFoamColor.a));
     alpha = max(alpha, coverage * _IntersectionFoamColor.a);
     if (_WATER_LAPPING_LINES)
     {
         float lapPhase = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);
         float lap = FoamLine(lapPhase, _LapWidth) * (1 - smoothstep(0, max(_LapRange, 0.001), distance))
-            * step(0.45, noise) * detailFade * 0.6;
-        color = FoamOverlay(color, _IntersectionFoamColor, lap);
-        alpha = max(alpha, lap * _IntersectionFoamColor.a);
+            * step(0.45, noise) * detailFade * _LapOpacity;
+        color = lerp(color, _LapColor.rgb, saturate(lap * _LapColor.a));
+        alpha = max(alpha, lap * _LapColor.a);
     }
     float shadow = 1;
     if (_WATER_SHADOWS)
