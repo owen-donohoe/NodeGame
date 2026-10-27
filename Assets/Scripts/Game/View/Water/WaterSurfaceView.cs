@@ -36,23 +36,25 @@ namespace NodeWar.View
         private void OnEnable()
         {
             if (!active.Contains(this)) active.Add(this);
-            RefreshQuality();
+            WaterQuality.Apply();
         }
 
         private void OnDisable() => active.Remove(this);
 
-        public static void RefreshAll()
+        public static void RefreshAll() => WaterQuality.Apply();
+
+        internal static void RefreshActive()
         {
             for (int i = 0; i < active.Count; i++) active[i].RefreshQuality();
         }
 
         private void RefreshQuality()
         {
-            WaterQuality.Apply();
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
-            int next = WaterMeshBuilder.SubdivisionsForTier(WaterQuality.Current);
+            int next = WaterFeatures.Subdivisions(WaterQuality.Waves);
             RefreshProbe();
             RefreshFloor();
+            surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
             if (next == subdivisions) return;
             subdivisions = next;
             if (terrain != null) RebuildMesh(terrain);
@@ -65,8 +67,7 @@ namespace NodeWar.View
             boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
-            int tier = WaterQuality.Current;
-            subdivisions = WaterMeshBuilder.SubdivisionsForTier(tier);
+            subdivisions = WaterFeatures.Subdivisions(WaterQuality.Waves);
             WaterQuality.Apply();
             properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();
@@ -74,7 +75,7 @@ namespace NodeWar.View
             surfaceRenderer.sharedMaterial = WaterMaterialFactory.Shared();
             ApplyProperties();
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
-            surfaceRenderer.receiveShadows = true;
+            surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
             RefreshProbe();
             RefreshFloor();
         }
@@ -150,6 +151,8 @@ namespace NodeWar.View
             if (WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex") != generatedSurfaceFoam
                 || WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex") != generatedIntersectionFoam
                 || WaterMaterialFactory.NeedsNormals(material) != generatedNormals) ApplyProperties();
+            if (floorRenderer != null && floorRenderer.gameObject.activeSelf)
+                floorRenderer.transform.localPosition = new Vector3(0, surfaceY - material.GetFloat("_FloorDepth"), 0);
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
             ApplyProperties();
@@ -193,7 +196,7 @@ namespace NodeWar.View
 
         private void RefreshFloor()
         {
-            bool enabled = WaterQuality.Current >= 1;
+            bool enabled = WaterQuality.Has(GraphicsFeature.Transparency);
             if (enabled && floorRenderer == null)
             {
                 var child = new GameObject("Sea floor");
@@ -219,7 +222,7 @@ namespace NodeWar.View
 
         private void RefreshProbe()
         {
-            bool enabled = WaterQuality.Current >= 2;
+            bool enabled = WaterQuality.Has(GraphicsFeature.Reflections);
             if (!enabled)
             {
                 if (reflectionProbe != null) reflectionProbe.gameObject.SetActive(false);

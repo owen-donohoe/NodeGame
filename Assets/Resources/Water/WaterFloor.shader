@@ -20,7 +20,20 @@ Shader "NodeWar/WaterFloor"
             HLSLPROGRAM
             #pragma vertex FloorVertex
             #pragma fragment FloorFragment
-            #include "WaterCore.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            TEXTURE2D(_ShoreTex); SAMPLER(sampler_ShoreTex);
+            TEXTURE2D(_ShorePrevTex); SAMPLER(sampler_ShorePrevTex);
+            CBUFFER_START(UnityPerMaterial)
+            float4 _OceanDeepColor, _LakeDeepColor, _DeepLakeDeepColor, _ShoreST;
+            float _ShoreBlend;
+            CBUFFER_END
+            struct Attributes { float4 positionOS : POSITION; };
+            struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float2 shoreUV : TEXCOORD1; };
+            float4 Shore(float2 uv)
+            {
+                if (_ShoreBlend >= 1) return SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
+                return lerp(SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv), SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv), _ShoreBlend);
+            }
             Varyings FloorVertex(Attributes input)
             {
                 Varyings output = (Varyings)0;

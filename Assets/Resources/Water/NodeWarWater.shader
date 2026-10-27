@@ -28,6 +28,7 @@ Shader "NodeWar/Water"
         _IntersectionFoamColor("Intersection foam (alpha = amount)", Color) = (0.909804,0.956863,1,1)
         _InkWidth("Ink width (cells, 0 = off)", Range(0,0.3)) = 0.025
         _InkColor("Ink", Color) = (0.117647,0.101961,0.180392,1)
+        [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
         _NormalsTex("Normals", 2D) = "bump" {}
         _NormalsScale("Normals scale", Float) = 0.4
         _NormalsSpeed("Normals speed", Float) = 0.04
@@ -92,8 +93,23 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
-            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
-            #pragma multi_compile _ _REFLECTION_PROBE_BOX_PROJECTION
+            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma dynamic_branch _WATER_TRANSPARENCY
+            #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
+            #pragma dynamic_branch _WATER_HORIZON_FRESNEL
+            #pragma dynamic_branch _WATER_SPECULAR
+            #pragma dynamic_branch _WATER_SHADOWS
+            #pragma dynamic_branch _WATER_DETAIL_NORMALS
+            #pragma dynamic_branch _WATER_MACRO_NORMALS
+            #pragma dynamic_branch _WATER_REFLECTIONS
+            #pragma dynamic_branch _WATER_CREST_COLOUR
+            #pragma dynamic_branch _WATER_CREST_FOAM
+            #pragma dynamic_branch _WATER_SHORE_NOISE
+            #pragma dynamic_branch _WATER_LAPPING_LINES
+            #pragma dynamic_branch _WATER_CAUSTICS
+            #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
+            #pragma dynamic_branch _WATER_DITHER
+            #define _REFLECTION_PROBE_BOX_PROJECTION 1
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             ENDHLSL
         }
@@ -106,7 +122,22 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepth
-            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma dynamic_branch _WATER_TRANSPARENCY
+            #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
+            #pragma dynamic_branch _WATER_HORIZON_FRESNEL
+            #pragma dynamic_branch _WATER_SPECULAR
+            #pragma dynamic_branch _WATER_SHADOWS
+            #pragma dynamic_branch _WATER_DETAIL_NORMALS
+            #pragma dynamic_branch _WATER_MACRO_NORMALS
+            #pragma dynamic_branch _WATER_REFLECTIONS
+            #pragma dynamic_branch _WATER_CREST_COLOUR
+            #pragma dynamic_branch _WATER_CREST_FOAM
+            #pragma dynamic_branch _WATER_SHORE_NOISE
+            #pragma dynamic_branch _WATER_LAPPING_LINES
+            #pragma dynamic_branch _WATER_CAUSTICS
+            #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
+            #pragma dynamic_branch _WATER_DITHER
             ENDHLSL
         }
         Pass
@@ -117,7 +148,22 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepthNormals
-            #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma dynamic_branch _WATER_TRANSPARENCY
+            #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
+            #pragma dynamic_branch _WATER_HORIZON_FRESNEL
+            #pragma dynamic_branch _WATER_SPECULAR
+            #pragma dynamic_branch _WATER_SHADOWS
+            #pragma dynamic_branch _WATER_DETAIL_NORMALS
+            #pragma dynamic_branch _WATER_MACRO_NORMALS
+            #pragma dynamic_branch _WATER_REFLECTIONS
+            #pragma dynamic_branch _WATER_CREST_COLOUR
+            #pragma dynamic_branch _WATER_CREST_FOAM
+            #pragma dynamic_branch _WATER_SHORE_NOISE
+            #pragma dynamic_branch _WATER_LAPPING_LINES
+            #pragma dynamic_branch _WATER_CAUSTICS
+            #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
+            #pragma dynamic_branch _WATER_DITHER
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT
             ENDHLSL
         }

@@ -35,7 +35,7 @@ namespace NodeWar.View
             }
             this.waterY = waterY;
             active.Add(this);
-            ApplyTransparency(WaterQuality.Current >= 1);
+            ApplyTransparency(WaterQuality.Has(GraphicsFeature.Transparency));
         }
 
         public GameObject Create(Transform parent, string name, float cellScale)
