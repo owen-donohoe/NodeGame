@@ -16,9 +16,8 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: 3000
-  stringTagMap:
-    RenderType: Transparent
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -46,73 +45,82 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _BodyStepA: 0.25
+    - _BodyStepB: 0.6
     - _CellSize: 6
     - _ClearDepth: 0.8
-    - _ColorSteps: 0
-    - _CrestFoamThreshold: 0.7
-    - _CrestStrength: 0.5
+    - _ColorSteps: 6
+    - _CrestFoamStrength: 1
+    - _CrestFoamThreshold: 0.45
+    - _CrestSharpness: 2.5
+    - _CrestStrength: 0.45
     - _DepthRange: 2
-    - _DetailFadeEnd: 10
+    - _DetailFadeEnd: 16
     - _DetailNormalSamples: 1
-    - _DstBlend: 10
+    - _DstBlend: 0
     - _FloorDepth: 1.2
-    - _Hardness: 0
+    - _Hardness: 0.5
     - _HorizonDistance: 4
-    - _InkWidth: 0.025
-    - _IntersectionFoamCutoff: 0.7
-    - _IntersectionFoamDepth: 0.3
-    - _IntersectionFoamFade: 1
+    - _IntersectionFoamBreakup: 0.5
+    - _IntersectionFoamSolid: 0.12
     - _IntersectionFoamSpeed: 0.05
     - _IntersectionFoamTiling: 0.6
     - _LapFrequency: 1.5
+    - _LapOpacity: 0.85
     - _LapRange: 1.2
     - _LapSpeed: 0.25
-    - _LapWidth: 0.04
+    - _LapWidth: 0.08
     - _MacroNormalsScale: 0.04
     - _MacroNormalsStrength: 0.8
-    - _MaxWaveAmplitude: 0.37
     - _NormalsScale: 0.4
     - _NormalsSpeed: 0.04
-    - _NormalsStrength: 0.25
+    - _NormalsStrength: 0.6
     - _ReflectionMin: 0.25
     - _ReflectionSteps: 0
     - _ReflectionStrength: 0.6
     - _ShallowAlpha: 0.35
     - _ShoreBlend: 1
+    - _ShoreCalmDistance: 1.5
+    - _ShoreMaxAmplitude: 0.35
     - _ShoreNoiseAmount: 0.25
     - _ShoreNoiseScale: 0.15
     - _ShoreNoiseSpeed: 0.02
-    - _Smoothness: 0.7
-    - _SrcBlend: 5
+    - _ShoreWaveDamping: 1
+    - _Smoothness: 0.6
+    - _SrcBlend: 1
     - _SurfaceFoamDirection: 0.09
     - _SurfaceFoamDistortion: 1
     - _SurfaceFoamSpeed: 0.03
-    - _SurfaceFoamTiling: 0.05
-    - _SurfaceFoamWidth: 0.07
-    - _TroughStrength: 0.25
-    - _WaveFadeEnd: 4
+    - _SurfaceFoamTiling: 0.2
+    - _SurfaceFoamWidth: 0.06
+    - _TroughStrength: 0.2
+    - _WaveFadeEnd: 10
     - _WaveFadeStart: 2
+    - _WaveGroupScale: 0.012
+    - _WaveGroupSpeed: 0.01
+    - _WaveGroupStrength: 0.5
+    - _WaveScale: 1.5
     - _WaveSpeed: 1
-    - _WaveSteepnessScale: 0.125
-    - _ZWrite: 0
+    - _WaveSteepnessScale: 1
+    - _ZWrite: 1
     m_Colors:
     - _BoardRect: {r: -3, g: -3, b: 3, a: 3}
-    - _CrestColor: {r: 0.51470596, g: 0.56470597, b: 0.82647, a: 1}
+    - _CrestColor: {r: 1.15, g: 1.15, b: 1.15, a: 1}
     - _DeepLakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _DeepLakeShallowColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _HorizonColor: {r: 0.5490199, g: 0.560784, b: 0.85098, a: 1}
-    - _InkColor: {r: 0.11764697, g: 0.101960965, b: 0.18039197, a: 1}
     - _IntersectionFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _LakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _LakeShallowColor: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
+    - _LapColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _OceanDeepColor: {r: 0.18039197, g: 0.16470596, b: 0.41960797, a: 1}
     - _OceanShallowColor: {r: 0.35294098, g: 0.41960797, b: 0.768627, a: 1}
     - _ShoreST: {r: 0, g: 0, b: 1, a: 1}
     - _SpecularColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.6}
-    - _WaveA: {r: 1, g: 0.2, b: 0.28, a: 18}
-    - _WaveB: {r: 0.3, g: 1, b: 0.22, a: 11}
-    - _WaveC: {r: -0.7, g: 0.4, b: 0.14, a: 6}
-    - _WaveD: {r: 0.2, g: -1, b: 0.1, a: 3.5}
+    - _WaveA: {r: 1, g: 0, b: 0.28, a: 18}
+    - _WaveB: {r: 0.422618, g: 0.906308, b: 0.22, a: 11}
+    - _WaveC: {r: -0.766044, g: 0.642788, b: 0.14, a: 6}
+    - _WaveD: {r: -0.422618, g: -0.906308, b: 0.1, a: 3.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
