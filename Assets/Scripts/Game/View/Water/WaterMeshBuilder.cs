@@ -5,7 +5,7 @@ namespace NodeWar.View
 {
     public static class WaterMeshBuilder
     {
-        public static int SubdivisionsForTier(int tier) => WaterFeatures.Subdivisions(WaterFeatures.WavesFor(tier));
+        public static int SubdivisionsForTier(int tier, float waveScale = 1.5f, float cellSize = 6f) => WaterFeatures.Subdivisions(WaterFeatures.WavesFor(tier), waveScale, cellSize);
 
         public static (float[] positions, int[] indices) Build(int cols, int rows, TerrainType[] resolved,
             int subdivisionsPerCell, int padCells, int skirtCells)
@@ -37,36 +37,14 @@ namespace NodeWar.View
                     bool inside = x >= 0 && x < cols && z >= 0 && z < rows;
                     if (inside && !Water(x, z)) continue;
                     int ox = x * lattice, oz = z * lattice;
-                    if (inside)
-                    {
-                        for (int v = 0; v < n; v++)
-                            for (int u = 0; u < n; u++)
-                            {
-                                int a = Vertex(ox + u * 2, oz + v * 2), b = Vertex(ox + u * 2, oz + v * 2 + 2);
-                                int c = Vertex(ox + u * 2 + 2, oz + v * 2 + 2), d = Vertex(ox + u * 2 + 2, oz + v * 2);
-                                Triangle(a, b, c); Triangle(a, c, d);
-                            }
-                    }
-                    else
-                    {
-                        // Only the edge touching the fine grid is split. The rest of the ring stays coarse.
-                        var edge = new List<int>();
-                        int[] counts = { Water(x - 1, z) ? n : 1, Water(x, z + 1) ? n : 1,
-                            Water(x + 1, z) ? n : 1, Water(x, z - 1) ? n : 1 };
-                        for (int side = 0; side < 4; side++)
-                            for (int k = 0; k < counts[side]; k++)
-                            {
-                                int t = k * lattice / counts[side];
-                                edge.Add(side == 0 ? Vertex(ox, oz + t) : side == 1 ? Vertex(ox + t, oz + lattice)
-                                    : side == 2 ? Vertex(ox + lattice, oz + lattice - t) : Vertex(ox + lattice - t, oz));
-                            }
-                        if (edge.Count == 4) { Triangle(edge[0], edge[1], edge[2]); Triangle(edge[0], edge[2], edge[3]); }
-                        else
+                    // Padding carries waves too, so retain the same sampling density to the fade edge.
+                    for (int v = 0; v < n; v++)
+                        for (int u = 0; u < n; u++)
                         {
-                            int centre = Vertex(ox + n, oz + n);
-                            for (int i = 0; i < edge.Count; i++) Triangle(centre, edge[i], edge[(i + 1) % edge.Count]);
+                            int a = Vertex(ox + u * 2, oz + v * 2), b = Vertex(ox + u * 2, oz + v * 2 + 2);
+                            int c = Vertex(ox + u * 2 + 2, oz + v * 2 + 2), d = Vertex(ox + u * 2 + 2, oz + v * 2);
+                            Triangle(a, b, c); Triangle(a, c, d);
                         }
-                    }
                 }
             if (skirtCells > padCells)
             {
@@ -76,7 +54,7 @@ namespace NodeWar.View
                 int outerBottom = -skirtCells * lattice, outerTop = (rows + skirtCells) * lattice;
                 // Long, unsubdivided strips share every padding-edge vertex. Four corner quads
                 // close the ring; cost depends on the inner perimeter, never the skirt's area.
-                int step = padCells == 0 ? 2 : lattice;
+                int step = 2;
                 for (int z = bottom; z < top; z += step)
                 {
                     Quad(outerLeft, z, left, z + step);

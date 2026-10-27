@@ -32,7 +32,11 @@ namespace NodeWar.View
             | GraphicsFeature.MacroNormals | GraphicsFeature.Reflections | GraphicsFeature.LappingLines;
         public static int FeaturesFor(int preset) => preset == 0 ? 0 : preset == 1 ? (int)Medium : preset == 3 ? All : (int)High;
         public static int WavesFor(int preset) => preset == 0 ? 0 : preset == 1 ? 2 : 4;
-        public static int Subdivisions(int waves) => waves == 0 ? 1 : waves == 2 ? 4 : 8;
+        public static int PaddingFor(int tier) => tier == 0 ? 4 : tier == 1 ? 6 : 10;
+        // Four intervals per shortest scaled wavelength, including the minimum bench scale.
+        public static int Subdivisions(int waves, float waveScale = 1.5f, float cellSize = 6f)
+            => waves == 0 ? 1 : Math.Max(waves == 2 ? 4 : 8,
+                (int)Math.Ceiling(4 * cellSize / ((waves == 2 ? 11f : 3.5f) * Math.Max(0.25f, waveScale))));
         public static int NormalizeWaves(int waves) => waves <= 0 ? 0 : waves < 4 ? 2 : 4;
         public static int NextWaves(int waves) => waves == 0 ? 2 : waves == 2 ? 4 : 0;
     }

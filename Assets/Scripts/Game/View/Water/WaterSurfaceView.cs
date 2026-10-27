@@ -9,7 +9,8 @@ namespace NodeWar.View
     /// <summary>Owns the runtime water resources; terrain is copied, never modified.</summary>
     public sealed class WaterSurfaceView : MonoBehaviour
     {
-        private const int Padding = 4;
+        private int Padding => WaterFeatures.PaddingFor(WaterQuality.Current);
+        private int meshPadding;
         private static readonly List<WaterSurfaceView> active = new List<WaterSurfaceView>();
         private int cols, rows, subdivisions, skirtCells;
         private float scale, surfaceY, blend = 1f;
@@ -53,12 +54,13 @@ namespace NodeWar.View
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
             surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
             ApplyProperties();
-            int next = WaterFeatures.Subdivisions(WaterQuality.Waves);
+            int next = WaterFeatures.Subdivisions(WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             RefreshProbe();
             RefreshFloor();
             surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
-            if (next == subdivisions) return;
+            if (next == subdivisions && meshPadding == Padding) return;
             subdivisions = next;
+            meshPadding = Padding;
             if (terrain != null) RebuildMesh(terrain);
         }
 
@@ -69,7 +71,7 @@ namespace NodeWar.View
             boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
-            subdivisions = WaterFeatures.Subdivisions(WaterQuality.Waves);
+            subdivisions = WaterFeatures.Subdivisions(WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             WaterQuality.Apply();
             properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();
@@ -133,7 +135,7 @@ namespace NodeWar.View
             nextMesh.RecalculateBounds();
             // Recalculated bounds include the whole skirt; expand further for GPU Gerstner displacement.
             Bounds bounds = nextMesh.bounds;
-            bounds.Expand(4f);
+            bounds.Expand(40f); // Supports the full wave/group/steepness slider range.
             nextMesh.bounds = bounds;
             filter.sharedMesh = nextMesh;
             Release(mesh);
@@ -180,6 +182,8 @@ namespace NodeWar.View
             Vector3 max = transform.TransformPoint(new Vector3((cols - 0.5f) * scale, surfaceY, (rows - 0.5f) * scale));
             properties.SetVector("_BoardRect", new Vector4(min.x, min.z, max.x, max.z));
             properties.SetFloat("_CellSize", scale);
+            properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
+            properties.SetFloat("_DetailFadeEnd", Mathf.Min(Padding + 6, WaterMaterialFactory.Runtime.GetFloat("_DetailFadeEnd")));
             Material material = surfaceRenderer.sharedMaterial;
             generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex");
             generatedIntersectionFoam = WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex");
@@ -220,6 +224,10 @@ namespace NodeWar.View
             if (floorRenderer != null)
             {
                 floorRenderer.gameObject.SetActive(enabled);
+                float left = (-Padding - 0.5f) * scale, right = (cols + Padding - 0.5f) * scale;
+                float bottom = (-Padding - 0.5f) * scale, top = (rows + Padding - 0.5f) * scale;
+                floorMesh.vertices = new[] { new Vector3(left, 0, bottom), new Vector3(left, 0, top), new Vector3(right, 0, top), new Vector3(right, 0, bottom) };
+                floorMesh.RecalculateBounds();
                 floorRenderer.transform.localPosition = new Vector3(0, surfaceY - surfaceRenderer.sharedMaterial.GetFloat("_FloorDepth"), 0);
                 ApplyProperties();
             }
