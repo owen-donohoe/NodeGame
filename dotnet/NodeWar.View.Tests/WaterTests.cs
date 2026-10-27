@@ -7,6 +7,14 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
+        [TestCase(0, 441)] [TestCase(1, 8281)] [TestCase(2, 59049)] [TestCase(3, 59049)]
+        public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count)
+        {
+            var terrain = new TerrainType[100];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
+            var mesh = WaterMeshBuilder.Build(10, 10, terrain, WaterMeshBuilder.SubdivisionsForTier(tier), WaterFeatures.PaddingFor(tier), 40);
+            Assert.AreEqual(count, mesh.positions.Length / 3);
+        }
         [TestCase(TerrainType.Lake)] [TestCase(TerrainType.DeepLake)]
         public void BodyMixIsMonotonicSymmetricAndClamped(TerrainType lake)
         {

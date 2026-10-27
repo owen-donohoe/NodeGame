@@ -156,24 +156,44 @@ namespace NodeWar.View
             FeatureToggle(GraphicsFeature.CrestFoam, "Crest foam");
             FeatureToggle(GraphicsFeature.SecondFoamLayer, "Double foam");
             Material material = WaterMaterialFactory.Shared();
+            GUILayout.Label("Waves");
+            MaterialSlider(material, "_WaveScale", "Wave scale", 0.25f, 4f);
+            MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 1.5f);
+            MaterialSlider(material, "_WaveGroupStrength", "Wave group strength", 0f, 1f);
             MaterialSlider(material, "_WaveFadeStart", "Wave fade start (cells)", 0f, 4f);
-            MaterialSlider(material, "_WaveFadeEnd", "Wave fade end (cells)", 0.1f, 4f);
-            MaterialSlider(material, "_CrestStrength", "Crest strength", 0f, 1f);
-            MaterialSlider(material, "_ReflectionMin", "Reflection floor", 0f, 1f);
-            MaterialSlider(material, "_ReflectionStrength", "Reflection strength", 0f, 1f);
+            MaterialSlider(material, "_WaveFadeEnd", "Wave fade end (cells)", 0.1f, 10f);
             MaterialSlider(material, "_MacroNormalsStrength", "Macro normal strength", 0f, 2f);
+            MaterialSlider(material, "_NormalsStrength", "Normals strength", 0f, 2f);
+            GUILayout.Label("Crests");
+            MaterialSlider(material, "_CrestSharpness", "Crest sharpness", 0.1f, 8f);
+            MaterialSlider(material, "_CrestStrength", "Crest strength", 0f, 1f);
+            MaterialSlider(material, "_CrestFoamThreshold", "Crest foam threshold", 0f, 1f);
+            MaterialSlider(material, "_CrestFoamStrength", "Crest foam strength", 0f, 1f);
+            GUILayout.Label("Shore");
+            MaterialSlider(material, "_ShoreWaveDamping", "Shore wave damping", 0f, 3f);
+            MaterialSlider(material, "_ShoreMaxAmplitude", "Shore max amplitude", 0f, 0.4f);
+            MaterialSlider(material, "_ShoreNoiseAmount", "Shore noise (cells)", 0f, 1f);
             MaterialSlider(material, "_ShallowAlpha", "Shallow alpha", 0f, 1f);
             MaterialSlider(material, "_ClearDepth", "Clear depth (cells)", 0.01f, 3f);
-            MaterialSlider(material, "_ShoreNoiseAmount", "Shore noise (cells)", 0f, 1f);
-            MaterialSlider(material, "_LapFrequency", "Lap frequency", 0.1f, 4f);
-            MaterialSlider(material, "_DepthRange", "Depth range", 0.1f, 3f);
+            GUILayout.Label("Colour");
+            MaterialSlider(material, "_BodyStepA", "Body step A", 0f, 1f);
+            MaterialSlider(material, "_BodyStepB", "Body step B", 0f, 1f);
             MaterialSlider(material, "_ColorSteps", "Colour steps", 0f, 16f, true);
+            MaterialSlider(material, "_DepthRange", "Depth range", 0.1f, 3f);
+            MaterialSlider(material, "_ReflectionMin", "Reflection floor", 0f, 1f);
+            MaterialSlider(material, "_ReflectionStrength", "Reflection strength", 0f, 1f);
+            MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
+            GUILayout.Label("Foam");
+            MaterialSlider(material, "_LapOpacity", "Lap opacity", 0f, 1f);
+            MaterialSlider(material, "_LapWidth", "Lap width", 0f, 0.3f);
+            MaterialSlider(material, "_LapFrequency", "Lap frequency", 0.1f, 4f);
+            MaterialSlider(material, "_LapSpeed", "Lap speed", 0f, 1f);
+            MaterialSlider(material, "_IntersectionFoamColor", "Intersection foam strength", 0f, 1f, false, true);
+            MaterialSlider(material, "_IntersectionFoamSolid", "Intersection foam solid (cells)", 0f, 1f);
+            MaterialSlider(material, "_IntersectionFoamBreakup", "Intersection foam breakup (cells)", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamWidth", "Surface foam width", 0f, 0.3f);
             MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);
-            MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 2f);
-            MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
-            MaterialSlider(material, "_NormalsStrength", "Normals strength", 0f, 2f);
             if (GUILayout.Button("Reset to shader defaults")) ResetMaterial(material);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
@@ -200,9 +220,9 @@ namespace NodeWar.View
         }
 
         private static void MaterialSlider(Material material, string property, string label,
-            float min, float max, bool integer = false)
+            float min, float max, bool integer = false, bool alpha = false)
         {
-            float value = material.GetFloat(property);
+            float value = alpha ? material.GetColor(property).a : material.GetFloat(property);
             GUILayout.Label($"{label}: {value:F2}");
             // Preserve authored values outside the slider range until the user changes the slider.
             bool previousChange = GUI.changed;
@@ -212,7 +232,14 @@ namespace NodeWar.View
             GUI.changed |= previousChange;
             if (integer) nextValue = Mathf.Round(nextValue);
             if (!sliderChanged || Mathf.Approximately(value, nextValue)) return;
-            material.SetFloat(property, nextValue);
+            if (alpha)
+            {
+                Color color = material.GetColor(property);
+                color.a = nextValue;
+                material.SetColor(property, color);
+            }
+            else material.SetFloat(property, nextValue);
+            WaterQuality.Apply();
             MarkMaterialDirty(material);
         }
 

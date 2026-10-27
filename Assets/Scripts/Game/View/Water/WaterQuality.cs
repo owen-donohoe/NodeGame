@@ -30,7 +30,7 @@ namespace NodeWar.View
             for (int i = 0; i < flags.Length; i++) SetKeyword(keywords[i], (features & (int)flags[i]) != 0);
             SetKeyword("_WATER_WAVES_2", Waves == 2);
             SetKeyword("_WATER_WAVES_4", Waves == 4);
-            Material material = WaterMaterialFactory.RecreateRuntime();
+            Material material = WaterMaterialFactory.ForQuality(features, Waves, Current);
             bool transparent = Has(GraphicsFeature.Transparency);
             material.SetFloat("_SrcBlend", (float)(transparent ? BlendMode.SrcAlpha : BlendMode.One));
             material.SetFloat("_DstBlend", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));

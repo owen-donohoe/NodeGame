@@ -6,12 +6,24 @@ namespace NodeWar.View
     {
         private static Texture2D surfaceFoam, intersectionFoam, normals;
         private static Material fallback, runtime;
+        private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
+
+        public static Material ForQuality(int features, int waves, int tier)
+        {
+            if (runtime == null || features != runtimeFeatures || waves != runtimeWaves || tier != runtimeTier)
+            {
+                RecreateRuntime();
+                runtimeFeatures = features; runtimeWaves = waves; runtimeTier = tier;
+            }
+            else runtime.CopyPropertiesFromMaterial(Shared()); // Keep deliberate bench edits live.
+            return runtime;
+        }
 
         public static Material Runtime => runtime != null ? runtime : RecreateRuntime();
 
         public static Material RecreateRuntime()
         {
-            if (runtime != null) Object.Destroy(runtime);
+            if (runtime != null) Release(runtime);
             // Render state belongs to this runtime copy; bench edits deliberately target Shared().
             runtime = new Material(Shared()) { name = "NodeWarWater runtime", hideFlags = HideFlags.HideAndDontSave };
             return runtime;
@@ -69,6 +81,11 @@ namespace NodeWar.View
             return texture;
         }
 
+        private static void Release(Object value)
+        {
+            if (Application.isPlaying) Object.Destroy(value);
+            else Object.DestroyImmediate(value);
+        }
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetTextures()
         {
@@ -78,8 +95,9 @@ namespace NodeWar.View
             surfaceFoam = intersectionFoam = normals = null;
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
-            if (runtime != null) Object.Destroy(runtime);
+            if (runtime != null) Release(runtime);
             runtime = null;
+            runtimeFeatures = runtimeWaves = runtimeTier = -1;
         }
     }
 }
