@@ -31,13 +31,13 @@ namespace NodeWar.View
 
         public static Texture2D SurfaceFoam()
         {
-            if (surfaceFoam == null) surfaceFoam = Bake("Water surface foam", FoamNoise.Bake(256, 0x71ab));
+            if (surfaceFoam == null) surfaceFoam = Bake("Water surface foam", FoamNoise.BakeVoronoi(512, 0x71ab, 6, 0.65), 512);
             return surfaceFoam;
         }
 
         public static Texture2D IntersectionFoam()
         {
-            if (intersectionFoam == null) intersectionFoam = Bake("Water intersection foam", FoamNoise.Bake(256, 0x36c1));
+            if (intersectionFoam == null) intersectionFoam = Bake("Water intersection foam", FoamNoise.BakeVoronoi(512, 0x36c1, 6, 0.65), 512);
             return intersectionFoam;
         }
 
@@ -47,11 +47,11 @@ namespace NodeWar.View
             return normals;
         }
 
-        private static Texture2D Bake(string name, byte[] rgba)
+        private static Texture2D Bake(string name, byte[] rgba, int size = 256)
         {
-            var texture = new Texture2D(256, 256, TextureFormat.RGBA32, true, true)
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, true, true)
             {
-                name = name, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Trilinear,
+                name = name, wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear,
                 hideFlags = HideFlags.HideAndDontSave
             };
             texture.SetPixelData(rgba, 0);

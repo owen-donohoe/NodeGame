@@ -16,7 +16,7 @@ Shader "NodeWar/Water"
         _SurfaceFoamTiling("Surface foam tiling", Float) = 0.2
         _SurfaceFoamDirection("Surface foam direction (turns)", Range(0,1)) = 0.09
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
-        _SurfaceFoamCutoff("Surface foam cutoff", Range(0,1)) = 0.65
+        _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.06
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
         _IntersectionFoamTex("Intersection foam", 2D) = "black" {}

@@ -2,28 +2,55 @@ using System;
 
 namespace NodeWar.View
 {
-    /// <summary>
-    /// Tileable, smooth foam noise (domain-warped gradient fBm). Thresholding it gives soft blobs and
-    /// streaks rather than the regular dots a sine pattern produces. Pure maths so it can be tested.
-    /// </summary>
+    /// <summary>Periodic view-only Voronoi foam and gradient noise.</summary>
     public static class FoamNoise
     {
-        /// <summary>RGBA bytes: R surface foam, G shore breakup, B fine noise, A 255.</summary>
-        public static byte[] Bake(int size, int seed)
+        /// <summary>R/G are unthresholded F2-F1 edges, B is shore noise, A is opaque.</summary>
+        public static byte[] BakeVoronoi(int size, int seed, int cells, double warp)
         {
             if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
+            if (cells < 2) throw new ArgumentOutOfRangeException(nameof(cells));
+            if (double.IsNaN(warp) || double.IsInfinity(warp) || warp < 0)
+                throw new ArgumentOutOfRangeException(nameof(warp));
             var rgba = new byte[size * size * 4];
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
                     double u = (double)x / size, v = (double)y / size;
                     int at = (y * size + x) * 4;
-                    rgba[at] = ToByte(Warped(u, v, seed, 4));
-                    rgba[at + 1] = ToByte(Warped(u, v, seed + 101, 6));
-                    rgba[at + 2] = ToByte(Fbm(u, v, seed + 211, 16, 2));
+                    rgba[at] = ToByte(Voronoi(u, v, seed, cells, warp));
+                    rgba[at + 1] = ToByte(Voronoi(u, v, seed + 101, cells + 4, warp * 1.5));
+                    rgba[at + 2] = ToByte((Fbm(u, v, seed + 211, 4, 3) - 0.5) * 2.5 + 0.5);
                     rgba[at + 3] = 255;
                 }
             return rgba;
+        }
+
+        public static double Voronoi(double u, double v, int seed, int cells, double warp)
+        {
+            double x = u * cells + (Fbm(u, v, seed + 7, 4, 2) - 0.5) * warp;
+            double y = v * cells + (Fbm(u, v, seed + 13, 4, 2) - 0.5) * warp;
+            int ix = (int)Math.Floor(x), iy = (int)Math.Floor(y);
+            double first = double.PositiveInfinity, second = double.PositiveInfinity;
+            for (int dy = -2; dy <= 2; dy++)
+                for (int dx = -2; dx <= 2; dx++)
+                {
+                    int gx = ix + dx, gy = iy + dy;
+                    int wx = (gx % cells + cells) % cells, wy = (gy % cells + cells) % cells;
+                    double px = gx + 0.15 + Jitter(wx, wy, seed) * 0.7;
+                    double py = gy + 0.15 + Jitter(wx, wy, seed + 37) * 0.7;
+                    double d = (px - x) * (px - x) + (py - y) * (py - y);
+                    if (d < first) { second = first; first = d; }
+                    else if (d < second) second = d;
+                }
+            return Clamp01(Math.Sqrt(second) - Math.Sqrt(first));
+        }
+
+        private static double Jitter(int x, int y, int seed)
+        {
+            uint h = unchecked((uint)(x * 73856093) ^ (uint)(y * 19349663) ^ (uint)(seed * 83492791));
+            h ^= h >> 13; h *= 0x5bd1e995; h ^= h >> 15;
+            return (h & 0xffff) / 65535.0;
         }
 
         /// <summary>RGBA tangent normals for UnpackNormal (RGB or RG/AG); alpha stays one.</summary>

@@ -17,7 +17,7 @@ float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _DepthRange, _ColorSteps, _HorizonDistance;
-float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamCutoff, _SurfaceFoamDistortion;
+float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _IntersectionFoamDepth, _IntersectionFoamCutoff, _IntersectionFoamFade, _IntersectionFoamTiling, _IntersectionFoamSpeed;
 float _InkWidth, _NormalsScale, _NormalsSpeed, _NormalsStrength;
 float _Smoothness, _Hardness, _WaveSpeed, _WaveSteepnessScale, _ReflectionStrength, _ShoreBlend;
@@ -174,13 +174,25 @@ half4 WaterFragment(Varyings input) : SV_Target
 #endif
     float surface = SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex,
         foamUV * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
-    color = FoamOverlay(color, _SurfaceFoamColor, step(_SurfaceFoamCutoff, surface) * lerp(0.025, 1, DetailFade(input.positionWS.xz)));
+    float surfaceAA = max(fwidth(surface), 0.0001);
+    float surfaceCoverage = 1 - smoothstep(_SurfaceFoamWidth - surfaceAA, _SurfaceFoamWidth + surfaceAA, surface);
+#if defined(_WATER_ULTRA)
+    float2 secondUV = input.positionWS.xz * _SurfaceFoamTiling * 1.37
+        + _Time.y * _SurfaceFoamSpeed * 0.6 * float2(-0.71, 0.7);
+    float second = SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex,
+        DistortFoam(secondUV) * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
+    float secondAA = max(fwidth(second), 0.0001);
+    surfaceCoverage = max(surfaceCoverage, 1 - smoothstep(_SurfaceFoamWidth - secondAA, _SurfaceFoamWidth + secondAA, second));
+#endif
+    color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage * lerp(0.025, 1, DetailFade(input.positionWS.xz)));
     float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling
         + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
     float intersection = SAMPLE_TEXTURE2D(_IntersectionFoamTex, sampler_IntersectionFoamTex,
         intersectionUV * _IntersectionFoamTex_ST.xy + _IntersectionFoamTex_ST.zw).g;
-    float coverage = step(_IntersectionFoamCutoff * fade, intersection)
+    float edgeAA = max(fwidth(intersection), 0.0001);
+    float edgeWidth = (1 - _IntersectionFoamCutoff) * (1 - fade);
+    float coverage = (1 - smoothstep(edgeWidth - edgeAA, edgeWidth + edgeAA, intersection))
         * pow(1 - fade, max(_IntersectionFoamFade, 0.001));
     color = FoamOverlay(color, _IntersectionFoamColor, coverage);
     float aa = max(fwidth(distance), 0.0001);
