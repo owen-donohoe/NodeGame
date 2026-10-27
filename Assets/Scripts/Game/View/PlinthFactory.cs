@@ -11,9 +11,21 @@ namespace NodeWar.View
         public static void ApplyTransparency(bool enabled)
         {
             foreach (PlinthFactory factory in active)
-                factory.material.SetFloat("_UnderwaterFade", enabled ? 0.15f : 0.3f);
+                factory.SetUnderwaterFade(enabled);
         }
         private static int fallbackUsers;
+        private readonly System.Collections.Generic.List<Renderer> renderers = new System.Collections.Generic.List<Renderer>();
+        private readonly MaterialPropertyBlock fadeProperties = new MaterialPropertyBlock();
+        private void SetUnderwaterFade(bool enabled)
+        {
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null) continue;
+                renderer.GetPropertyBlock(fadeProperties);
+                fadeProperties.SetFloat("_UnderwaterFade", enabled ? 0.15f : 0.3f);
+                renderer.SetPropertyBlock(fadeProperties);
+            }
+        }
         private bool disposed;
         private readonly GameObject prefab;
         private readonly Material material;
@@ -62,6 +74,8 @@ namespace NodeWar.View
                 var properties = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(properties);
                 properties.SetFloat("_WaterY", waterY);
+                properties.SetFloat("_UnderwaterFade", WaterQuality.Has(GraphicsFeature.Transparency) ? 0.15f : 0.3f);
+                renderers.Add(renderer);
                 renderer.SetPropertyBlock(properties);
                 renderer.shadowCastingMode = ShadowCastingMode.On;
                 renderer.receiveShadows = false;

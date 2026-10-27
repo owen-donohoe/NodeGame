@@ -5,7 +5,17 @@ namespace NodeWar.View
     public static class WaterMaterialFactory
     {
         private static Texture2D surfaceFoam, intersectionFoam, normals;
-        private static Material fallback;
+        private static Material fallback, runtime;
+
+        public static Material Runtime => runtime != null ? runtime : RecreateRuntime();
+
+        public static Material RecreateRuntime()
+        {
+            if (runtime != null) Object.Destroy(runtime);
+            // Render state belongs to this runtime copy; bench edits deliberately target Shared().
+            runtime = new Material(Shared()) { name = "NodeWarWater runtime", hideFlags = HideFlags.HideAndDontSave };
+            return runtime;
+        }
 
         public static Material Shared()
         {
@@ -68,6 +78,8 @@ namespace NodeWar.View
             surfaceFoam = intersectionFoam = normals = null;
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
+            if (runtime != null) Object.Destroy(runtime);
+            runtime = null;
         }
     }
 }

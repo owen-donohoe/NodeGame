@@ -104,7 +104,9 @@ namespace NodeWar.View
         {
             board = data;
             nodeScale = scale;
-            material = new Material(Shader.Find("Sprites/Default"));
+            // Runtime cue material must draw after transparent water regardless of queue sorting.
+            material = new Material(Shader.Find("Sprites/Default"))
+            { renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 1 };
             tiles = NewChild("Tiles");
             bridges = NewChild("Bridges");
             water = NewChild("Water").gameObject.AddComponent<WaterSurfaceView>();

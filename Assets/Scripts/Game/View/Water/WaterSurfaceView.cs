@@ -51,6 +51,8 @@ namespace NodeWar.View
         private void RefreshQuality()
         {
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
+            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
+            ApplyProperties();
             int next = WaterFeatures.Subdivisions(WaterQuality.Waves);
             RefreshProbe();
             RefreshFloor();
@@ -72,8 +74,9 @@ namespace NodeWar.View
             properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();
             surfaceRenderer = gameObject.AddComponent<MeshRenderer>();
-            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Shared();
+            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
             ApplyProperties();
+            surfaceRenderer.sortingOrder = TerrainPresentation.WaterSortingOrder;
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
             surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
             RefreshProbe();
@@ -207,8 +210,10 @@ namespace NodeWar.View
                 floorMesh = new Mesh { name = "Sea floor", vertices = new[] { new Vector3(left, 0, bottom), new Vector3(left, 0, top), new Vector3(right, 0, top), new Vector3(right, 0, bottom) }, triangles = new[] { 0, 1, 2, 0, 2, 3 } };
                 child.AddComponent<MeshFilter>().sharedMesh = floorMesh;
                 floorRenderer = child.AddComponent<MeshRenderer>();
+                // Runtime floor material owns its render state; no material asset is changed.
                 floorMaterial = new Material(Resources.Load<Shader>("Water/WaterFloor"));
                 floorRenderer.sharedMaterial = floorMaterial;
+                floorRenderer.sortingOrder = TerrainPresentation.WaterSortingOrder;
                 floorRenderer.shadowCastingMode = ShadowCastingMode.Off;
                 floorRenderer.receiveShadows = false;
             }
