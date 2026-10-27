@@ -17,6 +17,8 @@ float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect, _CrestColor;
 float _CrestStrength, _TroughStrength, _CrestFoamThreshold, _MaxWaveAmplitude;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
+float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _ShoreNoiseScale, _ShoreNoiseSpeed;
+float _LapFrequency, _LapSpeed, _LapRange, _LapWidth;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
@@ -171,6 +173,19 @@ half4 WaterFragment(Varyings input) : SV_Target
     float3 shallow = lerp(lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, lake), _DeepLakeShallowColor.rgb, deepLake);
     float3 deep = lerp(lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, lake), _DeepLakeDeepColor.rgb, deepLake);
     float distance = shore.r * 3;
+    float rawDistance = distance;
+    float noise = 0.5;
+#if defined(_WATER_MEDIUM) || defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    float2 shoreUV = input.positionWS.xz * _ShoreNoiseScale;
+    noise = (SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, shoreUV + _Time.y * _ShoreNoiseSpeed * float2(1, 0.7)).b
+        + SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, shoreUV * 1.13 + _Time.y * _ShoreNoiseSpeed * float2(-0.6, 1)).b) * 0.5;
+    distance = max(0, distance + (noise - 0.5) * 2 * _ShoreNoiseAmount);
+#endif
+    float alpha = 1;
+#if defined(_WATER_MEDIUM) || defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    alpha = lerp(_ShallowAlpha, 1, smoothstep(0, max(_ClearDepth, 0.001), distance));
+#endif
+    float detailFade = DetailFade(input.positionWS.xz);
     float depth = saturate(distance / max(_DepthRange, 0.001));
     if (_ColorSteps >= 2) depth = floor(depth * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
     float3 color = WaterColor(shallow, deep, depth);
@@ -216,7 +231,9 @@ half4 WaterFragment(Varyings input) : SV_Target
     float crestWidth = _SurfaceFoamWidth * saturate((input.crest - _CrestFoamThreshold) / max(1 - _CrestFoamThreshold, 0.0001));
     surfaceCoverage = max(surfaceCoverage, (1 - smoothstep(crestWidth - surfaceAA, crestWidth + surfaceAA, surface)) * step(_CrestFoamThreshold, input.crest));
 #endif
-    color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage * lerp(0.025, 1, DetailFade(input.positionWS.xz)));
+    surfaceCoverage *= lerp(0.025, 1, detailFade);
+    color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
+    alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
     float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling
         + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
@@ -227,9 +244,24 @@ half4 WaterFragment(Varyings input) : SV_Target
     float coverage = (1 - smoothstep(edgeWidth - edgeAA, edgeWidth + edgeAA, intersection))
         * pow(1 - fade, max(_IntersectionFoamFade, 0.001));
     color = FoamOverlay(color, _IntersectionFoamColor, coverage);
-    float aa = max(fwidth(distance), 0.0001);
-    float ink = (1 - smoothstep(_InkWidth - aa, _InkWidth + aa, distance)) * step(0.00001, _InkWidth);
+    alpha = max(alpha, coverage * _IntersectionFoamColor.a);
+#if defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    float lapDistance = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);
+    float lapAA = max(fwidth(lapDistance), 0.0001);
+    float lap = (1 - smoothstep(_LapWidth - lapAA, _LapWidth + lapAA, lapDistance))
+        * (1 - smoothstep(0, max(_LapRange, 0.001), distance)) * step(0.45, noise) * detailFade * 0.6;
+    color = FoamOverlay(color, _IntersectionFoamColor, lap);
+    alpha = max(alpha, lap * _IntersectionFoamColor.a);
+#endif
+#if defined(_WATER_ULTRA)
+    float caustic = (1 - smoothstep(0.02 - edgeAA, 0.02 + edgeAA, intersection))
+        * (1 - smoothstep(1.2, 1.5, distance)) * detailFade * 0.35;
+    color = lerp(color, lerp(shallow, float3(1, 1, 1), 0.35), caustic);
+#endif
+    float aa = max(fwidth(rawDistance), 0.0001);
+    float ink = (1 - smoothstep(_InkWidth - aa, _InkWidth + aa, rawDistance)) * step(0.00001, _InkWidth);
     color = lerp(color, _InkColor.rgb, ink * _InkColor.a);
+    alpha = max(alpha, ink * _InkColor.a);
 #if defined(_WATER_MEDIUM) || defined(_WATER_HIGH) || defined(_WATER_ULTRA)
     Light mainLight = GetMainLight();
     float shadow = 1;
@@ -242,8 +274,13 @@ half4 WaterFragment(Varyings input) : SV_Target
     float hardSpec = step(0.5, smoothstep(0.005, 0.01, softSpec));
     float spec = lerp(softSpec, hardSpec, _Hardness);
     color += spec * _SpecularColor.rgb * mainLight.color * shadow;
+    alpha = max(alpha, spec * shadow);
 #endif
-    return half4(color, 1);
+#if defined(_WATER_MEDIUM) || defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    float dither = frac(52.9829189 * frac(dot(input.positionCS.xy, float2(0.06711056, 0.00583715))));
+    color += (dither - 0.5) / 255.0;
+#endif
+    return half4(color, alpha);
 }
 half4 WaterDepth(Varyings input) : SV_Target
 {

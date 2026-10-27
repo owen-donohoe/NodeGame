@@ -6,7 +6,13 @@ namespace NodeWar.View
     /// <summary>Board-owned shared resources, with a prefab-independent mesh fallback.</summary>
     public sealed class PlinthFactory : System.IDisposable
     {
+        private static readonly System.Collections.Generic.List<PlinthFactory> active = new System.Collections.Generic.List<PlinthFactory>();
         private static Material fallbackMaterial;
+        public static void ApplyTransparency(bool enabled)
+        {
+            foreach (PlinthFactory factory in active)
+                factory.material.SetFloat("_UnderwaterFade", enabled ? 0.15f : 0.3f);
+        }
         private static int fallbackUsers;
         private bool disposed;
         private readonly GameObject prefab;
@@ -28,6 +34,8 @@ namespace NodeWar.View
                 fallbackUsers++;
             }
             this.waterY = waterY;
+            active.Add(this);
+            ApplyTransparency(WaterQuality.Current >= 1);
         }
 
         public GameObject Create(Transform parent, string name, float cellScale)
@@ -100,6 +108,7 @@ namespace NodeWar.View
         {
             if (disposed) return;
             disposed = true;
+            active.Remove(this);
             Release(fallback);
             if (ownsMaterial && --fallbackUsers == 0)
             {

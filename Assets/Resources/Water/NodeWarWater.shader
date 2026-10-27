@@ -35,6 +35,19 @@ Shader "NodeWar/Water"
         _Smoothness("Smoothness", Range(0,1)) = 0.6
         _Hardness("Specular hardness", Range(0,1)) = 0.5
         _SpecularColor("Specular", Color) = (0.909804,0.956863,1,1)
+        [HideInInspector] _SrcBlend("Source blend", Float) = 1
+        [HideInInspector] _DstBlend("Destination blend", Float) = 0
+        [HideInInspector] _ZWrite("Depth write", Float) = 1
+        _ShallowAlpha("Shallow alpha", Range(0,1)) = 0.35
+        _ClearDepth("Clear depth (cells)", Float) = 0.8
+        _FloorDepth("Floor depth (world units)", Float) = 1.2
+        _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
+        _ShoreNoiseScale("Shore noise scale", Float) = 0.15
+        _ShoreNoiseSpeed("Shore noise speed", Float) = 0.02
+        _LapFrequency("Lap frequency", Float) = 1.5
+        _LapSpeed("Lap speed", Float) = 0.25
+        _LapRange("Lap range (cells)", Float) = 1.2
+        _LapWidth("Lap width", Float) = 0.04
         _CellSize("Cell size", Float) = 6
         _BoardRect("Board bounds", Vector) = (-3,-3,3,3)
         _WaveFadeStart("Wave fade start (cells)", Float) = 2
@@ -72,6 +85,8 @@ Shader "NodeWar/Water"
         Pass
         {
             Name "UniversalForward"
+            Blend [_SrcBlend] [_DstBlend]
+            ZWrite [_ZWrite]
             Tags { "LightMode"="UniversalForward" }
             HLSLPROGRAM
             #pragma target 3.5

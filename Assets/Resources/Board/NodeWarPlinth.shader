@@ -5,7 +5,7 @@ Shader "NodeWar/Plinth"
         _TopColor("Top", Color) = (0.38,0.43,0.29,1)
         _SideColor("Sides", Color) = (0.352941,0.274510,0.196078,1)
         _UnderwaterColor("Underwater", Color) = (0.180392,0.164706,0.419608,1)
-        _WaterY("Water Y", Float) = -0.37
+        _WaterY("Water Y", Float) = -0.57
         _UnderwaterFade("Underwater fade", Float) = 0.3
     }
     SubShader
@@ -67,7 +67,7 @@ Shader "NodeWar/Plinth"
         half4 Forward(Varyings input) : SV_Target
         {
             half3 color = input.color.rgb * (normalize(input.normalWS).y > 0.5 ? _TopColor.rgb : _SideColor.rgb);
-            float underwater = saturate((_WaterY - input.positionWS.y) / max(_UnderwaterFade, 0.0001));
+            float underwater = saturate((_WaterY - input.positionWS.y) / 0.3) * saturate(_UnderwaterFade);
             return half4(lerp(color, _UnderwaterColor.rgb, underwater), 1);
         }
         half4 Depth(Varyings input) : SV_Target { return 0; }

@@ -20,6 +20,9 @@ namespace NodeWar.View
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
         private bool probeDirty, probeAfterSettled;
+        private Mesh floorMesh;
+        private Material floorMaterial;
+        private MeshRenderer floorRenderer;
         private Mesh mesh;
         private MeshFilter filter;
         private MeshRenderer surfaceRenderer;
@@ -49,6 +52,7 @@ namespace NodeWar.View
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
             int next = WaterMeshBuilder.SubdivisionsForTier(WaterQuality.Current);
             RefreshProbe();
+            RefreshFloor();
             if (next == subdivisions) return;
             subdivisions = next;
             if (terrain != null) RebuildMesh(terrain);
@@ -72,6 +76,7 @@ namespace NodeWar.View
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
             surfaceRenderer.receiveShadows = true;
             RefreshProbe();
+            RefreshFloor();
         }
 
         public void SetTerrain(TerrainType[] resolved)
@@ -177,6 +182,39 @@ namespace NodeWar.View
             if (generatedIntersectionFoam) properties.SetTexture("_IntersectionFoamTex", WaterMaterialFactory.IntersectionFoam());
             if (generatedNormals) properties.SetTexture("_NormalsTex", WaterMaterialFactory.Normals());
             surfaceRenderer.SetPropertyBlock(properties);
+            if (floorRenderer != null)
+            {
+                properties.SetColor("_OceanDeepColor", material.GetColor("_OceanDeepColor"));
+                properties.SetColor("_LakeDeepColor", material.GetColor("_LakeDeepColor"));
+                properties.SetColor("_DeepLakeDeepColor", material.GetColor("_DeepLakeDeepColor"));
+                floorRenderer.SetPropertyBlock(properties);
+            }
+        }
+
+        private void RefreshFloor()
+        {
+            bool enabled = WaterQuality.Current >= 1;
+            if (enabled && floorRenderer == null)
+            {
+                var child = new GameObject("Sea floor");
+                child.layer = gameObject.layer;
+                child.transform.SetParent(transform, false);
+                float left = (-Padding - 0.5f) * scale, right = (cols + Padding - 0.5f) * scale;
+                float bottom = (-Padding - 0.5f) * scale, top = (rows + Padding - 0.5f) * scale;
+                floorMesh = new Mesh { name = "Sea floor", vertices = new[] { new Vector3(left, 0, bottom), new Vector3(left, 0, top), new Vector3(right, 0, top), new Vector3(right, 0, bottom) }, triangles = new[] { 0, 1, 2, 0, 2, 3 } };
+                child.AddComponent<MeshFilter>().sharedMesh = floorMesh;
+                floorRenderer = child.AddComponent<MeshRenderer>();
+                floorMaterial = new Material(Resources.Load<Shader>("Water/WaterFloor"));
+                floorRenderer.sharedMaterial = floorMaterial;
+                floorRenderer.shadowCastingMode = ShadowCastingMode.Off;
+                floorRenderer.receiveShadows = false;
+            }
+            if (floorRenderer != null)
+            {
+                floorRenderer.gameObject.SetActive(enabled);
+                floorRenderer.transform.localPosition = new Vector3(0, surfaceY - surfaceRenderer.sharedMaterial.GetFloat("_FloorDepth"), 0);
+                ApplyProperties();
+            }
         }
 
         private void RefreshProbe()
@@ -231,7 +269,7 @@ namespace NodeWar.View
         private void OnDestroy()
         {
             if (previous != current) Release(previous);
-            Release(current); Release(mesh);
+            Release(current); Release(mesh); Release(floorMesh); Release(floorMaterial);
         }
 
         private static void Release(Object value)
