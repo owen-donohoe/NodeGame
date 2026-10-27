@@ -234,8 +234,8 @@ half4 WaterFragment(Varyings input) : SV_Target
     alpha = max(alpha, coverage * _IntersectionFoamColor.a);
     if (_WATER_LAPPING_LINES)
     {
-        float line = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);
-        float lap = FoamLine(line, _LapWidth) * (1 - smoothstep(0, max(_LapRange, 0.001), distance))
+        float lapPhase = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);
+        float lap = FoamLine(lapPhase, _LapWidth) * (1 - smoothstep(0, max(_LapRange, 0.001), distance))
             * step(0.45, noise) * detailFade * 0.6;
         color = FoamOverlay(color, _IntersectionFoamColor, lap);
         alpha = max(alpha, lap * _IntersectionFoamColor.a);
