@@ -11,7 +11,7 @@ namespace NodeWar.View
         [SerializeField] private BoardConfig boardConfig;
         [Tooltip("Multiplier on BoardConfig node spacing; 1 matches the game.")]
         [SerializeField] private float nodeScale = 1f;
-        [SerializeField, Range(-1, 3)] private int tierOverride = -1;
+        [SerializeField, Range(-1, 4)] private int tierOverride = -1;
         [SerializeField] private float stepSeconds = 0.8f;
         [SerializeField] private bool autoReplay = true;
         [SerializeField] private bool frameCamera = true;
@@ -36,8 +36,7 @@ namespace NodeWar.View
         private void ApplyTier()
         {
             if (WaterQuality.Override == tierOverride) return;
-            WaterQuality.Override = tierOverride;
-            WaterSurfaceView.RefreshAll();
+            WaterQuality.SelectOverride(tierOverride);
         }
 
         [ContextMenu("Replay draft")]
@@ -118,7 +117,7 @@ namespace NodeWar.View
             panelScroll = GUILayout.BeginScrollView(panelScroll);
             GUILayout.Label($"Water tuning (F1)   {frameSeconds * 1000f:F2} ms");
             GUILayout.BeginHorizontal();
-            string[] tiers = { "Low", "Medium", "High", "Ultra" };
+            string[] tiers = { "Low", "Medium", "High", "Ultra", "Custom" };
             for (int i = 0; i < tiers.Length; i++)
             {
                 bool selected = WaterQuality.Current == i;
@@ -135,10 +134,42 @@ namespace NodeWar.View
             GUILayout.EndHorizontal();
             GUILayout.Label($"Step seconds: {stepSeconds:F2}");
             stepSeconds = GUILayout.HorizontalSlider(stepSeconds, 0.05f, 3f);
+            if (GUILayout.Button("Waves: " + (WaterQuality.Waves == 0 ? "Off" : WaterQuality.Waves.ToString())))
+            {
+                int waves = WaterFeatures.NextWaves(WaterQuality.Waves);
+                SelectCustom();
+                WaterQuality.CustomWaves = waves;
+                WaterQuality.Apply();
+            }
+            FeatureToggle(GraphicsFeature.Transparency, "Transparent shallows");
+            FeatureToggle(GraphicsFeature.SurfaceFoamDistortion, "Foam ripple");
+            FeatureToggle(GraphicsFeature.HorizonFresnel, "Horizon sheen");
+            FeatureToggle(GraphicsFeature.Specular, "Sun glints");
+            FeatureToggle(GraphicsFeature.CrestColour, "Wave crests");
+            FeatureToggle(GraphicsFeature.ShoreNoise, "Shore wobble");
+            FeatureToggle(GraphicsFeature.Dither, "Smooth gradients");
+            FeatureToggle(GraphicsFeature.Shadows, "Shadows on water");
+            FeatureToggle(GraphicsFeature.DetailNormals, "Detail ripples");
+            FeatureToggle(GraphicsFeature.MacroNormals, "Large swells");
+            FeatureToggle(GraphicsFeature.Reflections, "Reflections");
+            FeatureToggle(GraphicsFeature.LappingLines, "Lapping lines");
+            FeatureToggle(GraphicsFeature.CrestFoam, "Crest foam");
+            FeatureToggle(GraphicsFeature.SecondFoamLayer, "Double foam");
+            FeatureToggle(GraphicsFeature.Caustics, "Caustics");
             Material material = WaterMaterialFactory.Shared();
+            MaterialSlider(material, "_WaveFadeStart", "Wave fade start (cells)", 0f, 4f);
+            MaterialSlider(material, "_WaveFadeEnd", "Wave fade end (cells)", 0.1f, 4f);
+            MaterialSlider(material, "_CrestStrength", "Crest strength", 0f, 1f);
+            MaterialSlider(material, "_ReflectionMin", "Reflection floor", 0f, 1f);
+            MaterialSlider(material, "_ReflectionStrength", "Reflection strength", 0f, 1f);
+            MaterialSlider(material, "_MacroNormalsStrength", "Macro normal strength", 0f, 2f);
+            MaterialSlider(material, "_ShallowAlpha", "Shallow alpha", 0f, 1f);
+            MaterialSlider(material, "_ClearDepth", "Clear depth (cells)", 0.01f, 3f);
+            MaterialSlider(material, "_ShoreNoiseAmount", "Shore noise (cells)", 0f, 1f);
+            MaterialSlider(material, "_LapFrequency", "Lap frequency", 0.1f, 4f);
             MaterialSlider(material, "_DepthRange", "Depth range", 0.1f, 3f);
             MaterialSlider(material, "_ColorSteps", "Colour steps", 0f, 16f, true);
-            MaterialSlider(material, "_SurfaceFoamCutoff", "Surface foam cutoff", 0f, 1f);
+            MaterialSlider(material, "_SurfaceFoamWidth", "Surface foam width", 0f, 0.3f);
             MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);
             MaterialSlider(material, "_IntersectionFoamDepth", "Intersection foam depth", 0.01f, 2f);
@@ -150,6 +181,26 @@ namespace NodeWar.View
             if (GUILayout.Button("Reset to shader defaults")) ResetMaterial(material);
             GUILayout.EndScrollView();
             GUILayout.EndArea();
+        }
+
+        private void SelectCustom()
+        {
+            int features = WaterQuality.Features, waves = WaterQuality.Waves;
+            tierOverride = 4;
+            WaterQuality.Override = 4;
+            WaterQuality.CustomFeatures = features;
+            WaterQuality.CustomWaves = waves;
+        }
+
+        private void FeatureToggle(GraphicsFeature feature, string label)
+        {
+            bool enabled = WaterQuality.Has(feature);
+            bool next = GUILayout.Toggle(enabled, label);
+            if (enabled == next) return;
+            SelectCustom();
+            int bit = (int)feature;
+            WaterQuality.CustomFeatures = next ? WaterQuality.CustomFeatures | bit : WaterQuality.CustomFeatures & ~bit;
+            WaterQuality.Apply();
         }
 
         private static void MaterialSlider(Material material, string property, string label,
@@ -197,6 +248,7 @@ namespace NodeWar.View
                 }
             }
             Destroy(defaults);
+            WaterQuality.Apply();
             MarkMaterialDirty(material);
         }
 
