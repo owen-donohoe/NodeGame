@@ -55,11 +55,29 @@ namespace NodeWar.View.Tests
             }
         }
 
+        [TestCase(7)] [TestCase(0x71ab)] [TestCase(0x36c1)]
+        public void VoronoiIsExactlyPeriodicAndInRange(int seed)
+        {
+            for (int i = 0; i < 129; i++)
+            {
+                double t = i / 128.0;
+                foreach (int cells in new[] { 6, 10 })
+                {
+                    double a = FoamNoise.Voronoi(0, t, seed, cells, 0.65);
+                    Assert.That(a, Is.InRange(0.0, 1.0));
+                    Assert.That(FoamNoise.Voronoi(1, t, seed, cells, 0.65), Is.EqualTo(a).Within(1e-12));
+                    Assert.That(FoamNoise.Voronoi(t, 1, seed, cells, 0.65), Is.EqualTo(FoamNoise.Voronoi(t, 0, seed, cells, 0.65)).Within(1e-12));
+                }
+            }
+        }
+
         [Test]
         public void InvalidSizeIsRejected()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => FoamNoise.BakeVoronoi(0, 1, 6, 0.65));
             Assert.Throws<ArgumentOutOfRangeException>(() => FoamNoise.BakeNormals(0, 1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FoamNoise.BakeVoronoi(16, 1, 0, 0.65));
+            Assert.Throws<ArgumentOutOfRangeException>(() => FoamNoise.BakeVoronoi(16, 1, 6, double.NaN));
         }
     }
 }

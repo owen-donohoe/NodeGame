@@ -81,6 +81,7 @@ Shader "NodeWar/Water"
         ZWrite On
         Cull Back
         HLSLINCLUDE
+        #define _REFLECTION_PROBE_BOX_PROJECTION 1
         #include "WaterCore.hlsl"
         ENDHLSL
         Pass
@@ -109,7 +110,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_CAUSTICS
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
-            #define _REFLECTION_PROBE_BOX_PROJECTION 1
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             ENDHLSL
         }

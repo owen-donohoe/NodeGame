@@ -214,14 +214,16 @@ half4 WaterFragment(Varyings input) : SV_Target
             DistortFoam(uv) * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
         surfaceCoverage = max(surfaceCoverage, FoamLine(edge, _SurfaceFoamWidth));
     }
-    if (_WATER_CREST_FOAM)
-    {
-        float width = _SurfaceFoamWidth * saturate((input.crest - _CrestFoamThreshold) / max(1 - _CrestFoamThreshold, 0.0001));
-        surfaceCoverage = max(surfaceCoverage, FoamLine(surface, width));
-    }
     surfaceCoverage *= lerp(0.025, 1, detailFade);
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
+    if (_WATER_CREST_FOAM)
+    {
+        float width = _SurfaceFoamWidth * saturate((input.crest - _CrestFoamThreshold) / max(1 - _CrestFoamThreshold, 0.0001));
+        float crestFoam = FoamLine(surface, width) * detailFade;
+        color = FoamOverlay(color, _SurfaceFoamColor, crestFoam);
+        alpha = max(alpha, crestFoam * _SurfaceFoamColor.a);
+    }
     float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
     float intersection = SAMPLE_TEXTURE2D(_IntersectionFoamTex, sampler_IntersectionFoamTex,
