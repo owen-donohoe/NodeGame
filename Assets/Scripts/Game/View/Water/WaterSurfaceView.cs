@@ -155,6 +155,10 @@ namespace NodeWar.View
             if (previous != null) properties.SetTexture("_ShorePrevTex", previous);
             properties.SetFloat("_ShoreBlend", blend);
             properties.SetVector("_ShoreST", shoreST);
+            Vector3 min = transform.TransformPoint(new Vector3(-0.5f * scale, surfaceY, -0.5f * scale));
+            Vector3 max = transform.TransformPoint(new Vector3((cols - 0.5f) * scale, surfaceY, (rows - 0.5f) * scale));
+            properties.SetVector("_BoardRect", new Vector4(min.x, min.z, max.x, max.z));
+            properties.SetFloat("_CellSize", scale);
             Material material = surfaceRenderer.sharedMaterial;
             generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex");
             generatedIntersectionFoam = WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex");

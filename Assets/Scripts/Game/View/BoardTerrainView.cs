@@ -46,7 +46,7 @@ namespace NodeWar.View
         private float[] riseByCell;
         private PlinthFactory plinthFactory;
         private bool hasShown;
-        private float WaterY => GroundY - 0.25f;
+        private float WaterY => GroundY - 0.45f;
         private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
         private bool[] targetByCell;
         private bool[] bridgeByCell;

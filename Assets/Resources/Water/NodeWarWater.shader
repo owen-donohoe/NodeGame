@@ -35,6 +35,11 @@ Shader "NodeWar/Water"
         _Smoothness("Smoothness", Range(0,1)) = 0.6
         _Hardness("Specular hardness", Range(0,1)) = 0.5
         _SpecularColor("Specular", Color) = (0.909804,0.956863,1,1)
+        _CellSize("Cell size", Float) = 6
+        _BoardRect("Board bounds", Vector) = (-3,-3,3,3)
+        _WaveFadeStart("Wave fade start (cells)", Float) = 2
+        _WaveFadeEnd("Wave fade end (cells)", Float) = 4
+        _DetailFadeEnd("Detail fade end (cells)", Float) = 10
         _WaveA("Wave A", Vector) = (1,0.2,0.08,6)
         _WaveB("Wave B", Vector) = (0.3,1,0.06,4)
         _WaveC("Wave C", Vector) = (-0.7,0.4,0.035,2)

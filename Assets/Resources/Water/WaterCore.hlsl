@@ -14,6 +14,8 @@ float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _InkColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
+float4 _BoardRect;
+float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamCutoff, _SurfaceFoamDistortion;
 float _IntersectionFoamDepth, _IntersectionFoamCutoff, _IntersectionFoamFade, _IntersectionFoamTiling, _IntersectionFoamSpeed;
@@ -52,6 +54,15 @@ void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
         -direction.y * direction.y * steepness * s);
 }
 
+float OutsideBoard(float2 xz)
+{
+    return length(max(max(_BoardRect.xy - xz, xz - _BoardRect.zw), 0));
+}
+float DetailFade(float2 xz)
+{
+    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_DetailFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
+}
+
 Varyings WaterVertex(Attributes input)
 {
     Varyings output;
@@ -62,6 +73,7 @@ Varyings WaterVertex(Attributes input)
 #if defined(_WATER_MEDIUM) || defined(_WATER_HIGH) || defined(_WATER_ULTRA)
     float damping = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0).g,
         SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0).g, _ShoreBlend);
+    damping *= 1 - smoothstep(_WaveFadeStart * _CellSize, max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
     Gerstner(_WaveA, xz, damping, position, tangent, binormal);
     Gerstner(_WaveB, xz, damping, position, tangent, binormal);
 #if defined(_WATER_HIGH) || defined(_WATER_ULTRA)
@@ -87,7 +99,7 @@ float3 WaterNormal(Varyings input)
         (uv * 1.71 + _Time.y * _NormalsSpeed * float2(-0.7, 1.2)) * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
     detail = normalize(float3(detail.xy + second.xy, detail.z * second.z));
 #endif
-    detail = normalize(float3(detail.xy * _NormalsStrength, detail.z));
+    detail = normalize(float3(detail.xy * _NormalsStrength * DetailFade(input.positionWS.xz), detail.z));
     float3 tangent = normalize(float3(normal.y, -normal.x, 0));
     float3 binormal = cross(tangent, normal);
     normal = normalize(tangent * detail.x + binormal * detail.y + normal * detail.z);
@@ -162,7 +174,7 @@ half4 WaterFragment(Varyings input) : SV_Target
 #endif
     float surface = SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex,
         foamUV * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
-    color = FoamOverlay(color, _SurfaceFoamColor, step(_SurfaceFoamCutoff, surface));
+    color = FoamOverlay(color, _SurfaceFoamColor, step(_SurfaceFoamCutoff, surface) * lerp(0.025, 1, DetailFade(input.positionWS.xz)));
     float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling
         + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
