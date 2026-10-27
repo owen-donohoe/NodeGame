@@ -24,6 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="../../Assets/Scripts/Game/View/Water/WaterFeatures.cs" Link="View/Water/WaterFeatures.cs" />
     <Compile Include="MatchStartupSequenceTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Core/MatchStartupSequence.cs" Link="Core/MatchStartupSequence.cs" />
     <Compile Include="../../Assets/Tests/EditMode/Tests/BoardFixtures.cs" Link="Fixtures/BoardFixtures.cs" />
@@ -133,6 +134,7 @@
     <Compile Include="BoardVisualsBenchDraftTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Debug/BoardVisualsBenchDraft.cs" Link="Debug/BoardVisualsBenchDraft.cs" />
     <Compile Include="WaterTests.cs" />
+    <Compile Include="WaterFeaturesTests.cs" />
     <Compile Include="WaterWaveDefaultsTests.cs" />
     <None Include="../../Assets/Resources/Water/NodeWarWater.shader" Link="Water/NodeWarWater.shader" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="FoamNoiseTests.cs" />

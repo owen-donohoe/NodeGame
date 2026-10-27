@@ -62,7 +62,7 @@ namespace NodeWar.Lobby.Tests
             stored.reducedMotion = true;
             stored.frameCap = 3;
             var result = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(7, result.version);
+            Assert.AreEqual(GameSettingsData.CurrentVersion, result.version);
             Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, result.graphicsQuality);
             Assert.AreEqual(0.12f, result.musicVolume);
             Assert.IsTrue(result.reducedMotion);
@@ -77,25 +77,64 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, GameSettingsData.Normalized(default).graphicsQuality);
         }
 
-        [TestCase(0, "Low")] [TestCase(1, "Medium")] [TestCase(2, "High")] [TestCase(3, "Ultra")]
+        [TestCase(0, "Low")] [TestCase(1, "Medium")] [TestCase(2, "High")] [TestCase(3, "Ultra")] [TestCase(4, "Custom")]
         public void GraphicsQualityPreservesChoicesLabelsAndCycles(int tier, string label)
         {
             var settings = GameSettingsData.CreateDefault();
             settings.graphicsQuality = tier;
             Assert.AreEqual(tier, GameSettingsData.Normalized(settings).graphicsQuality);
             Assert.AreEqual(label, GameSettingsData.GraphicsQualityLabel(tier));
-            Assert.AreEqual((tier + 1) % 4, GameSettingsData.NextGraphicsQuality(tier));
+            Assert.AreEqual((tier + 1) % 5, GameSettingsData.NextGraphicsQuality(tier));
             var changed = settings;
-            changed.graphicsQuality = (tier + 1) % 4;
+            changed.graphicsQuality = (tier + 1) % 5;
             Assert.IsTrue(GameSettingsData.Differ(settings, changed));
         }
 
-        [TestCase(-1)] [TestCase(4)] [TestCase(int.MinValue)] [TestCase(int.MaxValue)]
+        [TestCase(-1)] [TestCase(5)] [TestCase(int.MinValue)] [TestCase(int.MaxValue)]
         public void InvalidGraphicsQualityFallsBackToDefault(int tier)
         {
             var settings = GameSettingsData.CreateDefault();
             settings.graphicsQuality = tier;
             Assert.AreEqual(GameSettingsData.DefaultGraphicsQuality, GameSettingsData.Normalized(settings).graphicsQuality);
+        }
+
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(3)]
+        public void VersionSevenSeedsFeaturesWithoutLosingPreferences(int preset)
+        {
+            var stored = GameSettingsData.CreateDefault();
+            stored.version = 7; stored.graphicsQuality = preset;
+            stored.graphicsFeatures = 0; stored.waterWaves = 0; stored.musicVolume = 0.12f;
+            var result = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(NodeWar.View.WaterFeatures.FeaturesFor(preset), result.graphicsFeatures);
+            Assert.AreEqual(NodeWar.View.WaterFeatures.WavesFor(preset), result.waterWaves);
+            Assert.AreEqual(preset, result.graphicsQuality);
+            Assert.AreEqual(0.12f, result.musicVolume);
+        }
+
+        [TestCase(-5, 0)] [TestCase(0, 0)] [TestCase(1, 2)] [TestCase(2, 2)] [TestCase(3, 2)] [TestCase(4, 4)] [TestCase(99, 4)]
+        public void CustomValuesAreNormalizedAndDifferTracksThem(int waves, int expected)
+        {
+            var stored = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 4);
+            stored.graphicsFeatures = int.MaxValue; stored.waterWaves = waves;
+            var result = GameSettingsData.Normalized(stored);
+            Assert.AreEqual(32767, result.graphicsFeatures);
+            Assert.AreEqual(expected, result.waterWaves);
+            var changed = result; changed.graphicsFeatures ^= 1;
+            Assert.IsTrue(GameSettingsData.Differ(result, changed));
+            changed = result; changed.waterWaves = expected == 0 ? 2 : 0;
+            Assert.IsTrue(GameSettingsData.Differ(result, changed));
+        }
+
+        [Test]
+        public void CustomStartsFromPresetAndPresetKeepsStoredCustomMask()
+        {
+            var source = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 3);
+            var custom = GameSettingsData.WithGraphicsQuality(source, 4);
+            Assert.AreEqual(32767, custom.graphicsFeatures); Assert.AreEqual(4, custom.waterWaves);
+            custom.graphicsFeatures = 1; custom.waterWaves = 0;
+            var low = GameSettingsData.WithGraphicsQuality(custom, 0);
+            Assert.AreEqual(1, low.graphicsFeatures); Assert.AreEqual(0, low.waterWaves);
+            Assert.IsFalse(GameSettingsData.Differ(low, GameSettingsData.Normalized(low)));
         }
 
         // ===== FRAME CAP =====
@@ -538,7 +577,7 @@ namespace NodeWar.Lobby.Tests
         [Test]
         public void OlderControlsMigrateWithoutResettingPreferences()
         {
-            Assert.AreEqual(7, GameSettingsData.CurrentVersion);
+            Assert.AreEqual(8, GameSettingsData.CurrentVersion);
             GameSettingsData stored = GameSettingsData.CreateDefault();
             stored.version = 5;
             System.Array.Resize(ref stored.inputBindings, 13);
@@ -593,3 +632,5 @@ namespace NodeWar.Lobby.Tests
         }
     }
 }
+
+
