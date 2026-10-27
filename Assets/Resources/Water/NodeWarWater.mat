@@ -16,18 +16,19 @@ Material:
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
+  m_CustomRenderQueue: 3000
+  stringTagMap:
+    RenderType: Transparent
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _FoamTex:
+    - _IntersectionFoamTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
-    - _NormalTex:
+    - _NormalsTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -39,34 +40,79 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _SurfaceFoamTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _BandSoftness: 0.02
-    - _FoamCutoff: 0.97
-    - _FoamSpeed: 0.03
-    - _FoamTiling: 0.06
-    - _FresnelPower: 4
-    - _InkWidth: 0.08
-    - _NormalStrength: 0.2
+    - _CellSize: 6
+    - _ClearDepth: 0.8
+    - _ColorSteps: 0
+    - _CrestFoamThreshold: 0.7
+    - _CrestStrength: 0.5
+    - _DepthRange: 2
+    - _DetailFadeEnd: 10
+    - _DetailNormalSamples: 1
+    - _DstBlend: 10
+    - _FloorDepth: 1.2
+    - _Hardness: 0
+    - _HorizonDistance: 4
+    - _InkWidth: 0.025
+    - _IntersectionFoamCutoff: 0.7
+    - _IntersectionFoamDepth: 0.3
+    - _IntersectionFoamFade: 1
+    - _IntersectionFoamSpeed: 0.05
+    - _IntersectionFoamTiling: 0.6
+    - _LapFrequency: 1.5
+    - _LapRange: 1.2
+    - _LapSpeed: 0.25
+    - _LapWidth: 0.04
+    - _MacroNormalsScale: 0.04
+    - _MacroNormalsStrength: 0.8
+    - _MaxWaveAmplitude: 0.37
+    - _NormalsScale: 0.4
+    - _NormalsSpeed: 0.04
+    - _NormalsStrength: 0.25
+    - _ReflectionMin: 0.25
+    - _ReflectionSteps: 0
+    - _ReflectionStrength: 0.6
+    - _ShallowAlpha: 0.35
     - _ShoreBlend: 1
-    - _ShoreFoamWidth: 0.2
-    - _SpecHardness: 0.97
+    - _ShoreNoiseAmount: 0.25
+    - _ShoreNoiseScale: 0.15
+    - _ShoreNoiseSpeed: 0.02
+    - _Smoothness: 0.7
+    - _SrcBlend: 5
+    - _SurfaceFoamDirection: 0.09
+    - _SurfaceFoamDistortion: 1
+    - _SurfaceFoamSpeed: 0.03
+    - _SurfaceFoamTiling: 0.05
+    - _SurfaceFoamWidth: 0.07
+    - _TroughStrength: 0.25
+    - _WaveFadeEnd: 4
+    - _WaveFadeStart: 2
+    - _WaveSpeed: 1
+    - _WaveSteepnessScale: 0.125
+    - _ZWrite: 0
     m_Colors:
-    - _BandThresholds: {r: 0.15, g: 0.45, b: 0, a: 0}
-    - _FoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
+    - _BoardRect: {r: -3, g: -3, b: 3, a: 3}
+    - _CrestColor: {r: 0.51470596, g: 0.56470597, b: 0.82647, a: 1}
+    - _DeepLakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
+    - _DeepLakeShallowColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _HorizonColor: {r: 0.5490199, g: 0.560784, b: 0.85098, a: 1}
     - _InkColor: {r: 0.11764697, g: 0.101960965, b: 0.18039197, a: 1}
-    - _LakeDeep: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
-    - _LakeMid: {r: 0.40392196, g: 0.701961, b: 0.901961, a: 1}
-    - _LakeShallow: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
-    - _OceanDeep: {r: 0.18039197, g: 0.16470596, b: 0.41960797, a: 1}
-    - _OceanMid: {r: 0.23921597, g: 0.24705896, b: 0.560784, a: 1}
-    - _OceanShallow: {r: 0.35294098, g: 0.41960797, b: 0.768627, a: 1}
+    - _IntersectionFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
+    - _LakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
+    - _LakeShallowColor: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
+    - _OceanDeepColor: {r: 0.18039197, g: 0.16470596, b: 0.41960797, a: 1}
+    - _OceanShallowColor: {r: 0.35294098, g: 0.41960797, b: 0.768627, a: 1}
     - _ShoreST: {r: 0, g: 0, b: 1, a: 1}
-    - _SpecColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
-    - _WaveA: {r: 1, g: 0.2, b: 0.08, a: 6}
-    - _WaveB: {r: 0.3, g: 1, b: 0.06, a: 4}
-    - _WaveC: {r: -0.7, g: 0.4, b: 0.035, a: 2}
-    - _WaveD: {r: 0.2, g: -1, b: 0.025, a: 1}
+    - _SpecularColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
+    - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.6}
+    - _WaveA: {r: 1, g: 0.2, b: 0.28, a: 18}
+    - _WaveB: {r: 0.3, g: 1, b: 0.22, a: 11}
+    - _WaveC: {r: -0.7, g: 0.4, b: 0.14, a: 6}
+    - _WaveD: {r: 0.2, g: -1, b: 0.1, a: 3.5}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
