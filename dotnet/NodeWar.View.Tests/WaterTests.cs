@@ -86,7 +86,7 @@ namespace NodeWar.View.Tests
             CheckExtent(match.positions, 40); CheckExtent(lobby.positions, 80);
         }
 
-        [TestCase(0, 1)] [TestCase(1, 4)] [TestCase(2, 6)] [TestCase(3, 8)]
+        [TestCase(0, 1)] [TestCase(1, 4)] [TestCase(2, 8)] [TestCase(3, 8)]
         public void MeshCountsMatchTierAndOmitLand(int tier, int n)
         {
             Assert.AreEqual(n, WaterMeshBuilder.SubdivisionsForTier(tier));

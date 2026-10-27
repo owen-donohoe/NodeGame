@@ -5,7 +5,7 @@ namespace NodeWar.View
 {
     public static class WaterMeshBuilder
     {
-        public static int SubdivisionsForTier(int tier) => tier <= 0 ? 1 : tier == 1 ? 4 : tier == 2 ? 6 : 8;
+        public static int SubdivisionsForTier(int tier) => tier <= 0 ? 1 : tier == 1 ? 4 : 8;
 
         public static (float[] positions, int[] indices) Build(int cols, int rows, TerrainType[] resolved,
             int subdivisionsPerCell, int padCells, int skirtCells)

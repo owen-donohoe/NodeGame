@@ -133,6 +133,8 @@
     <Compile Include="BoardVisualsBenchDraftTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/Debug/BoardVisualsBenchDraft.cs" Link="Debug/BoardVisualsBenchDraft.cs" />
     <Compile Include="WaterTests.cs" />
+    <Compile Include="WaterWaveDefaultsTests.cs" />
+    <None Include="../../Assets/Resources/Water/NodeWarWater.shader" Link="Water/NodeWarWater.shader" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="FoamNoiseTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/FoamNoise.cs" Link="View/Water/FoamNoise.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/ShoreField.cs" Link="View/Water/ShoreField.cs" />
