@@ -194,6 +194,8 @@ namespace NodeWar.View
             surfaceRenderer.SetPropertyBlock(properties);
             if (floorRenderer != null)
             {
+                properties.SetFloat("_BodyStepA", material.GetFloat("_BodyStepA"));
+                properties.SetFloat("_BodyStepB", material.GetFloat("_BodyStepB"));
                 properties.SetColor("_OceanDeepColor", material.GetColor("_OceanDeepColor"));
                 properties.SetColor("_LakeDeepColor", material.GetColor("_LakeDeepColor"));
                 properties.SetColor("_DeepLakeDeepColor", material.GetColor("_DeepLakeDeepColor"));

@@ -24,6 +24,7 @@ float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _ShoreNoiseSca
 float _DetailNormalSamples;
 float _LapFrequency, _LapSpeed, _LapRange, _LapWidth;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
+float _BodyStepA, _BodyStepB;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _IntersectionFoamDepth, _IntersectionFoamCutoff, _IntersectionFoamFade, _IntersectionFoamTiling, _IntersectionFoamSpeed;
@@ -69,6 +70,10 @@ float OutsideBoard(float2 xz)
 {
     return length(max(max(_BoardRect.xy - xz, xz - _BoardRect.zw), 0));
 }
+float WaveFade(float2 xz)
+{
+    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
+}
 float DetailFade(float2 xz)
 {
     return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_DetailFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
@@ -87,7 +92,7 @@ Varyings WaterVertex(Attributes input)
     float4 shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0),
         SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0), _ShoreBlend);
     float damping = _ShoreWaveDamping <= 0 ? 1 : pow(saturate(shoreVertex.g), _ShoreWaveDamping);
-    damping *= 1 - smoothstep(_WaveFadeStart * _CellSize, max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
+    damping *= WaveFade(xz);
     float amplitudeSum = (_WaveA.z * _WaveA.w + _WaveB.z * _WaveB.w) * _WaveScale / 6.2831853;
     float steepnessSum = _WaveA.z + _WaveB.z;
 #if defined(_WATER_WAVES_4)
@@ -173,8 +178,9 @@ half4 WaterFragment(Varyings input) : SV_Target
     float4 shore = Shore(input.shoreUV);
     float lake = step(0.25, shore.b);
     float deepLake = lake * (1 - step(0.75, shore.b));
-    float3 shallow = lerp(lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, lake), _DeepLakeShallowColor.rgb, deepLake);
-    float3 deep = lerp(lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, lake), _DeepLakeDeepColor.rgb, deepLake);
+    float bodyMix = shore.a < 0.166667 ? 0 : shore.a < 0.5 ? _BodyStepA : shore.a < 0.833333 ? _BodyStepB : 1;
+    float3 shallow = lerp(_OceanShallowColor.rgb, lerp(_LakeShallowColor.rgb, _DeepLakeShallowColor.rgb, deepLake), bodyMix);
+    float3 deep = lerp(_OceanDeepColor.rgb, lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix);
     float rawDistance = shore.r * 3;
     float distance = rawDistance, noise = 0.5;
     float detailFade = DetailFade(input.positionWS.xz);
@@ -194,8 +200,8 @@ half4 WaterFragment(Varyings input) : SV_Target
     {
         float crestHighlight = pow(saturate(input.crest), max(_CrestSharpness, 0.001));
         if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
-        color = lerp(color, saturate(shallow * _CrestColor.rgb), crestHighlight * _CrestStrength);
-        color = lerp(color, deep, saturate(-input.crest) * _TroughStrength);
+        color = lerp(color, saturate(shallow * _CrestColor.rgb), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz));
+        color = lerp(color, deep, saturate(-input.crest) * _TroughStrength * WaveFade(input.positionWS.xz));
     }
     float3 normal = WaterNormal(input);
     float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -218,6 +224,11 @@ half4 WaterFragment(Varyings input) : SV_Target
         if (!_WATER_HORIZON_FRESNEL) weight *= detailFade;
         color = lerp(color, reflection, weight);
     }
+    // Converge on exactly the flat far-ocean palette as wave and detail fades complete.
+    float farWeight = _WATER_HORIZON_FRESNEL
+        ? lerp(_ReflectionMin, 1, pow(1 - saturate(view.y), max(_HorizonDistance, 0.001))) * _ReflectionStrength : 0;
+    float3 farOcean = lerp(_OceanDeepColor.rgb, _HorizonColor.rgb, farWeight);
+    color = lerp(farOcean, color, detailFade);
     float angle = _SurfaceFoamDirection * 6.2831853;
     float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
         + _Time.y * _SurfaceFoamSpeed * float2(cos(angle), sin(angle));

@@ -9,7 +9,9 @@ Shader "NodeWar/Water"
         _DeepLakeShallowColor("Deep lake shallow", Color) = (0.243137,0.560784,0.819608,1)
         _DeepLakeDeepColor("Deep lake deep", Color) = (0.243137,0.560784,0.819608,1)
         _DepthRange("Depth range (cells)", Float) = 2
-        _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 0
+        _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 6
+        _BodyStepA("Body blend step A", Range(0,1)) = 0.25
+        _BodyStepB("Body blend step B", Range(0,1)) = 0.6
         _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
         _HorizonDistance("Horizon exponent", Float) = 4
         _SurfaceFoamTex("Surface foam", 2D) = "black" {}

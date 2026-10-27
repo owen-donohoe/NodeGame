@@ -7,13 +7,31 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
+        [TestCase(TerrainType.Lake)] [TestCase(TerrainType.DeepLake)]
+        public void BodyMixIsMonotonicSymmetricAndClamped(TerrainType lake)
+        {
+            var terrain = new TerrainType[24];
+            for (int z = 0; z < 4; z++)
+                for (int x = 0; x < 6; x++) terrain[z * 6 + x] = x < 3 ? TerrainType.Ocean : lake;
+            var f = ShoreField.Bake(6, 4, terrain, 16, 1);
+            int row = 40;
+            int Mix(int x) => f.rgba[(row * f.width + x) * 4 + 3];
+            // Boundary x=2.5 sits between texels 63 and 64, far from exterior ocean.
+            Assert.AreEqual(ShoreField.WaterBodyOf(lake), f.rgba[(row * f.width + 60) * 4 + 2], "Ocean side must blend toward the nearest lake palette.");
+            for (int i = 0; i < 24; i++)
+            {
+                Assert.That(Mix(40 + i), Is.LessThanOrEqualTo(Mix(41 + i)));
+                Assert.That(Mix(63 - i) + Mix(64 + i), Is.EqualTo(255).Within(1));
+                if (i >= 8) { Assert.AreEqual(0, Mix(63 - i)); Assert.AreEqual(255, Mix(64 + i)); }
+            }
+        }
         [Test]
         public void FieldEncodesLandDistanceDampingAndBody()
         {
             var f = ShoreField.Bake(4, 1, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Ocean }, 1, 1);
             int at = (f.width + 1) * 4;
             Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 1]); Assert.AreEqual(0, f.rgba[at + 3]);
-            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(85, f.rgba[at + 5]); Assert.AreEqual(255, f.rgba[at + 7]);
+            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(85, f.rgba[at + 5]); Assert.AreEqual(0, f.rgba[at + 7]);
             Assert.Less(f.rgba[at + 4], f.rgba[at + 8]); Assert.Less(f.rgba[at + 8], f.rgba[at + 12]);
             Assert.AreEqual(0, f.rgba[at + 6]); Assert.AreEqual(255, f.rgba[at + 10]);
         }
@@ -42,7 +60,7 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(-4.5f, a.originX); Assert.AreEqual(-4.5f, a.originZ);
             Assert.AreEqual(1f / 16, a.worldPerTexel);
             Assert.AreEqual(255, a.rgba[0]); Assert.AreEqual(255, a.rgba[1]);
-            Assert.AreEqual(0, a.rgba[2]); Assert.AreEqual(255, a.rgba[3]);
+            Assert.AreEqual(0, a.rgba[2]); Assert.AreEqual(0, a.rgba[3]);
             CollectionAssert.AreEqual(a.rgba, b.rgba);
         }
 
@@ -58,7 +76,7 @@ namespace NodeWar.View.Tests
                     Assert.AreEqual(255, f.rgba[at], "R: saturated distance");
                     Assert.AreEqual(255, f.rgba[at + 1], "G: full wave amplitude");
                     Assert.AreEqual(0, f.rgba[at + 2], "B: ocean palette");
-                    Assert.AreEqual(255, f.rgba[at + 3], "A: water");
+                    Assert.AreEqual(0, f.rgba[at + 3], "A: ocean mix");
                 }
         }
 

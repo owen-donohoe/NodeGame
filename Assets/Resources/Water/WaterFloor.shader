@@ -5,6 +5,8 @@ Shader "NodeWar/WaterFloor"
         _OceanDeepColor("Ocean deep", Color) = (0.180392,0.164706,0.419608,1)
         _LakeDeepColor("Lake deep", Color) = (0.243137,0.560784,0.819608,1)
         _DeepLakeDeepColor("Deep lake", Color) = (0.243137,0.560784,0.819608,1)
+        _BodyStepA("Body blend step A", Range(0,1)) = 0.25
+        _BodyStepB("Body blend step B", Range(0,1)) = 0.6
         _ShoreTex("Shore", 2D) = "black" {}
         _ShorePrevTex("Previous shore", 2D) = "black" {}
         _ShoreBlend("Blend", Float) = 1
@@ -25,7 +27,7 @@ Shader "NodeWar/WaterFloor"
             TEXTURE2D(_ShorePrevTex); SAMPLER(sampler_ShorePrevTex);
             CBUFFER_START(UnityPerMaterial)
             float4 _OceanDeepColor, _LakeDeepColor, _DeepLakeDeepColor, _ShoreST;
-            float _ShoreBlend;
+            float _ShoreBlend, _BodyStepA, _BodyStepB;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; };
             struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float2 shoreUV : TEXCOORD1; };
@@ -44,10 +46,12 @@ Shader "NodeWar/WaterFloor"
             }
             half4 FloorFragment(Varyings input) : SV_Target
             {
-                float body = Shore(input.shoreUV).b;
+                float4 shore = Shore(input.shoreUV);
+                float body = shore.b;
+                float bodyMix = shore.a < 0.166667 ? 0 : shore.a < 0.5 ? _BodyStepA : shore.a < 0.833333 ? _BodyStepB : 1;
                 float lake = step(0.25, body);
                 float deepLake = lake * (1 - step(0.75, body));
-                return half4(lerp(lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, lake), _DeepLakeDeepColor.rgb, deepLake) * 0.85, 1);
+                return half4(lerp(_OceanDeepColor.rgb, lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix) * 0.85, 1);
             }
             ENDHLSL
         }
