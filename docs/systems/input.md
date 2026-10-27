@@ -17,7 +17,7 @@ sources:
   - Assets/Scripts/Game/Core/BoardFraming.cs
   - Assets/Scripts/Lobby/Data/InputBindings.cs
   - Assets/Scripts/Lobby/Data/GameSettingsData.cs
-verified: 794baded
+verified: 5cb22bf7
 ---
 
 # Input
@@ -36,7 +36,7 @@ Resolve each pointer trace once into selection, camera or order intent. Keep phy
 
 `CameraController.SetGestureSource` binds gesture pan/zoom; `ApplyInputSettings` updates controls. `SetViewer(mode, playerID)` resolves home/spectator side; `SetHomeAnchor`, `SetDraftMode`, `RotateView` and `SetPOV(side, pitch)` control framing. `POVChanged(Quaternion)`, `ZoomChanged(float)` and `ZoomGestureActiveChanged(bool)` notify presentation. HUD calls `RecentreOnHome`, `ToggleFitDefaultZoom`, zoom gesture/normalised zoom methods, and focus-session methods. `FocusOnWorldPoint` counts as manual camera movement. `Shake` composes presentation offsets. Pure `BoardFraming` computes centre, expanded bounds and width-fit/toggle zoom.
 
-`InputBindings` defines allowed/default actions, normalisation and warnings. `GameSettingsData.Normalized` migrates settings; `Differ` compares them; `PlayerProfile.SetSettings` persists them. Controls fields include slot-indexed bindings, hold time, camera-button visibility/zoom, controls side and selection-bar visibility. Display preferences include frame cap and graphics quality (Low/Medium/High/Ultra). Graphics defaults to Medium on mobile and High elsewhere.
+`InputBindings` defines allowed/default actions, normalisation and warnings. `GameSettingsData.Normalized` migrates settings; `Differ` compares them; `PlayerProfile.SetSettings` persists them. Controls fields include slot-indexed bindings, hold time, camera-button visibility/zoom, controls side and selection-bar visibility. Display preferences include frame cap and graphics quality (Low/Medium/High/Ultra/Custom). Custom stores a feature mask and 0/2/4 water waves. `WithGraphicsQuality` seeds Custom from the selected preset; presets retain but ignore the stored mask. Graphics defaults to Medium on mobile and High elsewhere.
 
 ## Connects to
 - `commands`: `TapRouter` calls `CommandSystem.IssueMoveTo`; drag events feed order previews, then enqueue identical commands.
@@ -49,7 +49,7 @@ Resolve each pointer trace once into selection, camera or order intent. Keep phy
 - `tooling`: synthetic gesture traces and settings-migration tests guard input contracts.
 
 ## Invariants
-One action per slot. Locked tap/right-click/UI grammar stays reachable. Villagers select on release, never press; dragging an unselected villager cannot select/order it. IDs are append-only: LassoSelect=2 remains “Paint select”; node slots 13/14 make 15 slots. Settings version 7 is independent of network protocol. Camera/view changes never alter simulation results.
+One action per slot. Locked tap/right-click/UI grammar stays reachable. Villagers select on release, never press; dragging an unselected villager cannot select/order it. IDs are append-only: LassoSelect=2 remains “Paint select”; node slots 13/14 make 15 slots. Settings version 8 is independent of network protocol. Camera/view changes never alter simulation results.
 
 ## How it works
 Default villager taps add/remove. Hold-drag paints; ground drag and two-finger drag pan; pinch, middle-drag and scroll are enabled. Order-drag, ground/villager double taps, two-finger tap, double-drag zoom and stationary hold-info are optional. Node double/triple selection defaults on. Controls warnings identify unusable/redundant combinations without blocking; Reset remains available.

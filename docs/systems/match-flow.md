@@ -15,7 +15,7 @@ sources:
   - Assets/Scripts/Game/Core/MatchTransitionController.cs
   - Assets/Scripts/Game/Core/TickRunner.cs
   - Assets/Scripts/Game/Debug/
-verified: 20bb7952
+verified: 5cb22bf7
 ---
 
 # Match flow
