@@ -177,6 +177,17 @@ namespace NodeWar.View
             if (plinthByCell[i] != null) plinthByCell[i].SetActive(land);
         }
 
+        public bool PlinthsSettled
+        {
+            get
+            {
+                if (landByCell == null) return true;
+                for (int i = 0; i < landByCell.Length; i++)
+                    if (landByCell[i] && riseByCell[i] < 1f) return false;
+                return true;
+            }
+        }
+
         private void Update()
         {
             if (plinthByCell == null) return;

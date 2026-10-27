@@ -51,7 +51,11 @@ Shader "NodeWar/Water"
         _CrestStrength("Crest strength", Range(0,1)) = 0.5
         _TroughStrength("Trough strength", Range(0,1)) = 0.25
         _CrestFoamThreshold("Crest foam threshold", Range(0,1)) = 0.7
-        _ReflectionStrength("Sky reflection strength", Range(0,1)) = 0.35
+        _ReflectionStrength("Reflection strength", Range(0,1)) = 0.6
+        _ReflectionMin("Reflection floor", Range(0,1)) = 0.25
+        _ReflectionSteps("Reflection steps (0 = smooth)", Range(0,16)) = 0
+        _MacroNormalsScale("Macro normals scale", Float) = 0.04
+        _MacroNormalsStrength("Macro normals strength", Range(0,2)) = 0.8
         [NoScaleOffset] _ShoreTex("Shore field", 2D) = "white" {}
         [NoScaleOffset] _ShorePrevTex("Previous shore field", 2D) = "white" {}
         _ShoreBlend("Shore blend", Range(0,1)) = 1
@@ -74,6 +78,7 @@ Shader "NodeWar/Water"
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
             #pragma multi_compile _ _WATER_MEDIUM _WATER_HIGH _WATER_ULTRA
+            #pragma multi_compile _ _REFLECTION_PROBE_BOX_PROJECTION
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
             ENDHLSL
         }

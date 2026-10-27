@@ -17,6 +17,9 @@ namespace NodeWar.View
         private MaterialPropertyBlock properties;
         private Vector4 shoreST;
         private bool generatedSurfaceFoam, generatedIntersectionFoam, generatedNormals;
+        private ReflectionProbe reflectionProbe;
+        private BoardTerrainView boardView;
+        private bool probeDirty, probeAfterSettled;
         private Mesh mesh;
         private MeshFilter filter;
         private MeshRenderer surfaceRenderer;
@@ -45,6 +48,7 @@ namespace NodeWar.View
             WaterQuality.Apply();
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
             int next = WaterMeshBuilder.SubdivisionsForTier(WaterQuality.Current);
+            RefreshProbe();
             if (next == subdivisions) return;
             subdivisions = next;
             if (terrain != null) RebuildMesh(terrain);
@@ -52,6 +56,9 @@ namespace NodeWar.View
 
         public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40)
         {
+            int waterLayer = LayerMask.NameToLayer("Water");
+            if (waterLayer >= 0) gameObject.layer = waterLayer;
+            boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
             int tier = WaterQuality.Current;
@@ -64,6 +71,7 @@ namespace NodeWar.View
             ApplyProperties();
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
             surfaceRenderer.receiveShadows = true;
+            RefreshProbe();
         }
 
         public void SetTerrain(TerrainType[] resolved)
@@ -99,6 +107,8 @@ namespace NodeWar.View
 
             RebuildMesh(resolved);
             terrain = (TerrainType[])resolved.Clone();
+            probeDirty = true;
+            probeAfterSettled = true;
             if (blend == 1f) FinishBlend();
         }
 
@@ -167,6 +177,55 @@ namespace NodeWar.View
             if (generatedIntersectionFoam) properties.SetTexture("_IntersectionFoamTex", WaterMaterialFactory.IntersectionFoam());
             if (generatedNormals) properties.SetTexture("_NormalsTex", WaterMaterialFactory.Normals());
             surfaceRenderer.SetPropertyBlock(properties);
+        }
+
+        private void RefreshProbe()
+        {
+            bool enabled = WaterQuality.Current >= 2;
+            if (!enabled)
+            {
+                if (reflectionProbe != null) reflectionProbe.gameObject.SetActive(false);
+                surfaceRenderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                return;
+            }
+            if (reflectionProbe == null)
+            {
+                var child = new GameObject("Water reflection probe");
+                child.transform.SetParent(transform, false);
+                child.transform.localPosition = new Vector3((cols - 1) * scale * 0.5f, surfaceY + scale, (rows - 1) * scale * 0.5f);
+                reflectionProbe = child.AddComponent<ReflectionProbe>();
+                reflectionProbe.mode = ReflectionProbeMode.Realtime;
+                reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
+                reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.AllFacesAtOnce;
+                reflectionProbe.boxProjection = true;
+                reflectionProbe.size = new Vector3((cols + Padding * 2) * scale, 4 * scale, (rows + Padding * 2) * scale);
+                reflectionProbe.cullingMask = ~(1 << gameObject.layer);
+                reflectionProbe.nearClipPlane = 0.1f;
+                reflectionProbe.farClipPlane = Mathf.Max(cols, rows) * scale * 4;
+                reflectionProbe.importance = 10;
+                surfaceRenderer.probeAnchor = child.transform;
+                probeDirty = true;
+            }
+            if (!reflectionProbe.gameObject.activeSelf) probeDirty = true;
+            reflectionProbe.gameObject.SetActive(true);
+            int resolution = WaterQuality.Current == 3 ? 256 : 128;
+            if (reflectionProbe.resolution != resolution) { reflectionProbe.resolution = resolution; probeDirty = true; }
+            surfaceRenderer.reflectionProbeUsage = ReflectionProbeUsage.Simple;
+        }
+
+        private void LateUpdate()
+        {
+            if (reflectionProbe == null || !reflectionProbe.isActiveAndEnabled || terrain == null) return;
+            if (probeDirty)
+            {
+                reflectionProbe.RenderProbe();
+                probeDirty = false;
+            }
+            else if (probeAfterSettled && blend >= 1f && (boardView == null || boardView.PlinthsSettled))
+            {
+                reflectionProbe.RenderProbe();
+                probeAfterSettled = false;
+            }
         }
 
         private void OnDestroy()

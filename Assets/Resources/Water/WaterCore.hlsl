@@ -16,6 +16,7 @@ float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect, _CrestColor;
 float _CrestStrength, _TroughStrength, _CrestFoamThreshold, _MaxWaveAmplitude;
+float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
@@ -101,6 +102,9 @@ float3 WaterNormal(Varyings input)
 {
     float3 normal = normalize(input.normalWS);
 #if defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    float2 macroUV = input.positionWS.xz * _MacroNormalsScale + _Time.y * _NormalsSpeed * 0.2 * float2(0.6, -0.4);
+    float3 macro = UnpackNormal(SAMPLE_TEXTURE2D(_NormalsTex, sampler_NormalsTex, macroUV * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
+    normal = normalize(normal + float3(macro.x, 0, macro.y) * _MacroNormalsStrength * DetailFade(input.positionWS.xz));
     float2 uv = input.positionWS.xz * _NormalsScale;
     float3 detail = UnpackNormal(SAMPLE_TEXTURE2D(_NormalsTex, sampler_NormalsTex,
         (uv + _Time.y * _NormalsSpeed * float2(1, 0.63)) * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
@@ -178,7 +182,17 @@ half4 WaterFragment(Varyings input) : SV_Target
     float3 normal = WaterNormal(input);
     float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
     float fresnel = pow(1 - saturate(dot(normal, view)), max(_HorizonDistance, 0.001));
-    color = lerp(color, _HorizonColor.rgb, fresnel);
+    float reflectWeight = lerp(_ReflectionMin, 1, fresnel) * _ReflectionStrength;
+    float3 reflection = _HorizonColor.rgb;
+#if defined(_WATER_HIGH) || defined(_WATER_ULTRA)
+    reflection = GlossyEnvironmentReflection(reflect(-view, normal), input.positionWS, 0.15h, 1.0h);
+    if (_ReflectionSteps >= 2)
+    {
+        float luminance = max(dot(reflection, float3(0.2126, 0.7152, 0.0722)), 0.0001);
+        reflection *= (floor(luminance * _ReflectionSteps) + 0.5) / (_ReflectionSteps * luminance);
+    }
+#endif
+    color = lerp(color, reflection, reflectWeight);
 #endif
     float angle = _SurfaceFoamDirection * 6.2831853;
     float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
@@ -228,10 +242,6 @@ half4 WaterFragment(Varyings input) : SV_Target
     float hardSpec = step(0.5, smoothstep(0.005, 0.01, softSpec));
     float spec = lerp(softSpec, hardSpec, _Hardness);
     color += spec * _SpecularColor.rgb * mainLight.color * shadow;
-#if defined(_WATER_ULTRA)
-    half3 sky = GlossyEnvironmentReflection(reflect(-view, normal), 0.15h, 1.0h);
-    color = lerp(color, sky, fresnel * _ReflectionStrength);
-#endif
 #endif
     return half4(color, 1);
 }
