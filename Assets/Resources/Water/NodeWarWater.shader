@@ -26,8 +26,6 @@ Shader "NodeWar/Water"
         _IntersectionFoamTiling("Intersection foam tiling", Float) = 0.6
         _IntersectionFoamSpeed("Intersection foam speed", Float) = 0.05
         _IntersectionFoamColor("Intersection foam (alpha = amount)", Color) = (0.909804,0.956863,1,1)
-        _InkWidth("Ink width (cells, 0 = off)", Range(0,0.3)) = 0.025
-        _InkColor("Ink", Color) = (0.117647,0.101961,0.180392,1)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
         _NormalsTex("Normals", 2D) = "bump" {}
         _NormalsScale("Normals scale", Float) = 0.4
@@ -107,7 +105,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_CREST_FOAM
             #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
-            #pragma dynamic_branch _WATER_CAUSTICS
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
             #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE
@@ -135,7 +132,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_CREST_FOAM
             #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
-            #pragma dynamic_branch _WATER_CAUSTICS
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
             ENDHLSL
@@ -161,7 +157,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_CREST_FOAM
             #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
-            #pragma dynamic_branch _WATER_CAUSTICS
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
             #pragma multi_compile_fragment _ _GBUFFER_NORMALS_OCT

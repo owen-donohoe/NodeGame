@@ -191,10 +191,6 @@
                             <engine:Label class="lb-grow__label ui-w500" text="Double foam" picking-mode="Ignore" />
                             <lobby:LobbyToggle name="settings-second-foam-layer" value="false" />
                         </lobby:PaperButton>
-                        <lobby:PaperButton name="settings-row-caustics" class="ui-reset-button lb-grow">
-                            <engine:Label class="lb-grow__label ui-w500" text="Caustics" picking-mode="Ignore" />
-                            <lobby:LobbyToggle name="settings-caustics" value="false" />
-                        </lobby:PaperButton>
                     </engine:VisualElement>
                     <lobby:PaperButton name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />

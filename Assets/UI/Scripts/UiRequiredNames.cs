@@ -165,10 +165,8 @@ namespace NodeWar.UI
             public const string GraphicsRowCrestFoam = "settings-row-crest-foam";
             public const string GraphicsSecondFoamLayer = "settings-second-foam-layer";
             public const string GraphicsRowSecondFoamLayer = "settings-row-second-foam-layer";
-            public const string GraphicsCaustics = "settings-caustics";
-            public const string GraphicsRowCaustics = "settings-row-caustics";
-            public static readonly string[] GraphicsToggles = { GraphicsTransparency, GraphicsSurfaceFoamDistortion, GraphicsHorizonFresnel, GraphicsSpecular, GraphicsCrestColour, GraphicsShoreNoise, GraphicsDither, GraphicsShadows, GraphicsDetailNormals, GraphicsMacroNormals, GraphicsReflections, GraphicsLappingLines, GraphicsCrestFoam, GraphicsSecondFoamLayer, GraphicsCaustics };
-            public static readonly string[] GraphicsRows = { GraphicsRowTransparency, GraphicsRowSurfaceFoamDistortion, GraphicsRowHorizonFresnel, GraphicsRowSpecular, GraphicsRowCrestColour, GraphicsRowShoreNoise, GraphicsRowDither, GraphicsRowShadows, GraphicsRowDetailNormals, GraphicsRowMacroNormals, GraphicsRowReflections, GraphicsRowLappingLines, GraphicsRowCrestFoam, GraphicsRowSecondFoamLayer, GraphicsRowCaustics };
+            public static readonly string[] GraphicsToggles = { GraphicsTransparency, GraphicsSurfaceFoamDistortion, GraphicsHorizonFresnel, GraphicsSpecular, GraphicsCrestColour, GraphicsShoreNoise, GraphicsDither, GraphicsShadows, GraphicsDetailNormals, GraphicsMacroNormals, GraphicsReflections, GraphicsLappingLines, GraphicsCrestFoam, GraphicsSecondFoamLayer };
+            public static readonly string[] GraphicsRows = { GraphicsRowTransparency, GraphicsRowSurfaceFoamDistortion, GraphicsRowHorizonFresnel, GraphicsRowSpecular, GraphicsRowCrestColour, GraphicsRowShoreNoise, GraphicsRowDither, GraphicsRowShadows, GraphicsRowDetailNormals, GraphicsRowMacroNormals, GraphicsRowReflections, GraphicsRowLappingLines, GraphicsRowCrestFoam, GraphicsRowSecondFoamLayer };
             public static readonly string[] All =
             {
                 SettingsAccountStatus,
@@ -205,7 +203,6 @@ namespace NodeWar.UI
                 GraphicsLappingLines, GraphicsRowLappingLines,
                 GraphicsCrestFoam, GraphicsRowCrestFoam,
                 GraphicsSecondFoamLayer, GraphicsRowSecondFoamLayer,
-                GraphicsCaustics, GraphicsRowCaustics,
                 SettingsRowSize,
                 SettingsRowFramecap,
                 SettingsRowControls,

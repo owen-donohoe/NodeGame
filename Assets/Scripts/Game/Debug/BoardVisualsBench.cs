@@ -155,7 +155,6 @@ namespace NodeWar.View
             FeatureToggle(GraphicsFeature.LappingLines, "Lapping lines");
             FeatureToggle(GraphicsFeature.CrestFoam, "Crest foam");
             FeatureToggle(GraphicsFeature.SecondFoamLayer, "Double foam");
-            FeatureToggle(GraphicsFeature.Caustics, "Caustics");
             Material material = WaterMaterialFactory.Shared();
             MaterialSlider(material, "_WaveFadeStart", "Wave fade start (cells)", 0f, 4f);
             MaterialSlider(material, "_WaveFadeEnd", "Wave fade end (cells)", 0.1f, 4f);
@@ -174,7 +173,6 @@ namespace NodeWar.View
             MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);
             MaterialSlider(material, "_IntersectionFoamDepth", "Intersection foam depth", 0.01f, 2f);
             MaterialSlider(material, "_IntersectionFoamCutoff", "Intersection foam cutoff", 0f, 1f);
-            MaterialSlider(material, "_InkWidth", "Ink width", 0f, 0.3f);
             MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 2f);
             MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
             MaterialSlider(material, "_NormalsStrength", "Normals strength", 0f, 2f);

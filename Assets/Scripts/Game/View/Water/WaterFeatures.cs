@@ -17,7 +17,6 @@ namespace NodeWar.View
         CrestFoam = 512,
         ShoreNoise = 1024,
         LappingLines = 2048,
-        Caustics = 4096,
         SecondFoamLayer = 8192,
         Dither = 16384,
     }
@@ -25,7 +24,7 @@ namespace NodeWar.View
     /// <summary>Single source of truth for view-only water presets; usable without Unity.</summary>
     public static class WaterFeatures
     {
-        public const int All = 32767;
+        public const int All = 32767 & ~4096; // Retired caustics bit stays reserved.
         private const GraphicsFeature Medium = GraphicsFeature.Transparency | GraphicsFeature.SurfaceFoamDistortion
             | GraphicsFeature.HorizonFresnel | GraphicsFeature.Specular | GraphicsFeature.CrestColour
             | GraphicsFeature.ShoreNoise | GraphicsFeature.Dither;

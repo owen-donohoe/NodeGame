@@ -49,8 +49,8 @@ namespace NodeWar.Lobby
         private readonly Label graphicsLabel;
         private readonly Label wavesLabel;
         private readonly VisualElement graphicsDetails;
-        private readonly LobbyToggle[] graphicsToggles = new LobbyToggle[15];
-        private static readonly NodeWar.View.GraphicsFeature[] graphicsFlags = { NodeWar.View.GraphicsFeature.Transparency, NodeWar.View.GraphicsFeature.SurfaceFoamDistortion, NodeWar.View.GraphicsFeature.HorizonFresnel, NodeWar.View.GraphicsFeature.Specular, NodeWar.View.GraphicsFeature.CrestColour, NodeWar.View.GraphicsFeature.ShoreNoise, NodeWar.View.GraphicsFeature.Dither, NodeWar.View.GraphicsFeature.Shadows, NodeWar.View.GraphicsFeature.DetailNormals, NodeWar.View.GraphicsFeature.MacroNormals, NodeWar.View.GraphicsFeature.Reflections, NodeWar.View.GraphicsFeature.LappingLines, NodeWar.View.GraphicsFeature.CrestFoam, NodeWar.View.GraphicsFeature.SecondFoamLayer, NodeWar.View.GraphicsFeature.Caustics };
+        private readonly LobbyToggle[] graphicsToggles = new LobbyToggle[graphicsFlags.Length];
+        private static readonly NodeWar.View.GraphicsFeature[] graphicsFlags = { NodeWar.View.GraphicsFeature.Transparency, NodeWar.View.GraphicsFeature.SurfaceFoamDistortion, NodeWar.View.GraphicsFeature.HorizonFresnel, NodeWar.View.GraphicsFeature.Specular, NodeWar.View.GraphicsFeature.CrestColour, NodeWar.View.GraphicsFeature.ShoreNoise, NodeWar.View.GraphicsFeature.Dither, NodeWar.View.GraphicsFeature.Shadows, NodeWar.View.GraphicsFeature.DetailNormals, NodeWar.View.GraphicsFeature.MacroNormals, NodeWar.View.GraphicsFeature.Reflections, NodeWar.View.GraphicsFeature.LappingLines, NodeWar.View.GraphicsFeature.CrestFoam, NodeWar.View.GraphicsFeature.SecondFoamLayer };
 
         // Controls live in their own overlay, opened by one button. The panel owns
         // its rows; this page owns the value and the save.

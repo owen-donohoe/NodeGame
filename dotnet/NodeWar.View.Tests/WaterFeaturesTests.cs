@@ -8,7 +8,7 @@ namespace NodeWar.View.Tests
         [TestCase(0, 0, 0, 1)]
         [TestCase(1, 17679, 2, 4)]
         [TestCase(2, 19967, 4, 8)]
-        [TestCase(3, 32767, 4, 8)]
+        [TestCase(3, 28671, 4, 8)]
         public void PresetsMatchFeatureTable(int preset, int features, int waves, int subdivisions)
         {
             Assert.That(WaterFeatures.FeaturesFor(preset), Is.EqualTo(features));

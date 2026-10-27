@@ -11,7 +11,7 @@ TEXTURE2D(_NormalsTex); SAMPLER(sampler_NormalsTex);
 CBUFFER_START(UnityPerMaterial)
 float4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
-float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _InkColor, _SpecularColor;
+float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect, _CrestColor;
@@ -24,7 +24,7 @@ float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _IntersectionFoamDepth, _IntersectionFoamCutoff, _IntersectionFoamFade, _IntersectionFoamTiling, _IntersectionFoamSpeed;
-float _InkWidth, _NormalsScale, _NormalsSpeed, _NormalsStrength;
+float _NormalsScale, _NormalsSpeed, _NormalsStrength;
 float _Smoothness, _Hardness, _WaveSpeed, _WaveSteepnessScale, _ReflectionStrength, _ShoreBlend;
 CBUFFER_END
 struct Attributes { float4 positionOS : POSITION; };
@@ -240,15 +240,6 @@ half4 WaterFragment(Varyings input) : SV_Target
         color = FoamOverlay(color, _IntersectionFoamColor, lap);
         alpha = max(alpha, lap * _IntersectionFoamColor.a);
     }
-    if (_WATER_CAUSTICS)
-    {
-        float caustic = FoamLine(intersection, 0.02) * (1 - smoothstep(1.2, 1.5, distance)) * detailFade * 0.35;
-        color = lerp(color, lerp(shallow, float3(1, 1, 1), 0.35), caustic);
-    }
-    float aa = max(fwidth(rawDistance), 0.0001);
-    float ink = (1 - smoothstep(_InkWidth - aa, _InkWidth + aa, rawDistance)) * step(0.00001, _InkWidth);
-    color = lerp(color, _InkColor.rgb, ink * _InkColor.a);
-    alpha = max(alpha, ink * _InkColor.a);
     float shadow = 1;
     if (_WATER_SHADOWS)
     {
