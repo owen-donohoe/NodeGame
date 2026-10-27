@@ -15,6 +15,7 @@ float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect, _CrestColor;
+float _CrestSharpness, _CrestFoamStrength;
 float _CrestStrength, _TroughStrength, _CrestFoamThreshold, _WaveScale;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
@@ -37,6 +38,7 @@ struct Varyings
     float3 normalWS : TEXCOORD1;
     float2 shoreUV : TEXCOORD2;
     float crest : TEXCOORD3;
+    float fold : TEXCOORD4;
 };
 
 float4 Shore(float2 uv)
@@ -47,7 +49,7 @@ float4 Shore(float2 uv)
 }
 
 void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
-    inout float3 tangent, inout float3 binormal)
+    inout float3 tangent, inout float3 binormal, inout float fold)
 {
     float2 direction = wave.xy / max(length(wave.xy), 0.001);
     float k = 6.2831853 / max(wave.w * _WaveScale, 0.01);
@@ -55,6 +57,7 @@ void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
     float steepness = wave.z * damping;
     float amplitude = steepness / k;
     float s = sin(phase), c = cos(phase);
+    fold += steepness * s;
     position += float3(direction.x * amplitude * c, amplitude * s, direction.y * amplitude * c);
     tangent += float3(-direction.x * direction.x * steepness * s, direction.x * steepness * c,
         -direction.x * direction.y * steepness * s);
@@ -79,6 +82,7 @@ Varyings WaterVertex(Attributes input)
     output.shoreUV = (xz - _ShoreST.xy) * _ShoreST.zw;
     float3 tangent = float3(1, 0, 0), binormal = float3(0, 0, 1);
     output.crest = 0;
+    output.fold = 0;
 #if defined(_WATER_WAVES_2) || defined(_WATER_WAVES_4)
     float4 shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0),
         SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0), _ShoreBlend);
@@ -97,12 +101,13 @@ Varyings WaterVertex(Attributes input)
     float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
-    Gerstner(_WaveA, xz, damping, position, tangent, binormal);
-    Gerstner(_WaveB, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveA, xz, damping, position, tangent, binormal, output.fold);
+    Gerstner(_WaveB, xz, damping, position, tangent, binormal, output.fold);
 #if defined(_WATER_WAVES_4)
-    Gerstner(_WaveC, xz, damping, position, tangent, binormal);
-    Gerstner(_WaveD, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveC, xz, damping, position, tangent, binormal, output.fold);
+    Gerstner(_WaveD, xz, damping, position, tangent, binormal, output.fold);
 #endif
+    output.fold /= max(steepnessSum, 0.0001); // Threshold is a fraction of authored summed steepness.
     output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);
 #endif
     output.positionWS = position;
@@ -187,7 +192,9 @@ half4 WaterFragment(Varyings input) : SV_Target
     float3 color = lerp(shallow, deep, depth);
     if (_WATER_CREST_COLOUR)
     {
-        color = lerp(color, _CrestColor.rgb, saturate(input.crest) * _CrestStrength);
+        float crestHighlight = pow(saturate(input.crest), max(_CrestSharpness, 0.001));
+        if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
+        color = lerp(color, saturate(shallow * _CrestColor.rgb), crestHighlight * _CrestStrength);
         color = lerp(color, deep, saturate(-input.crest) * _TroughStrength);
     }
     float3 normal = WaterNormal(input);
@@ -229,10 +236,10 @@ half4 WaterFragment(Varyings input) : SV_Target
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
     if (_WATER_CREST_FOAM)
     {
-        float width = _SurfaceFoamWidth * saturate((input.crest - _CrestFoamThreshold) / max(1 - _CrestFoamThreshold, 0.0001));
-        float crestFoam = FoamLine(surface, width) * detailFade;
-        color = FoamOverlay(color, _SurfaceFoamColor, crestFoam);
-        alpha = max(alpha, crestFoam * _SurfaceFoamColor.a);
+        float crestFoam = smoothstep(_CrestFoamThreshold, _CrestFoamThreshold + 0.15, input.fold)
+            * FoamLine(surface, 0.35) * _CrestFoamStrength * detailFade;
+        color = lerp(color, float3(1, 1, 1), saturate(crestFoam));
+        alpha = max(alpha, saturate(crestFoam));
     }
     float fade = saturate(distance / max(_IntersectionFoamDepth, 0.001));
     float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);

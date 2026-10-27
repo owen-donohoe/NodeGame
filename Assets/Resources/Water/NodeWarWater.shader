@@ -65,10 +65,12 @@ Shader "NodeWar/Water"
         _WaveGroupScale("Wave group scale", Float) = 0.012
         _WaveGroupSpeed("Wave group speed", Float) = 0.01
         _WaveGroupStrength("Wave group strength", Range(0,1)) = 0.5
-        _CrestColor("Crest colour", Color) = (0.514706,0.564706,0.826470,1)
-        _CrestStrength("Crest strength", Range(0,1)) = 0.5
-        _TroughStrength("Trough strength", Range(0,1)) = 0.25
-        _CrestFoamThreshold("Crest foam threshold", Range(0,1)) = 0.7
+        _CrestColor("Crest tint (shallow multiplier)", Color) = (1.15,1.15,1.15,1)
+        _CrestStrength("Crest strength", Range(0,1)) = 0.45
+        _TroughStrength("Trough strength", Range(0,1)) = 0.2
+        _CrestSharpness("Crest sharpness", Float) = 2.5
+        _CrestFoamThreshold("Crest foam threshold", Range(0,1)) = 0.45
+        _CrestFoamStrength("Crest foam strength", Range(0,1)) = 1
         _ReflectionStrength("Reflection strength", Range(0,1)) = 0.6
         _ReflectionMin("Reflection floor", Range(0,1)) = 0.25
         _ReflectionSteps("Reflection steps (0 = smooth)", Range(0,16)) = 0
