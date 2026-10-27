@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 5cb22bf7
+verified: 1c42739e1decb37891c6d57fe53d26388c42ad39
 ---
 
 # World view
@@ -63,13 +63,13 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water owns fields/meshes and a transparent-only opaque floor. Fields blend over 0.4 seconds; reduced motion snaps. `WaterMaterialFactory.Shared()` respects artist textures, otherwise caches tileable Voronoi edges/noise and normals. Shore distance drives colour/foam/alpha; raw distance anchors ink. Waves and detail fade beyond the board. Crests reveal waves from above; forward/depth passes agree.
+Water owns meshes, blended fields and a transparency-only floor; reduced motion snaps the 0.4-second blend. `WaterMaterialFactory` copies assets into runtime materials and caches fallback textures. Shore RG encode land distance/damping; A mixes bodies over one cell; B selects the lake palette. Grouped waves scale wavelength/amplitude with clamped steepness and local land clearance. Crests/whitecaps follow height/compression. Wave/detail fades converge on far ocean; forward/depth passes agree.
 
-`WaterFeatures` defines presets/density. `WaterQuality.Apply()` sets feature branches, wave variants, render state, plinth tint, floor and probes. `RefreshAll` reapplies live without losing blends; Custom uses independent flags and 0/2/4 waves. High/Ultra probes capture terrain changes and settled plinths, never every frame.
+`WaterFeatures` defines presets, scale-aware density and padding. `WaterQuality.Apply()` sets features, runtime render state, plinth blocks, floor and probes. `RefreshAll` preserves blends; Custom selects flags and 0/2/4 waves. Water sorts at -10 before runtime cue materials. High/Ultra probes capture changed terrain and settled plinths.
 
-Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height. Only fallback resources are disposed.
+Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
 
-`BoardVisualsBench` replays hourglass drafting/shoals without simulation. Its F1 Play-mode panel controls presets/Custom features, waves, replay/pause and material sliders/reset, showing averaged frame time. Inspector controls spacing/framing.
+`BoardVisualsBench` replays drafting/shoals without simulation. Its scrolling F1 panel groups asset sliders/reset, presets/Custom, replay/pause and frame time. Inspector controls spacing/framing.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
@@ -85,4 +85,4 @@ Per-tick state diffs miss damage cancelled by healing. Multiple visual systems n
 - Add outlines: use driver intents and test priority, ID release/reuse and both renderer assets.
 
 ## Tests
-`NodeWar.View.Tests` covers pure movement/route/layout/indicator/art maths, shore channels/distances, mesh seams/counts and Voronoi periodicity/range, unit-normal bakes, wave clearance/density and preset masks. `Assets/Tests/EditMode/Outline/` tests outline lifecycle/priority separately. Compile-check covers Unity components; Unity/device checks verify shaders, render passes, sorting, paint coverage, materials and scene wiring.
+`NodeWar.View.Tests` covers presentation maths, shore encoding/body blends, mesh seams/counts, texture bakes, wave clearance/density, fold coverage and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
