@@ -123,6 +123,7 @@ namespace NodeWar.Lobby
             if (!GameSettingsData.Differ(normalized, data.settings)) return;
 
             data.settings = normalized;
+            NodeWar.View.WaterSurfaceView.RefreshAll();
             Save();
         }
 

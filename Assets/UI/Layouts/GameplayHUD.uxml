@@ -436,6 +436,11 @@
                 <engine:Label name="hud-settings-framecap" class="hud__settings-label ui-w500" text="60" picking-mode="Ignore" />
             </engine:Button>
 
+            <engine:Button name="hud-settings-row-graphics" class="ui-reset-button hud__settings-row hud__settings-row--switch">
+                <engine:Label class="hud__settings-label ui-w500" text="Graphics" picking-mode="Ignore" />
+                <engine:Label name="hud-settings-graphics" class="hud__settings-label ui-w500" text="High" picking-mode="Ignore" />
+            </engine:Button>
+
             <!--
                 Controls: only what undoes a bad combination mid-match. The
                 full list lives on the lobby's Settings page.

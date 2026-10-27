@@ -130,7 +130,17 @@
          reads them needs a Camera and a panel and stays in Unity. -->
     <Compile Include="DisconnectPresentationTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/DisconnectPresentation.cs" Link="View/DisconnectPresentation.cs" />
+    <Compile Include="BoardVisualsBenchDraftTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/Debug/BoardVisualsBenchDraft.cs" Link="Debug/BoardVisualsBenchDraft.cs" />
+    <Compile Include="WaterTests.cs" />
+    <Compile Include="FoamNoiseTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/FoamNoise.cs" Link="View/Water/FoamNoise.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/ShoreField.cs" Link="View/Water/ShoreField.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/Water/WaterMeshBuilder.cs" Link="View/Water/WaterMeshBuilder.cs" />
     <Compile Include="TerrainPresentationTests.cs" />
+    <Compile Include="PlinthTests.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/PlinthMotion.cs" Link="View/PlinthMotion.cs" />
+    <Compile Include="../../Assets/Scripts/Game/View/PlinthLayout.cs" Link="View/PlinthLayout.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/TerrainPresentation.cs"
              Link="View/TerrainPresentation.cs" />
     <Compile Include="DraftHandoverTests.cs" />

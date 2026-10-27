@@ -40,6 +40,7 @@ namespace NodeWar.UI
         private readonly LobbyToggle emotesSwitch;
         private readonly LobbyIcon emotesIcon;
         private readonly Label frameCapLabel;
+        private readonly Label graphicsLabel;
         private readonly LobbyToggle cameraButtonSwitch;
         private readonly LobbyToggle tooltipsSwitch;
         private readonly Label sideLabel;
@@ -84,6 +85,7 @@ namespace NodeWar.UI
             emotesSwitch = NodeWar.UI.UiRequired.Q<LobbyToggle>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsEmotes, nameof(MatchSettingsPanel));
             emotesIcon = hudRoot.Q<LobbyIcon>("hud-settings-emotes-icon");
             frameCapLabel = NodeWar.UI.UiRequired.Q<Label>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsFramecap, nameof(MatchSettingsPanel));
+            graphicsLabel = UiRequired.Q<Label>(hudRoot, UiRequiredNames.MatchSettings.HudSettingsGraphics, nameof(MatchSettingsPanel));
 
             if (gear != null) gear.clicked += Toggle;
 
@@ -114,6 +116,8 @@ namespace NodeWar.UI
 
             Button frameCapRow = NodeWar.UI.UiRequired.Q<Button>(hudRoot, NodeWar.UI.UiRequiredNames.MatchSettings.HudSettingsRowFramecap, nameof(MatchSettingsPanel));
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
+            Button graphicsRow = UiRequired.Q<Button>(hudRoot, UiRequiredNames.MatchSettings.HudSettingsRowGraphics, nameof(MatchSettingsPanel));
+            if (graphicsRow != null) graphicsRow.clicked += CycleGraphics;
 
             // Only what undoes a bad control combination mid-match; the full
             // list is on the lobby's Settings page.
@@ -271,6 +275,7 @@ namespace NodeWar.UI
             if (routesSwitch != null) routesSwitch.Value = current.opponentRoutes;
             if (emotesSwitch != null) emotesSwitch.Value = current.opponentEmotes;
             UpdateFrameCapLabel();
+            UpdateGraphicsLabel();
             UpdateControls();
 
             loading = false;
@@ -313,6 +318,18 @@ namespace NodeWar.UI
         private void UpdateFrameCapLabel()
         {
             if (frameCapLabel != null) frameCapLabel.text = GameSettingsData.FrameCapLabel(current.frameCap);
+        }
+
+        private void CycleGraphics()
+        {
+            current.graphicsQuality = GameSettingsData.NextGraphicsQuality(current.graphicsQuality);
+            UpdateGraphicsLabel();
+            OnValueChanged(commitNow: true);
+        }
+
+        private void UpdateGraphicsLabel()
+        {
+            if (graphicsLabel != null) graphicsLabel.text = GameSettingsData.GraphicsQualityLabel(current.graphicsQuality);
         }
 
         private void OnValueChanged(bool commitNow)

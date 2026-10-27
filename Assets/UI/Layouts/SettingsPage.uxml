@@ -126,6 +126,10 @@
                         <engine:Label class="lb-grow__label ui-w500" text="Frame rate cap" picking-mode="Ignore" />
                         <engine:Label name="settings-framecap" class="lb-grow__value ui-w500" text="60" picking-mode="Ignore" />
                     </lobby:PaperButton>
+                    <lobby:PaperButton name="settings-row-graphics" class="ui-reset-button lb-grow">
+                        <engine:Label class="lb-grow__label ui-w500" text="Graphics" picking-mode="Ignore" />
+                        <engine:Label name="settings-graphics" class="lb-grow__value ui-w500" text="High" picking-mode="Ignore" />
+                    </lobby:PaperButton>
                     <lobby:PaperButton name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
                         <lobby:LobbyToggle name="settings-battery" value="false" />
