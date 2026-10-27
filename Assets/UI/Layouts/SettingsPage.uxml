@@ -130,6 +130,72 @@
                         <engine:Label class="lb-grow__label ui-w500" text="Graphics" picking-mode="Ignore" />
                         <engine:Label name="settings-graphics" class="lb-grow__value ui-w500" text="High" picking-mode="Ignore" />
                     </lobby:PaperButton>
+                    <engine:VisualElement name="graphics-details" picking-mode="Ignore" style="display: none;">
+                        <lobby:PaperButton name="settings-row-waves" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Waves" picking-mode="Ignore" />
+                            <engine:Label name="settings-waves" class="lb-grow__value ui-w500" text="4" picking-mode="Ignore" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-transparency" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Transparent shallows" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-transparency" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-surface-foam-distortion" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Foam ripple" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-surface-foam-distortion" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-horizon-fresnel" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Horizon sheen" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-horizon-fresnel" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-specular" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Sun glints" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-specular" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-crest-colour" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Wave crests" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-crest-colour" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-shore-noise" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Shore wobble" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-shore-noise" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-dither" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Smooth gradients" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-dither" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-shadows" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Shadows on water" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-shadows" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-detail-normals" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Detail ripples" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-detail-normals" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-macro-normals" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Large swells" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-macro-normals" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-reflections" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Reflections" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-reflections" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-lapping-lines" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Lapping lines" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-lapping-lines" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-crest-foam" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Crest foam" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-crest-foam" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-second-foam-layer" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Double foam" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-second-foam-layer" value="false" />
+                        </lobby:PaperButton>
+                        <lobby:PaperButton name="settings-row-caustics" class="ui-reset-button lb-grow">
+                            <engine:Label class="lb-grow__label ui-w500" text="Caustics" picking-mode="Ignore" />
+                            <lobby:LobbyToggle name="settings-caustics" value="false" />
+                        </lobby:PaperButton>
+                    </engine:VisualElement>
                     <lobby:PaperButton name="settings-row-battery" class="ui-reset-button lb-grow lb-grow--last">
                         <engine:Label class="lb-grow__label ui-w500" text="Battery saver" picking-mode="Ignore" />
                         <lobby:LobbyToggle name="settings-battery" value="false" />

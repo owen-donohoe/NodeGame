@@ -47,6 +47,10 @@ namespace NodeWar.Lobby
         private readonly Label sizeLabel;
         private readonly Label frameCapLabel;
         private readonly Label graphicsLabel;
+        private readonly Label wavesLabel;
+        private readonly VisualElement graphicsDetails;
+        private readonly LobbyToggle[] graphicsToggles = new LobbyToggle[15];
+        private static readonly NodeWar.View.GraphicsFeature[] graphicsFlags = { NodeWar.View.GraphicsFeature.Transparency, NodeWar.View.GraphicsFeature.SurfaceFoamDistortion, NodeWar.View.GraphicsFeature.HorizonFresnel, NodeWar.View.GraphicsFeature.Specular, NodeWar.View.GraphicsFeature.CrestColour, NodeWar.View.GraphicsFeature.ShoreNoise, NodeWar.View.GraphicsFeature.Dither, NodeWar.View.GraphicsFeature.Shadows, NodeWar.View.GraphicsFeature.DetailNormals, NodeWar.View.GraphicsFeature.MacroNormals, NodeWar.View.GraphicsFeature.Reflections, NodeWar.View.GraphicsFeature.LappingLines, NodeWar.View.GraphicsFeature.CrestFoam, NodeWar.View.GraphicsFeature.SecondFoamLayer, NodeWar.View.GraphicsFeature.Caustics };
 
         // Controls live in their own overlay, opened by one button. The panel owns
         // its rows; this page owns the value and the save.
@@ -146,6 +150,21 @@ namespace NodeWar.Lobby
             if (frameCapRow != null) frameCapRow.clicked += CycleFrameCap;
             Button graphicsRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowGraphics, nameof(SettingsPage));
             if (graphicsRow != null) graphicsRow.clicked += CycleGraphics;
+
+            graphicsDetails = NodeWar.UI.UiRequired.Q<VisualElement>(Root, NodeWar.UI.UiRequiredNames.Settings.GraphicsDetails, nameof(SettingsPage));
+            wavesLabel = NodeWar.UI.UiRequired.Q<Label>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsWaves, nameof(SettingsPage));
+            Button wavesRow = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowWaves, nameof(SettingsPage));
+            if (wavesRow != null) wavesRow.clicked += () =>
+            {
+                current.waterWaves = NodeWar.View.WaterFeatures.NextWaves(current.waterWaves);
+                RenderGraphicsDetails();
+                OnValueChanged(commitNow: true);
+            };
+            for (int i = 0; i < graphicsToggles.Length; i++)
+            {
+                graphicsToggles[i] = NodeWar.UI.UiRequired.Q<LobbyToggle>(Root, NodeWar.UI.UiRequiredNames.Settings.GraphicsToggles[i], nameof(SettingsPage));
+                BindSwitchRow(NodeWar.UI.UiRequiredNames.Settings.GraphicsRows[i], graphicsToggles[i]);
+            }
 
             controlsPanel = new ControlsPanel(Root, () => current, EditControls, EditHoldTime);
             Button controlsOpen = NodeWar.UI.UiRequired.Q<Button>(Root, NodeWar.UI.UiRequiredNames.Settings.SettingsRowControls, nameof(SettingsPage));
@@ -353,7 +372,8 @@ namespace NodeWar.Lobby
 
         private void CycleGraphics()
         {
-            graphicsIndex = GameSettingsData.NextGraphicsQuality(graphicsIndex);
+            current = GameSettingsData.WithGraphicsQuality(current, GameSettingsData.NextGraphicsQuality(graphicsIndex));
+            graphicsIndex = current.graphicsQuality;
             UpdateGraphicsLabel();
             OnValueChanged(commitNow: true);
         }
@@ -361,6 +381,18 @@ namespace NodeWar.Lobby
         private void UpdateGraphicsLabel()
         {
             if (graphicsLabel != null) graphicsLabel.text = GameSettingsData.GraphicsQualityLabel(graphicsIndex);
+            RenderGraphicsDetails();
+        }
+
+        private void RenderGraphicsDetails()
+        {
+            bool wasLoading = loading;
+            loading = true;
+            if (graphicsDetails != null) graphicsDetails.style.display = graphicsIndex == 4 ? DisplayStyle.Flex : DisplayStyle.None;
+            if (wavesLabel != null) wavesLabel.text = current.waterWaves == 0 ? "Off" : current.waterWaves.ToString();
+            for (int i = 0; i < graphicsToggles.Length; i++)
+                SetSwitch(graphicsToggles[i], (current.graphicsFeatures & (int)graphicsFlags[i]) != 0);
+            loading = wasLoading;
         }
 
         private void UpdateSizeLabel()
@@ -406,6 +438,15 @@ namespace NodeWar.Lobby
             captured.interfaceSize = sizeIndex;
             captured.frameCap = frameCapIndex;
             captured.graphicsQuality = graphicsIndex;
+            if (graphicsIndex == 4)
+            {
+                for (int i = 0; i < graphicsToggles.Length; i++)
+                {
+                    int flag = (int)graphicsFlags[i];
+                    bool enabled = ReadSwitch(graphicsToggles[i], (current.graphicsFeatures & flag) != 0);
+                    captured.graphicsFeatures = enabled ? captured.graphicsFeatures | flag : captured.graphicsFeatures & ~flag;
+                }
+            }
 
             captured.cameraSpeed = ReadSlider(cameraSlider, current.cameraSpeed);
             captured.confirmEachCommand = ReadSwitch(confirmSwitch, current.confirmEachCommand);
