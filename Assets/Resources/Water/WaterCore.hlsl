@@ -131,9 +131,9 @@ Varyings WaterVertex(Attributes input)
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
     Gerstner(_WaveA, -1.0, 0.0, xz, damping, position, tangent, binormal);
-    Gerstner(_WaveB, 0.62, 1.7, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveB, -0.55, 1.7, xz, damping, position, tangent, binormal);
 #if defined(_WATER_WAVES_4)
-    Gerstner(_WaveC, -0.38, 3.1, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveC, 0.62, 3.1, xz, damping, position, tangent, binormal);
     Gerstner(_WaveD, 0.85, 4.6, xz, damping, position, tangent, binormal);
 #endif
     output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);

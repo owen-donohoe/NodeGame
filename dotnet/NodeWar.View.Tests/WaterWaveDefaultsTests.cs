@@ -37,7 +37,7 @@ namespace NodeWar.View.Tests
             Assert.That(Scalar("_WindDirection"), Is.EqualTo(0.1));
             var directions = new double[4];
             double[] phaseOffsets = { 0, 1.7, 3.1, 4.6 };
-            double[] wavelengthFactors = { 1, 0.618, 0.382, 0.236 };
+            double[] wavelengthFactors = { 1, 0.382, 0.618, 0.236 };
             for (int i = 0; i < 4; i++)
             {
                 var call = Regex.Match(core, "Gerstner\\(_Wave" + (char)('A' + i) + @", ([-0-9.]+), ([-0-9.]+), xz");
