@@ -17,7 +17,7 @@ sources:
   - Assets/Scripts/Game/Core/BoardFraming.cs
   - Assets/Scripts/Lobby/Data/InputBindings.cs
   - Assets/Scripts/Lobby/Data/GameSettingsData.cs
-verified: 5cb22bf7
+verified: 33ad3190
 ---
 
 # Input
@@ -36,7 +36,7 @@ Resolve each pointer trace once into selection, camera or order intent. Keep phy
 
 `CameraController.SetGestureSource` binds gesture pan/zoom; `ApplyInputSettings` updates controls. `SetViewer(mode, playerID)` resolves home/spectator side; `SetHomeAnchor`, `SetDraftMode`, `RotateView` and `SetPOV(side, pitch)` control framing. `POVChanged(Quaternion)`, `ZoomChanged(float)` and `ZoomGestureActiveChanged(bool)` notify presentation. HUD calls `RecentreOnHome`, `ToggleFitDefaultZoom`, zoom gesture/normalised zoom methods, and focus-session methods. `FocusOnWorldPoint` counts as manual camera movement. `Shake` composes presentation offsets. Pure `BoardFraming` computes centre, expanded bounds and width-fit/toggle zoom.
 
-`InputBindings` defines allowed/default actions, normalisation and warnings. `GameSettingsData.Normalized` migrates settings; `Differ` compares them; `PlayerProfile.SetSettings` persists them. Controls fields include slot-indexed bindings, hold time, camera-button visibility/zoom, controls side and selection-bar visibility. Display preferences include frame cap and graphics quality (Low/Medium/High/Ultra/Custom). Custom stores a feature mask and 0/2/4 water waves. `WithGraphicsQuality` seeds Custom from the selected preset; presets retain but ignore the stored mask. Graphics defaults to Medium on mobile and High elsewhere.
+`InputBindings` defines allowed/default actions, normalisation and warnings. `GameSettingsData.Normalized` migrates settings; `Differ` compares them; `PlayerProfile.SetSettings` persists them. Controls fields include slot-indexed bindings, hold time, camera-button visibility/zoom, controls side and selection-bar visibility. Display preferences include frame cap and graphics quality (Low/Medium/High/Ultra/Custom). Custom stores a feature mask and Off/Noise/Gerstner 2/Gerstner 4 water modes. `WithGraphicsQuality` seeds Custom from the selected preset; presets retain but ignore the stored mask. Graphics defaults to Medium on mobile and High elsewhere.
 
 ## Connects to
 - `commands`: `TapRouter` calls `CommandSystem.IssueMoveTo`; drag events feed order previews, then enqueue identical commands.
