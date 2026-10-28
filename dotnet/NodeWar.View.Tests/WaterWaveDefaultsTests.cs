@@ -12,6 +12,25 @@ namespace NodeWar.View.Tests
         private static double Scalar(string name) => double.Parse(Regex.Match(Shader, name + @"\([^\r\n]*= ([0-9.]+)").Groups[1].Value, CultureInfo.InvariantCulture);
         private static double[] Wave(int index) => Array.ConvertAll(Regex.Match(Shader, "_Wave" + (char)('A' + index) + @"\([^\r\n]*= \(([^)]+)\)").Groups[1].Value.Split(','), x => double.Parse(x, CultureInfo.InvariantCulture));
 
+        [TestCase(0)] [TestCase(1)] [TestCase(2)] [TestCase(4)]
+        public void FloorBoundMatchesShaderPerWaveFormula(int mode)
+        {
+            double sum = 0;
+            for (int i = 0; i < (mode == 4 ? 4 : mode == 2 ? 2 : 0); i++)
+            {
+                double[] wave = Wave(i);
+                double term = wave[2] / (6.2831853 / Math.Max(wave[3] * 4, 0.01));
+                Assert.That(WaterWaveBounds.Amplitude(wave[2], wave[3], 4), Is.EqualTo(term).Within(1e-9));
+                sum += term;
+            }
+            double bound = WaterWaveBounds.MaxTrough(mode, 0.7, sum, 1.5, 1);
+            Assert.That(bound, Is.EqualTo(mode == 0 ? 0 : mode == 1 ? 0.7 : sum * 3).Within(1e-9));
+            string core = File.ReadAllText(Path.Combine(TestContext.CurrentContext.TestDirectory, "Water/WaterCore.hlsl"));
+            StringAssert.Contains("max(wave.w * _WaveScale, 0.01)", core);
+            StringAssert.Contains("float amplitude = steepness / k", core);
+            StringAssert.Contains("swellA.r + swellB.r - 1", core);
+        }
+
         [TestCase(2, 4)] [TestCase(3, 4)]
         public void ScaledWavesResolveAtDefaultAndMinimumScale(int tier, int count)
         {

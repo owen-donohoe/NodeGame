@@ -21,6 +21,7 @@ namespace NodeWar.View
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
         private bool probeDirty, probeAfterSettled;
+        private float floorY = float.NaN;
         private Mesh floorMesh;
         private Material floorMaterial;
         private MeshRenderer floorRenderer;
@@ -158,7 +159,7 @@ namespace NodeWar.View
             if (WaterMaterialFactory.NeedsFoam(material, "_FoamTex") != generatedSurfaceFoam
                 || WaterMaterialFactory.NeedsSwell(material) != generatedSwell) ApplyProperties();
             if (floorRenderer != null && floorRenderer.gameObject.activeSelf)
-                floorRenderer.transform.localPosition = new Vector3(0, surfaceY - material.GetFloat("_FloorDepth"), 0);
+                UpdateFloorPosition(material);
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
             ApplyProperties();
@@ -202,6 +203,22 @@ namespace NodeWar.View
             }
         }
 
+        private void UpdateFloorPosition(Material material)
+        {
+            int mode = material.IsKeywordEnabled("_WATER_LITE") ? 0 : WaterQuality.Waves;
+            double amplitude = 0;
+            int count = mode == 4 ? 4 : mode == 2 ? 2 : 0;
+            for (int i = 0; i < count; i++)
+            {
+                Vector4 wave = material.GetVector(i == 0 ? "_WaveA" : i == 1 ? "_WaveB" : i == 2 ? "_WaveC" : "_WaveD");
+                amplitude += WaterWaveBounds.Amplitude(wave.z, wave.w, material.GetFloat("_WaveScale"));
+            }
+            float next = surfaceY - material.GetFloat("_FloorDepth") - (float)WaterWaveBounds.MaxTrough(mode,
+                material.GetFloat("_NoiseWaveHeight"), amplitude, material.GetFloat("_WaveSteepnessScale"), material.GetFloat("_WaveGroupStrength"));
+            if (next == floorY) return;
+            floorY = next;
+            floorRenderer.transform.localPosition = new Vector3(0, next, 0);
+        }
         private void RefreshFloor()
         {
             bool enabled = WaterQuality.Has(GraphicsFeature.Transparency);
@@ -229,7 +246,7 @@ namespace NodeWar.View
                 float bottom = (-Padding - 0.5f) * scale, top = (rows + Padding - 0.5f) * scale;
                 floorMesh.vertices = new[] { new Vector3(left, 0, bottom), new Vector3(left, 0, top), new Vector3(right, 0, top), new Vector3(right, 0, bottom) };
                 floorMesh.RecalculateBounds();
-                floorRenderer.transform.localPosition = new Vector3(0, surfaceY - surfaceRenderer.sharedMaterial.GetFloat("_FloorDepth"), 0);
+                UpdateFloorPosition(surfaceRenderer.sharedMaterial);
                 ApplyProperties();
             }
         }
@@ -297,3 +314,4 @@ namespace NodeWar.View
         }
     }
 }
+

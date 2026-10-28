@@ -41,3 +41,18 @@ namespace NodeWar.View
         public static int NextWaves(int waves) => waves == 0 ? 1 : waves == 1 ? 2 : waves == 2 ? 4 : 0;
     }
 }
+
+namespace NodeWar.View
+{
+    /// <summary>Conservative open-water bound; shore damping and steepness limiting only reduce it.</summary>
+    public static class WaterWaveBounds
+    {
+        public static double Amplitude(double steepness, double wavelength, double scale) =>
+            System.Math.Abs(steepness) * System.Math.Max(wavelength * scale, 0.01) / 6.2831853;
+
+        public static double MaxTrough(int mode, double noiseHeight, double amplitudeSum,
+            double steepnessScale, double groupStrength) => mode == 0 ? 0 : mode == 1
+            ? System.Math.Max(0, noiseHeight)
+            : amplitudeSum * System.Math.Max(0, steepnessScale) * (1 + System.Math.Abs(groupStrength));
+    }
+}
