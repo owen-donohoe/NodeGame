@@ -128,6 +128,15 @@ namespace NodeWar.View
                 }
             }
             GUILayout.EndHorizontal();
+            bool useFsr = GUILayout.Toggle(GraphicsTierRenderer.UseFsr, "FSR upscaling (Low/Medium)");
+            GUILayout.Label($"FSR sharpness: {GraphicsTierRenderer.FsrSharpness:F2}");
+            float sharpness = GUILayout.HorizontalSlider(GraphicsTierRenderer.FsrSharpness, 0f, 1f);
+            if (useFsr != GraphicsTierRenderer.UseFsr || !Mathf.Approximately(sharpness, GraphicsTierRenderer.FsrSharpness))
+            {
+                GraphicsTierRenderer.UseFsr = useFsr;
+                GraphicsTierRenderer.FsrSharpness = sharpness;
+                GraphicsTierRenderer.Apply(WaterQuality.Current);
+            }
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Replay draft")) ReplayDraft();
             if (GUILayout.Button(paused ? "Resume" : "Pause")) paused = !paused;

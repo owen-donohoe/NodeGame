@@ -11,6 +11,10 @@ namespace NodeWar.View
         private static RenderPipelineAsset originalQualityAsset;
         private static float authoredShadowDistance;
 
+        /// <summary>Bench-tunable; applied on the next <see cref="Apply"/>.</summary>
+        public static bool UseFsr = true;
+        public static float FsrSharpness = 0.8f;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void Initialize() => Apply(WaterQuality.Current);
 
@@ -38,6 +42,10 @@ namespace NodeWar.View
             runtime.renderScale = budget == 0 ? 0.7f : budget == 1 ? 0.8f : 1f;
             runtime.msaaSampleCount = budget < 2 ? 1 : budget == 2 ? 2 : 4;
             runtime.shadowDistance = budget == 0 ? 0 : authoredShadowDistance;
+            // FSR 1 only acts below full render scale; it restores edges the downscaled tiers blur.
+            runtime.upscalingFilter = budget < 2 && UseFsr ? UpscalingFilterSelection.FSR : UpscalingFilterSelection.Auto;
+            runtime.fsrOverrideSharpness = true;
+            runtime.fsrSharpness = FsrSharpness;
             // Preserve authored HDR: SampleSceneProfile enables Bloom (0.25) and tonemapping.
         }
 
