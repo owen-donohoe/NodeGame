@@ -163,6 +163,8 @@ namespace NodeWar.View
             MaterialSlider(material, "_NoiseWaveScale", "Noise wave scale", 0.002f, 0.15f);
             MaterialSlider(material, "_NoiseWaveSpeed", "Noise wave speed", 0f, 0.1f);
             MaterialSlider(material, "_WaveScale", "Wave scale", 0.25f, 4f);
+            MaterialSlider(material, "_WindDirection", "Wind direction", 0f, 1f);
+            MaterialSlider(material, "_WindSpread", "Wind spread", 0f, 90f);
             MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 1.5f);
             MaterialSlider(material, "_WaveGroupStrength", "Wave group strength", 0f, 1f);
             MaterialSlider(material, "_WaveFadeStart", "Wave fade start (cells)", 0f, 4f);

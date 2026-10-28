@@ -21,6 +21,7 @@ float _CrestStrength, _WaveScale;
 float _NoiseWaveHeight, _NoiseWaveScale, _NoiseWaveSpeed;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
+float _WindDirection, _WindSpread;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
 float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
 float _DetailNormalSamples, _FoamDistortionQuality;
@@ -59,12 +60,14 @@ half4 Shore(float2 uv)
     previousShore.b = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).b;
     return lerp(previousShore, currentShore, _ShoreBlend);
 }
-void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
+void Gerstner(float4 wave, float spreadOffset, float phaseOffset, float2 xz, float damping, inout float3 position,
     inout float3 tangent, inout float3 binormal)
 {
-    float2 direction = wave.xy / max(length(wave.xy), 0.001);
+    // Authored xy is retired: all crests follow one wind with asymmetric spread.
+    float angle = _WindDirection * 6.2831853 + radians(_WindSpread * spreadOffset);
+    float2 direction = float2(cos(angle), sin(angle));
     float k = 6.2831853 / max(wave.w * _WaveScale, 0.01);
-    float phase = k * (dot(direction, xz) - sqrt(9.8 / k) * _WaveSpeed * _Time.y);
+    float phase = k * (dot(direction, xz) - sqrt(9.8 / k) * _WaveSpeed * _Time.y) + phaseOffset;
     float steepness = wave.z * damping;
     float amplitude = steepness / k;
     float s = sin(phase), c = cos(phase);
@@ -127,11 +130,11 @@ Varyings WaterVertex(Attributes input)
     float waveScale = min(_WaveSteepnessScale * groupAmount, 0.95 / max(steepnessSum, 0.0001));
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
-    Gerstner(_WaveA, xz, damping, position, tangent, binormal);
-    Gerstner(_WaveB, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveA, -1.0, 0.0, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveB, 0.62, 1.7, xz, damping, position, tangent, binormal);
 #if defined(_WATER_WAVES_4)
-    Gerstner(_WaveC, xz, damping, position, tangent, binormal);
-    Gerstner(_WaveD, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveC, -0.38, 3.1, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveD, 0.85, 4.6, xz, damping, position, tangent, binormal);
 #endif
     output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);
 #endif

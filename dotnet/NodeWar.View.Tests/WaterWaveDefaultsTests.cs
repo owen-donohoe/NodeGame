@@ -29,14 +29,33 @@ namespace NodeWar.View.Tests
         }
 
         [Test]
-        public void DefaultDirectionsAreSeparated()
+        public void DefaultWavesStayWithinWindSpreadWithoutIntegerWavelengthRatios()
         {
+            string core = File.ReadAllText(Path.Combine(TestContext.CurrentContext.TestDirectory, "Water/WaterCore.hlsl"));
+            double spread = Scalar("_WindSpread"), wind = Scalar("_WindDirection") * 360;
+            Assert.That(spread, Is.EqualTo(35));
+            Assert.That(Scalar("_WindDirection"), Is.EqualTo(0.1));
+            var directions = new double[4];
+            double[] phaseOffsets = { 0, 1.7, 3.1, 4.6 };
+            double[] wavelengthFactors = { 1, 0.618, 0.382, 0.236 };
+            for (int i = 0; i < 4; i++)
+            {
+                var call = Regex.Match(core, "Gerstner\\(_Wave" + (char)('A' + i) + @", ([-0-9.]+), ([-0-9.]+), xz");
+                Assert.That(call.Success, Is.True);
+                double offset = double.Parse(call.Groups[1].Value, CultureInfo.InvariantCulture);
+                Assert.That(Math.Abs(offset), Is.LessThanOrEqualTo(1));
+                directions[i] = wind + offset * spread;
+                Assert.That(double.Parse(call.Groups[2].Value, CultureInfo.InvariantCulture), Is.EqualTo(phaseOffsets[i]));
+                Assert.That(Wave(i)[3] / Wave(0)[3], Is.EqualTo(wavelengthFactors[i]).Within(0.0001));
+            }
             for (int i = 0; i < 4; i++)
                 for (int j = i + 1; j < 4; j++)
                 {
-                    double[] a = Wave(i), b = Wave(j);
-                    double cosine = (a[0] * b[0] + a[1] * b[1]) / Math.Sqrt((a[0] * a[0] + a[1] * a[1]) * (b[0] * b[0] + b[1] * b[1]));
-                    Assert.That(Math.Acos(cosine) * 180 / Math.PI, Is.GreaterThanOrEqualTo(25));
+                    Assert.That(Math.Abs(directions[i] - directions[j]), Is.LessThanOrEqualTo(2 * spread));
+                    double ratio = Math.Max(Wave(i)[3], Wave(j)[3]) / Math.Min(Wave(i)[3], Wave(j)[3]);
+                    double nearestInteger = Math.Round(ratio);
+                    Assert.That(Math.Abs(ratio - nearestInteger) / nearestInteger, Is.GreaterThan(0.05),
+                        "Near-integer wavelength ratios create repeated interference.");
                 }
         }
     }

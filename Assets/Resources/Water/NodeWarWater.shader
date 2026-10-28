@@ -60,6 +60,8 @@ Shader "NodeWar/Water"
         _NoiseWaveScale("Noise wave scale", Float) = 0.025
         _NoiseWaveSpeed("Noise wave speed", Float) = 0.02
         _WaveSpeed("Wave speed", Float) = 1
+        _WindDirection("Wind direction (turns)", Range(0,1)) = 0.1
+        _WindSpread("Wind spread (degrees)", Range(0,90)) = 35
         _WaveSteepnessScale("Wave steepness scale", Range(0,1.5)) = 1
         _WaveScale("Wave scale", Range(0.25,4)) = 1.0
         _ShoreWaveDamping("Shore wave damping", Range(0,3)) = 0.6

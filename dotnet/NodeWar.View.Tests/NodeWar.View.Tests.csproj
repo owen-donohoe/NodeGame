@@ -137,6 +137,7 @@
     <Compile Include="WaterFeaturesTests.cs" />
     <Compile Include="WaterWaveDefaultsTests.cs" />
     <None Include="../../Assets/Resources/Water/NodeWarWater.shader" Link="Water/NodeWarWater.shader" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../Assets/Resources/Water/WaterCore.hlsl" Link="Water/WaterCore.hlsl" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="FoamNoiseTests.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/FoamNoise.cs" Link="View/Water/FoamNoise.cs" />
     <Compile Include="../../Assets/Scripts/Game/View/Water/ShoreField.cs" Link="View/Water/ShoreField.cs" />
