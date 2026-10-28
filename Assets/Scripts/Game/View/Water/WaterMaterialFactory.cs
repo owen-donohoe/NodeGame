@@ -30,7 +30,8 @@ namespace NodeWar.View
                 variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, combination.ToArray()));
             }
             var normals = new List<string>(keywords) { "_GBUFFER_NORMALS_OCT" };
-            variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, normals.ToArray()));            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFar"));
+            variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, normals.ToArray()));
+            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFar"));
             AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFloor"));
             Shader plinth = Resources.Load<Shader>("Board/NodeWarPlinth");
             AddSimpleVariant(variants, plinth);
@@ -180,5 +181,3 @@ namespace NodeWar.View
         }
     }
 }
-
-

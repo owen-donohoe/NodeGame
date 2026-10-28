@@ -31,7 +31,7 @@ namespace NodeWar.View
         private float frameSeconds, frameSum;
         private int frameCount;
         private readonly Queue<Vector2> recentFrames = new Queue<Vector2>();
-        private float worstFrameMs;
+        private float worstFrameMs, nextTimingLog;
 
         private void Start() => ReplayDraft();
 
@@ -93,6 +93,11 @@ namespace NodeWar.View
                 frameSeconds = frameSum / frameCount;
                 frameSum = 0f;
                 frameCount = 0;
+            }
+            if (Time.unscaledTime >= nextTimingLog)
+            {
+                Debug.Log($"Water bench tier {WaterQuality.Current}: worst frame (2 s) {worstFrameMs:F2} ms; {WaterSurfaceView.PlacementTimings}", this);
+                nextTimingLog = Time.unscaledTime + 2f;
             }
             if (view == null || paused) return;
             elapsed += Time.unscaledDeltaTime;
@@ -357,5 +362,3 @@ namespace NodeWar.View
         private void OnDestroy() => ReleaseBoard();
     }
 }
-
-

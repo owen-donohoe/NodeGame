@@ -119,6 +119,7 @@ namespace NodeWar.View
             if (requestVersion > 0 && SameTerrain(resolved)) return;
             ShoreField.Validate(cols, rows, resolved, 16, 4);
             LastBakeMs = LastUploadMs = LastMeshMs = LastProbeMs = 0;
+            LastBakePath = "pending";
             System.Array.Copy(resolved, terrain, terrain.Length);
             requestVersion++;
             if (mesh == null)
@@ -188,14 +189,19 @@ namespace NodeWar.View
                 }
                 // Flatten the visible blend into the old source before swapping both reusable textures.
                 // No GetPixels32 arrays and no texture/buffer allocation during subsequent placements.
-                if (!first)
+                if (!first && blend < 1f)
                     for (int i = 0; i < currentBytes.Length; i++)
                         previousBytes[i] = (byte)Mathf.RoundToInt(Mathf.Lerp(previousBytes[i], currentBytes[i], blend));
+                else if (!first) System.Array.Copy(currentBytes, previousBytes, currentBytes.Length);
+                bool uploadPrevious = first || blend < 1f;
                 Texture2D swap = current; current = previous; previous = swap;
                 System.Array.Copy(field.rgba, currentBytes, currentBytes.Length);
                 if (first) System.Array.Copy(currentBytes, previousBytes, currentBytes.Length);
-                previous.SetPixelData(previousBytes, 0);
-                previous.Apply(false, false);
+                if (uploadPrevious)
+                {
+                    previous.SetPixelData(previousBytes, 0);
+                    previous.Apply(false, false);
+                }
                 current.SetPixelData(currentBytes, 0);
                 current.Apply(false, false);
                 blend = first || ReducedMotion ? 1f : 0f;
@@ -215,23 +221,23 @@ namespace NodeWar.View
             long started = Stopwatch.GetTimestamp();
             using (MeshMarker.Auto())
             {
-            var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding, skirtCells);
-            var vertices = new Vector3[data.positions.Length / 3];
-            for (int i = 0; i < vertices.Length; i++)
-                vertices[i] = new Vector3(data.positions[i * 3] * scale, surfaceY, data.positions[i * 3 + 2] * scale);
-            var nextMesh = new Mesh { name = "Water surface", indexFormat = IndexFormat.UInt32 };
-            nextMesh.vertices = vertices;
-            nextMesh.subMeshCount = 2;
-            nextMesh.SetTriangles(data.nearIndices, 0);
-            nextMesh.SetTriangles(data.farIndices, 1);
-            nextMesh.RecalculateBounds();
-            // Recalculated bounds include the whole skirt; expand further for GPU Gerstner displacement.
-            Bounds bounds = nextMesh.bounds;
-            bounds.Expand(40f); // Supports the full wave/group/steepness slider range.
-            nextMesh.bounds = bounds;
-            filter.sharedMesh = nextMesh;
-            Release(mesh);
-            mesh = nextMesh;
+                var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding, skirtCells);
+                var vertices = new Vector3[data.positions.Length / 3];
+                for (int i = 0; i < vertices.Length; i++)
+                    vertices[i] = new Vector3(data.positions[i * 3] * scale, surfaceY, data.positions[i * 3 + 2] * scale);
+                var nextMesh = new Mesh { name = "Water surface", indexFormat = IndexFormat.UInt32 };
+                nextMesh.vertices = vertices;
+                nextMesh.subMeshCount = 2;
+                nextMesh.SetTriangles(data.nearIndices, 0);
+                nextMesh.SetTriangles(data.farIndices, 1);
+                nextMesh.RecalculateBounds();
+                // Recalculated bounds include the whole skirt; expand further for GPU Gerstner displacement.
+                Bounds bounds = nextMesh.bounds;
+                bounds.Expand(40f); // Supports the full wave/group/steepness slider range.
+                nextMesh.bounds = bounds;
+                filter.sharedMesh = nextMesh;
+                Release(mesh);
+                mesh = nextMesh;
             }
             LastMeshMs = Milliseconds(started);
         }
@@ -405,10 +411,3 @@ namespace NodeWar.View
         }
     }
 }
-
-
-
-
-
-
-

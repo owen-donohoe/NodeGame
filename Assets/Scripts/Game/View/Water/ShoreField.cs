@@ -160,14 +160,6 @@ namespace NodeWar.View
                 initialized = true;
             }
 
-            /// <summary>Copy a worker result into this main-thread workspace without sharing writable buffers.</summary>
-            public void Adopt(ShoreFieldData source, TerrainType[] resolved)
-            {
-                Array.Copy(source.rgba, Field.rgba, Field.rgba.Length);
-                Array.Copy(resolved, terrain, terrain.Length);
-                initialized = true;
-            }
-
             public bool TryAddLand(TerrainType[] resolved)
             {
                 Validate(cols, rows, resolved, resolution, pad);
@@ -313,5 +305,3 @@ namespace NodeWar.View
         private static byte Encode(double value) => (byte)Math.Round(Math.Min(1, Math.Max(0, value)) * 255);
     }
 }
-
-
