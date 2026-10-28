@@ -74,20 +74,20 @@ Material:
     - _ShoreFoamWidth: 0.12
     - _ShoreMaxAmplitude: 0.35
     - _ShoreNoiseAmount: 0.25
-    - _ShoreWaveDamping: 1
+    - _ShoreWaveDamping: 0.6
     - _Smoothness: 0.6
     - _SrcBlend: 1
     - _SurfaceFoamDirection: 0.09
     - _SurfaceFoamDistortion: 1
     - _SurfaceFoamSpeed: 0.03
     - _SurfaceFoamTiling: 0.05
-    - _SurfaceFoamWidth: 0.07
+    - _SurfaceFoamWidth: 0.08
     - _SwashDesync: 1
-    - _SwashOpacity: 0.85
+    - _SwashOpacity: 0.5
     - _SwashRange: 1.2
-    - _SwashSpeed: 0.25
+    - _SwashSpeed: 0.07
     - _SwashWetStrength: 0.15
-    - _SwashWidth: 0.08
+    - _SwashWidth: 0.05
     - _WaveFadeEnd: 10
     - _WaveFadeStart: 2
     - _WaveGroupScale: 0.012
@@ -96,12 +96,14 @@ Material:
     - _WaveScale: 1
     - _WaveSpeed: 1
     - _WaveSteepnessScale: 1
+    - _WindDirection: 0.1
+    - _WindSpread: 35
     - _ZWrite: 1
     m_Colors:
     - _BoardRect: {r: -3, g: -3, b: 3, a: 3}
     - _CrestColor: {r: 1.15, g: 1.15, b: 1.15, a: 1}
-    - _DeepLakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
-    - _DeepLakeShallowColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
+    - _DeepLakeDeepColor: {r: 0.10227398, g: 0.40721497, b: 0.65568596, a: 1}
+    - _DeepLakeShallowColor: {r: 0.42792198, g: 0.653804, b: 0.7592159, a: 1}
     - _HorizonColor: {r: 0.5490199, g: 0.560784, b: 0.85098, a: 1}
     - _LakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _LakeShallowColor: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
