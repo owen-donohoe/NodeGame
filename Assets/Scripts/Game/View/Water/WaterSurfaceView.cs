@@ -5,6 +5,7 @@ using UnityEngine.Rendering;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Unity.Profiling;
+using System.Threading.Tasks;
 
 namespace NodeWar.View
 {
@@ -19,7 +20,7 @@ namespace NodeWar.View
         public static double LastUploadMs { get; private set; }
         public static double LastMeshMs { get; private set; }
         public static double LastProbeMs { get; private set; }
-        public static string PlacementTimings => $"Water ms: bake {LastBakeMs:F2}, upload {LastUploadMs:F2}, mesh {LastMeshMs:F2}, probe submit {LastProbeMs:F2}";
+        public static string PlacementTimings => $"Water ms ({LastBakePath}): bake {LastBakeMs:F2}, upload {LastUploadMs:F2}, mesh {LastMeshMs:F2}, probe submit {LastProbeMs:F2}";
         private static double Milliseconds(long start) => (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
         private int Padding => WaterFeatures.PaddingFor(WaterQuality.Current);
         private int meshPadding;
@@ -41,6 +42,12 @@ namespace NodeWar.View
         private MeshFilter filter;
         private MeshRenderer surfaceRenderer;
         private Texture2D current, previous;
+        private ShoreField.Workspace shoreWorkspace;
+        private TerrainType[] bakingTerrain;
+        private byte[] currentBytes, previousBytes;
+        private Task<double> bakeTask;
+        private int requestVersion, bakingVersion, appliedVersion;
+        public static string LastBakePath { get; private set; } = "pending";
 
         private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
 
@@ -84,6 +91,11 @@ namespace NodeWar.View
             boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
+            shoreWorkspace = new ShoreField.Workspace(cols, rows);
+            terrain = new TerrainType[cols * rows];
+            bakingTerrain = new TerrainType[terrain.Length];
+            currentBytes = new byte[shoreWorkspace.Field.rgba.Length];
+            previousBytes = new byte[currentBytes.Length];
             subdivisions = WaterFeatures.SubdivisionsFor(WaterQuality.Current, WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             WaterQuality.Apply();
             properties = new MaterialPropertyBlock();
@@ -100,51 +112,96 @@ namespace NodeWar.View
 
         public void SetTerrain(TerrainType[] resolved)
         {
-            if (SameTerrain(resolved)) return;
+            if (requestVersion > 0 && SameTerrain(resolved)) return;
+            ShoreField.Validate(cols, rows, resolved, 16, 4);
             LastBakeMs = LastUploadMs = LastMeshMs = LastProbeMs = 0;
-            long bakeStart = Stopwatch.GetTimestamp();
-            ShoreFieldData field;
-            using (BakeMarker.Auto()) field = ShoreField.Bake(cols, rows, resolved);
-            LastBakeMs = Milliseconds(bakeStart);
-            long uploadStart = Stopwatch.GetTimestamp();
-            using (UploadMarker.Auto())
-            {
-            var texture = new Texture2D(field.width, field.height, TextureFormat.RGBA32, false, true)
-            {
-                name = "Water shore field", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp
-            };
-            texture.LoadRawTextureData(field.rgba);
-            texture.Apply(false, false);
-
-            // Preserve the currently visible field when another edit interrupts a blend.
-            if (previous != null && previous != current)
-            {
-                if (blend < 1f)
-                {
-                    Color32[] from = previous.GetPixels32(), to = current.GetPixels32();
-                    for (int i = 0; i < to.Length; i++) to[i] = Color32.Lerp(from[i], to[i], blend);
-                    current.SetPixels32(to);
-                    current.Apply(false, false);
-                }
-                Release(previous);
-            }
-            previous = current != null ? current : texture;
-            current = texture;
-            blend = previous == current || ReducedMotion ? 1f : 0f;
-            Vector3 origin = transform.TransformPoint(new Vector3(field.originX * scale, surfaceY, field.originZ * scale));
-            shoreST = new Vector4(origin.x, origin.z,
-                1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale));
-            ApplyProperties();
-
-            }
-            LastUploadMs = Milliseconds(uploadStart);
+            System.Array.Copy(resolved, terrain, terrain.Length);
+            requestVersion++;
             RebuildMesh(resolved);
-            terrain = (TerrainType[])resolved.Clone();
             probeDirty = true;
             probeAfterSettled = true;
-            if (blend == 1f) FinishBlend();
+            StartBake();
         }
 
+        private void StartBake()
+        {
+            if (bakeTask != null || requestVersion == appliedVersion) return;
+            System.Array.Copy(terrain, bakingTerrain, terrain.Length);
+            bakingVersion = requestVersion;
+            bakeTask = Task.Run(BakeRequestedTerrain);
+        }
+
+        private double BakeRequestedTerrain()
+        {
+            long started = Stopwatch.GetTimestamp();
+            using (BakeMarker.Auto())
+            {
+                bool incremental = shoreWorkspace.TryAddLand(bakingTerrain);
+                if (!incremental) shoreWorkspace.Bake(bakingTerrain);
+                // Task completion publishes this result along with its byte buffer.
+                workerIncremental = incremental;
+            }
+            return Milliseconds(started);
+        }
+
+        private bool workerIncremental;
+
+        private void PollBake()
+        {
+            if (bakeTask == null || !bakeTask.IsCompleted) return; // Never wait on a frame.
+            Task<double> finished = bakeTask;
+            bakeTask = null;
+            if (finished.IsFaulted)
+            {
+                UnityEngine.Debug.LogException(finished.Exception, this);
+                appliedVersion = bakingVersion; // Retry only when new terrain arrives.
+            }
+            else if (bakingVersion == requestVersion)
+            {
+                LastBakeMs = finished.Result;
+                LastBakePath = workerIncremental ? "incremental worker" : "full EDT worker";
+                UploadField(shoreWorkspace.Field);
+                appliedVersion = bakingVersion;
+                UnityEngine.Debug.Log(PlacementTimings, this);
+            }
+            StartBake(); // Newer terrain replaces stale results; at most one worker owns the buffers.
+        }
+
+        private void UploadField(ShoreFieldData field)
+        {
+            long started = Stopwatch.GetTimestamp();
+            using (UploadMarker.Auto())
+            {
+                bool first = current == null;
+                if (first)
+                {
+                    current = CreateShoreTexture(field);
+                    previous = CreateShoreTexture(field);
+                }
+                // Flatten the visible blend into the old source before swapping both reusable textures.
+                // No GetPixels32 arrays and no texture/buffer allocation during subsequent placements.
+                if (!first)
+                    for (int i = 0; i < currentBytes.Length; i++)
+                        previousBytes[i] = (byte)Mathf.RoundToInt(Mathf.Lerp(previousBytes[i], currentBytes[i], blend));
+                Texture2D swap = current; current = previous; previous = swap;
+                System.Array.Copy(field.rgba, currentBytes, currentBytes.Length);
+                if (first) System.Array.Copy(currentBytes, previousBytes, currentBytes.Length);
+                previous.SetPixelData(previousBytes, 0);
+                previous.Apply(false, false);
+                current.SetPixelData(currentBytes, 0);
+                current.Apply(false, false);
+                blend = first || ReducedMotion ? 1f : 0f;
+                Vector3 origin = transform.TransformPoint(new Vector3(field.originX * scale, surfaceY, field.originZ * scale));
+                shoreST = new Vector4(origin.x, origin.z,
+                    1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale));
+                ApplyProperties();
+            }
+            LastUploadMs = Milliseconds(started);
+        }
+
+        private static Texture2D CreateShoreTexture(ShoreFieldData field) =>
+            new Texture2D(field.width, field.height, TextureFormat.RGBA32, false, true)
+            { name = "Water shore field", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp };
         private void RebuildMesh(TerrainType[] resolved)
         {
             long started = Stopwatch.GetTimestamp();
@@ -180,6 +237,7 @@ namespace NodeWar.View
 
         private void Update()
         {
+            PollBake();
             if (surfaceRenderer == null) return;
             Material material = surfaceRenderer.sharedMaterial;
             if (WaterMaterialFactory.NeedsFoam(material, "_FoamTex") != generatedSurfaceFoam
@@ -192,13 +250,7 @@ namespace NodeWar.View
             if (blend == 1f) FinishBlend();
         }
 
-        private void FinishBlend()
-        {
-            if (previous != current) Release(previous);
-            previous = current;
-            ApplyProperties();
-        }
-
+        private void FinishBlend() => ApplyProperties(); // Keep both textures alive for the next edit.
         private void ApplyProperties()
         {
             properties.Clear();
@@ -336,6 +388,8 @@ namespace NodeWar.View
 
         private void OnDestroy()
         {
+            if (bakeTask != null)
+                bakeTask.ContinueWith(task => { var observed = task.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
             if (previous != current) Release(previous);
             Release(current); Release(mesh); Release(floorMesh); Release(floorMaterial);
         }
@@ -348,5 +402,7 @@ namespace NodeWar.View
         }
     }
 }
+
+
 
 

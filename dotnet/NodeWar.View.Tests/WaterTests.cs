@@ -7,6 +7,54 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
+        [TestCase(1, 0)] [TestCase(3, 1)] [TestCase(8, 4)] [TestCase(16, 4)]
+        public void ExactEdtMatchesBruteForceOnVariedBoards(int resolution, int padding)
+        {
+            var random = new Random(917);
+            for (int run = 0; run < 12; run++)
+            {
+                int cols = 1 + random.Next(7), rows = 1 + random.Next(6);
+                var terrain = new TerrainType[cols * rows];
+                var kinds = new[] { TerrainType.Ocean, TerrainType.Land, TerrainType.Lake, TerrainType.DeepLake };
+                for (int i = 0; i < terrain.Length; i++) terrain[i] = kinds[random.Next(4)];
+                var actual = ShoreField.Bake(cols, rows, terrain, resolution, padding);
+                var expected = ShoreField.BakeBruteForce(cols, rows, terrain, resolution, padding);
+                for (int i = 0; i < actual.rgba.Length; i++)
+                    Assert.That(Math.Abs(actual.rgba[i] - expected.rgba[i]), Is.LessThanOrEqualTo(i % 4 == 2 ? 0 : 1), $"run {run}, byte {i}");
+            }
+        }
+
+        [TestCase(1)] [TestCase(3)] [TestCase(16)]
+        public void IncrementalEqualsFullBakeAcrossRandomPlacementsAndBodyChanges(int resolution)
+        {
+            var random = new Random(532);
+            var terrain = new TerrainType[36];
+            var kinds = new[] { TerrainType.Ocean, TerrainType.Lake, TerrainType.DeepLake };
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = kinds[random.Next(3)];
+            var workspace = new ShoreField.Workspace(6, 6, resolution);
+            workspace.Bake(terrain);
+            byte[] buffer = workspace.Field.rgba;
+            for (int step = 0; step < 35; step++)
+            {
+                int cell = random.Next(terrain.Length);
+                terrain[cell] = step == 17 ? TerrainType.DeepLake : TerrainType.Land;
+                if (!workspace.TryAddLand(terrain)) workspace.Bake(terrain);
+                Assert.AreSame(buffer, workspace.Field.rgba);
+                CollectionAssert.AreEqual(ShoreField.Bake(6, 6, terrain, resolution).rgba, workspace.Field.rgba, $"step {step}");
+            }
+        }
+
+        [Test]
+        public void ReusedBakerHandlesNoSourcesAndRejectsLandRemoval()
+        {
+            var terrain = new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Ocean, TerrainType.Lake };
+            var workspace = new ShoreField.Workspace(2, 2);
+            workspace.Bake(terrain);
+            terrain[0] = TerrainType.Ocean;
+            Assert.IsFalse(workspace.TryAddLand(terrain));
+            workspace.Bake(terrain);
+            CollectionAssert.AreEqual(ShoreField.BakeBruteForce(2, 2, terrain).rgba, workspace.Field.rgba);
+        }
         [TestCase(0, 441)] [TestCase(1, 4761)] [TestCase(2, 33489)] [TestCase(3, 59049)]
         public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count)
         {
@@ -215,3 +263,4 @@ namespace NodeWar.View.Tests
         }
     }
 }
+
