@@ -28,13 +28,19 @@ Shader "NodeWar/WaterFloor"
             CBUFFER_START(UnityPerMaterial)
             float4 _OceanDeepColor, _LakeDeepColor, _DeepLakeDeepColor, _ShoreST;
             float _ShoreBlend, _BodyStepA, _BodyStepB;
+            float4 _ShoreTex_TexelSize;
             CBUFFER_END
             struct Attributes { float4 positionOS : POSITION; };
             struct Varyings { float4 positionCS : SV_POSITION; float3 positionWS : TEXCOORD0; float2 shoreUV : TEXCOORD1; };
             float4 Shore(float2 uv)
             {
-                if (_ShoreBlend >= 1) return SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
-                return lerp(SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv), SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv), _ShoreBlend);
+                float2 bodyUV = (floor(uv * _ShoreTex_TexelSize.zw) + 0.5) * _ShoreTex_TexelSize.xy;
+                float4 currentShore = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
+                currentShore.b = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).b;
+                if (_ShoreBlend >= 1) return currentShore;
+                float4 previousShore = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv);
+                previousShore.b = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).b;
+                return lerp(previousShore, currentShore, _ShoreBlend);
             }
             Varyings FloorVertex(Attributes input)
             {
@@ -48,7 +54,8 @@ Shader "NodeWar/WaterFloor"
             {
                 float4 shore = Shore(input.shoreUV);
                 float body = shore.b;
-                float bodyMix = shore.a < 0.166667 ? 0 : shore.a < 0.5 ? _BodyStepA : shore.a < 0.833333 ? _BodyStepB : 1;
+                float containedMix = body >= 0.25 ? shore.a : 0;
+                float bodyMix = containedMix < 0.166667 ? 0 : containedMix < 0.5 ? _BodyStepA : containedMix < 0.833333 ? _BodyStepB : 1;
                 float lake = step(0.25, body);
                 float deepLake = lake * (1 - step(0.75, body));
                 return half4(lerp(_OceanDeepColor.rgb, lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix) * 0.85, 1);

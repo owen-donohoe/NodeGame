@@ -37,12 +37,12 @@ namespace NodeWar.View
             Validate(cols, rows, resolved, texelsPerCell, padCells);
             if (blendCells <= 0) throw new ArgumentOutOfRangeException(nameof(blendCells));
             var ocean = new List<int>();
-            var lakes = new List<int>();
+
             var land = new List<int>();
             for (int i = 0; i < resolved.Length; i++)
                 if (resolved[i] == TerrainType.Land) land.Add(i);
                 else if (resolved[i] == TerrainType.Ocean) ocean.Add(i);
-                else lakes.Add(i);
+
             var field = new ShoreFieldData
             {
                 width = checked((cols + 2 * padCells) * texelsPerCell),
@@ -76,32 +76,20 @@ namespace NodeWar.View
                         ? resolved[cz * cols + cx] : TerrainType.Ocean;
                     field.rgba[at] = Encode(distance / 3);
                     field.rgba[at + 2] = WaterBodyOf(terrain);
-                    // R retains land distance; G holds static swash phase; B retains body ID. A is ocean/lake mix.
-                    // Land is already identifiable by R=0 within the plinth, so no mask is lost.
+                    // R: land distance; G: static swash phase; B: own body ID.
+                    // A: ocean-to-lake mix, entirely inside the lake.
                     bool isLake = terrain != TerrainType.Ocean && terrain != TerrainType.Land;
-                    List<int> opposite = isLake ? ocean : lakes;
                     double bodyDistanceSquared = double.PositiveInfinity;
-                    int nearestOpposite = -1;
-                    for (int i = 0; i < opposite.Count; i++)
-                    {
-                        double candidate = DistanceSquaredToSquare(px, pz, opposite[i] % cols, opposite[i] / cols, 0.5 / texelsPerCell);
-                        if (candidate < bodyDistanceSquared) { bodyDistanceSquared = candidate; nearestOpposite = opposite[i]; }
-                    }
                     if (isLake)
                     {
-                        // The area outside the board is ocean, including boards with no ocean cells.
+                        for (int i = 0; i < ocean.Count; i++)
+                            bodyDistanceSquared = Math.Min(bodyDistanceSquared,
+                                DistanceSquaredToSquare(px, pz, ocean[i] % cols, ocean[i] / cols));
+                        // The area outside the board is ocean, even without ocean cells.
                         double edgeDistance = Math.Min(Math.Min(px + 0.5, cols - 0.5 - px), Math.Min(pz + 0.5, rows - 0.5 - pz));
-                        edgeDistance += 0.5 / texelsPerCell;
                         bodyDistanceSquared = Math.Min(bodyDistanceSquared, edgeDistance * edgeDistance);
                     }
-                    // Half a texel centres the signed mix on the boundary between water texels.
-                    double bodyDistance = Math.Max(0, Math.Sqrt(bodyDistanceSquared) - 0.5 / texelsPerCell);
-                    // On the ocean half of a blend B identifies the destination lake palette;
-                    // A < 0.5 still identifies ocean. This preserves DeepLake colour on both sides.
-                    if (terrain == TerrainType.Ocean && bodyDistance < blendCells * 0.5 && nearestOpposite >= 0)
-                        field.rgba[at + 2] = WaterBodyOf(resolved[nearestOpposite]);
-                    field.rgba[at + 3] = terrain == TerrainType.Land ? (byte)0
-                        : Encode(0.5 + (isLake ? bodyDistance : -bodyDistance) / blendCells);
+                    field.rgba[at + 3] = isLake ? Encode(Math.Sqrt(bodyDistanceSquared) / blendCells) : (byte)0;
                 }
             return field;
         }

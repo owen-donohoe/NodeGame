@@ -35,22 +35,26 @@ namespace NodeWar.View.Tests
         }
 
         [TestCase(TerrainType.Lake)] [TestCase(TerrainType.DeepLake)]
-        public void BodyMixIsMonotonicSymmetricAndClamped(TerrainType lake)
+        public void BodyMixIsContainedMonotonicAndClamped(TerrainType lake)
         {
-            var terrain = new TerrainType[24];
-            for (int z = 0; z < 4; z++)
-                for (int x = 0; x < 6; x++) terrain[z * 6 + x] = x < 3 ? TerrainType.Ocean : lake;
-            var f = ShoreField.Bake(6, 4, terrain, 16, 1);
-            int row = 40;
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++) terrain[z * 10 + x] = x < 3 ? TerrainType.Ocean : lake;
+            var f = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int row = 64;
             int Mix(int x) => f.rgba[(row * f.width + x) * 4 + 3];
-            // Boundary x=2.5 sits between texels 63 and 64, far from exterior ocean.
-            Assert.AreEqual(ShoreField.WaterBodyOf(lake), f.rgba[(row * f.width + 60) * 4 + 2], "Ocean side must blend toward the nearest lake palette.");
-            for (int i = 0; i < 24; i++)
-            {
-                Assert.That(Mix(40 + i), Is.LessThanOrEqualTo(Mix(41 + i)));
-                Assert.That(Mix(63 - i) + Mix(64 + i), Is.EqualTo(255).Within(1));
-                if (i >= 8) { Assert.AreEqual(0, Mix(63 - i)); Assert.AreEqual(255, Mix(64 + i)); }
-            }
+            // Boundary x=2.5 lies between texels 63 and 64.
+            for (int z = 0; z < f.height; z++)
+                for (int x = 0; x < f.width; x++)
+                {
+                    int at = (z * f.width + x) * 4;
+                    if (f.rgba[at + 2] == 0) Assert.AreEqual(0, f.rgba[at + 3]);
+                }
+            Assert.AreEqual(0, Mix(63));
+            Assert.That(Mix(64), Is.InRange(1, 254));
+            for (int x = 64; x < 88; x++)
+                Assert.That(Mix(x), Is.LessThanOrEqualTo(Mix(x + 1)));
+            Assert.AreEqual(255, Mix(80));
         }
         [Test]
         public void FieldEncodesLandDistanceDampingAndBody()

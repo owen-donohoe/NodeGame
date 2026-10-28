@@ -14,6 +14,7 @@ half4 _HorizonColor, _SurfaceFoamColor, _SpecularColor, _ShoreFoamColor;
 float _ShoreFoamWidth;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _FoamTex_ST, _SwellTex_ST;
+float4 _ShoreTex_TexelSize;
 float4 _BoardRect, _CrestColor, _SwashColor;
 float _CrestSharpness;
 float _CrestStrength, _WaveScale;
@@ -49,11 +50,15 @@ float2 UnrotateNoise(float2 uv) { return float2(0.831954 * uv.x + 0.554844 * uv.
 float2 Scroll(float speed, float2 direction) { return frac(_Time.y * speed * direction); }
 half4 Shore(float2 uv)
 {
-    if (_ShoreBlend >= 1.0) return SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
-    return lerp(SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv),
-        SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv), _ShoreBlend);
+    // Keep categorical body ownership exact while filtering distance, phase and mix.
+    float2 bodyUV = (floor(uv * _ShoreTex_TexelSize.zw) + 0.5) * _ShoreTex_TexelSize.xy;
+    half4 currentShore = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
+    currentShore.b = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).b;
+    if (_ShoreBlend >= 1.0) return currentShore;
+    half4 previousShore = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv);
+    previousShore.b = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).b;
+    return lerp(previousShore, currentShore, _ShoreBlend);
 }
-
 void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
     inout float3 tangent, inout float3 binormal)
 {
@@ -228,7 +233,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     }
 #endif
     half noise = foam.g;
-    half displacedMix = saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount);
+    half displacedMix = shore.b >= 0.25 ? saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
     half lake = step(0.25, shore.b);
     half deepLake = lake * (1 - step(0.75, shore.b));
     half bodyMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
