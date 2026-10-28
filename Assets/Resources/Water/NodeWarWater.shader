@@ -10,8 +10,8 @@ Shader "NodeWar/Water"
         _DeepLakeDeepColor("Deep lake deep", Color) = (0.243137,0.560784,0.819608,1)
         _DepthRange("Depth range (cells)", Float) = 2
         _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 6
-        _BodyStepA("Body blend step A", Range(0,1)) = 0.25
-        _BodyStepB("Body blend step B", Range(0,1)) = 0.6
+        _BodyStepA("Body blend step A", Range(0,1)) = 0.30
+        _BodyStepB("Body blend step B", Range(0,1)) = 0.65
         _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
         _HorizonDistance("Horizon exponent", Float) = 4
         _FoamTex("Surface foam", 2D) = "black" {}
@@ -35,9 +35,8 @@ Shader "NodeWar/Water"
         _ShallowAlpha("Shallow alpha", Range(0,1)) = 0.35
         _ClearDepth("Clear depth (cells)", Float) = 0.8
         _FloorDepth("Floor depth (world units)", Float) = 1.2
+        _BodyNoiseAmount("Body noise amount", Float) = 0.25
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
-        _ShoreNoiseScale("Shore noise scale", Float) = 0.15
-        _ShoreNoiseSpeed("Shore noise speed", Float) = 0.02
         _LapFrequency("Lap frequency", Float) = 1.5
         _LapSpeed("Lap speed", Float) = 0.25
         _LapRange("Lap range (cells)", Float) = 1.2

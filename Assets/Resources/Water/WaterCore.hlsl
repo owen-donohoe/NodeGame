@@ -20,7 +20,7 @@ float _NoiseWaveHeight, _NoiseWaveScale, _NoiseWaveSpeed;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
-float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _ShoreNoiseScale, _ShoreNoiseSpeed;
+float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
 float _DetailNormalSamples;
 float _LapFrequency, _LapSpeed, _LapRange, _LapWidth, _LapOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
@@ -189,21 +189,29 @@ float FoamLine(float edge, float width)
 half4 WaterFragment(Varyings input) : SV_Target
 {
     float4 shore = Shore(input.shoreUV);
+    float angle = _SurfaceFoamDirection * 6.2831853;
+    float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
+        + Scroll(_SurfaceFoamSpeed, float2(cos(angle), sin(angle)));
+    float4 foam = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
+        DistortFoam(foamUV) * _FoamTex_ST.xy + _FoamTex_ST.zw);
+    float surfaceCoverage = FoamLine(foam.r, _SurfaceFoamWidth);
+    if (_WATER_SECOND_FOAM_LAYER)
+    {
+        float2 uv = RotateNoise(input.positionWS.xz * _SurfaceFoamTiling) * 1.618034 + Scroll(_SurfaceFoamSpeed * 0.6, float2(-0.71, 0.7));
+        float4 secondFoam = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
+            DistortFoam(uv) * _FoamTex_ST.xy + _FoamTex_ST.zw);
+        foam.g = (foam.g + secondFoam.g) * 0.5;
+        surfaceCoverage = max(surfaceCoverage, FoamLine(secondFoam.r, _SurfaceFoamWidth));
+    }
+    float noise = foam.g;
+    float displacedMix = saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount);
     float lake = step(0.25, shore.b);
     float deepLake = lake * (1 - step(0.75, shore.b));
-    float bodyMix = shore.a < 0.166667 ? 0 : shore.a < 0.5 ? _BodyStepA : shore.a < 0.833333 ? _BodyStepB : 1;
+    float bodyMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
     float3 shallow = lerp(_OceanShallowColor.rgb, lerp(_LakeShallowColor.rgb, _DeepLakeShallowColor.rgb, deepLake), bodyMix);
     float3 deep = lerp(_OceanDeepColor.rgb, lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix);
-    float rawDistance = shore.r * 3;
-    float distance = rawDistance, noise = 0.5;
+    float distance = max(0, shore.r * 3 + (noise - 0.5) * 2 * _ShoreNoiseAmount);
     float detailFade = DetailFade(input.positionWS.xz);
-    if (true)
-    {
-        float2 uv = input.positionWS.xz * _ShoreNoiseScale;
-        noise = (SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex, uv + _Time.y * _ShoreNoiseSpeed * float2(1, 0.7)).b
-            + SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex, uv * 1.13 + _Time.y * _ShoreNoiseSpeed * float2(-0.6, 1)).b) * 0.5;
-        distance = max(0, distance + (noise - 0.5) * 2 * _ShoreNoiseAmount);
-    }
     float alpha = 1;
     if (_WATER_TRANSPARENCY) alpha = lerp(_ShallowAlpha, 1, smoothstep(0, max(_ClearDepth, 0.001), distance));
     float depth = saturate(distance / max(_DepthRange, 0.001));
@@ -241,19 +249,6 @@ half4 WaterFragment(Varyings input) : SV_Target
         ? lerp(_ReflectionMin, 1, pow(1 - saturate(view.y), max(_HorizonDistance, 0.001))) * _ReflectionStrength : 0;
     float3 farOcean = lerp(_OceanDeepColor.rgb, _HorizonColor.rgb, farWeight);
     color = lerp(farOcean, color, detailFade);
-    float angle = _SurfaceFoamDirection * 6.2831853;
-    float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
-        + _Time.y * _SurfaceFoamSpeed * float2(cos(angle), sin(angle));
-    float surface = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
-        DistortFoam(foamUV) * _FoamTex_ST.xy + _FoamTex_ST.zw).r;
-    float surfaceCoverage = FoamLine(surface, _SurfaceFoamWidth);
-    if (_WATER_SECOND_FOAM_LAYER)
-    {
-        float2 uv = input.positionWS.xz * _SurfaceFoamTiling * 1.37 + _Time.y * _SurfaceFoamSpeed * 0.6 * float2(-0.71, 0.7);
-        float edge = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
-            DistortFoam(uv) * _FoamTex_ST.xy + _FoamTex_ST.zw).r;
-        surfaceCoverage = max(surfaceCoverage, FoamLine(edge, _SurfaceFoamWidth));
-    }
     surfaceCoverage *= lerp(0.025, 1, detailFade);
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);

@@ -5,8 +5,8 @@ Shader "NodeWar/WaterFloor"
         _OceanDeepColor("Ocean deep", Color) = (0.180392,0.164706,0.419608,1)
         _LakeDeepColor("Lake deep", Color) = (0.243137,0.560784,0.819608,1)
         _DeepLakeDeepColor("Deep lake", Color) = (0.243137,0.560784,0.819608,1)
-        _BodyStepA("Body blend step A", Range(0,1)) = 0.25
-        _BodyStepB("Body blend step B", Range(0,1)) = 0.6
+        _BodyStepA("Body blend step A", Range(0,1)) = 0.30
+        _BodyStepB("Body blend step B", Range(0,1)) = 0.65
         _ShoreTex("Shore", 2D) = "black" {}
         _ShorePrevTex("Previous shore", 2D) = "black" {}
         _ShoreBlend("Blend", Float) = 1
