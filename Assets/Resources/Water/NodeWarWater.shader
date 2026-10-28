@@ -14,7 +14,7 @@ Shader "NodeWar/Water"
         _BodyStepB("Body blend step B", Range(0,1)) = 0.6
         _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
         _HorizonDistance("Horizon exponent", Float) = 4
-        _SurfaceFoamTex("Surface foam", 2D) = "black" {}
+        _FoamTex("Surface foam", 2D) = "black" {}
         _SurfaceFoamTiling("Surface foam tiling", Float) = 0.2
         _SurfaceFoamDirection("Surface foam direction (turns)", Range(0,1)) = 0.09
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
@@ -22,7 +22,7 @@ Shader "NodeWar/Water"
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
-        _NormalsTex("Normals", 2D) = "bump" {}
+        _SwellTex("Swell height and derivatives", 2D) = "black" {}
         _NormalsScale("Normals scale", Float) = 0.4
         _NormalsSpeed("Normals speed", Float) = 0.04
         _NormalsStrength("Normals strength", Range(0,2)) = 0.6

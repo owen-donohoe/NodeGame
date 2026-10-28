@@ -17,7 +17,7 @@ namespace NodeWar.View
         private TerrainType[] terrain;
         private MaterialPropertyBlock properties;
         private Vector4 shoreST;
-        private bool generatedSurfaceFoam, generatedNormals;
+        private bool generatedSurfaceFoam, generatedSwell;
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
         private bool probeDirty, probeAfterSettled;
@@ -153,8 +153,8 @@ namespace NodeWar.View
         {
             if (surfaceRenderer == null) return;
             Material material = surfaceRenderer.sharedMaterial;
-            if (WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex") != generatedSurfaceFoam
-                || WaterMaterialFactory.NeedsNormals(material) != generatedNormals) ApplyProperties();
+            if (WaterMaterialFactory.NeedsFoam(material, "_FoamTex") != generatedSurfaceFoam
+                || WaterMaterialFactory.NeedsSwell(material) != generatedSwell) ApplyProperties();
             if (floorRenderer != null && floorRenderer.gameObject.activeSelf)
                 floorRenderer.transform.localPosition = new Vector3(0, surfaceY - material.GetFloat("_FloorDepth"), 0);
             if (blend >= 1f) return;
@@ -184,10 +184,10 @@ namespace NodeWar.View
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
             properties.SetFloat("_DetailFadeEnd", Mathf.Min(Padding + 6, WaterMaterialFactory.Runtime.GetFloat("_DetailFadeEnd")));
             Material material = surfaceRenderer.sharedMaterial;
-            generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex");
-            generatedNormals = WaterMaterialFactory.NeedsNormals(material);
-            if (generatedSurfaceFoam) properties.SetTexture("_SurfaceFoamTex", WaterMaterialFactory.SurfaceFoam());
-            if (generatedNormals) properties.SetTexture("_NormalsTex", WaterMaterialFactory.Normals());
+            generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
+            generatedSwell = WaterMaterialFactory.NeedsNormals(material);
+            if (generatedSurfaceFoam) properties.SetTexture("_FoamTex", WaterMaterialFactory.SurfaceFoam());
+            if (generatedSwell) properties.SetTexture("_SwellTex", WaterMaterialFactory.Swell());
             surfaceRenderer.SetPropertyBlock(properties);
             if (floorRenderer != null)
             {

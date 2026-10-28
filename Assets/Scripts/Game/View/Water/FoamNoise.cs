@@ -5,7 +5,7 @@ namespace NodeWar.View
     /// <summary>Periodic view-only Voronoi foam and gradient noise.</summary>
     public static class FoamNoise
     {
-        /// <summary>R/G are unthresholded F2-F1 edges, B is shore noise, A is opaque.</summary>
+        /// <summary>R is unthresholded F2-F1 edges, G/B are decorrelated fBm, A is opaque.</summary>
         public static byte[] BakeVoronoi(int size, int seed, int cells, double warp)
         {
             if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
@@ -19,7 +19,7 @@ namespace NodeWar.View
                     double u = (double)x / size, v = (double)y / size;
                     int at = (y * size + x) * 4;
                     rgba[at] = ToByte(Voronoi(u, v, seed, cells, warp));
-                    rgba[at + 1] = ToByte(Voronoi(u, v, seed + 101, cells + 4, warp * 1.5));
+                    rgba[at + 1] = ToByte((Fbm(u, v, seed + 101, 4, 3) - 0.5) * 2.5 + 0.5);
                     rgba[at + 2] = ToByte((Fbm(u, v, seed + 211, 4, 3) - 0.5) * 2.5 + 0.5);
                     rgba[at + 3] = 255;
                 }
@@ -53,23 +53,22 @@ namespace NodeWar.View
             return (h & 0xffff) / 65535.0;
         }
 
-        /// <summary>RGBA tangent normals for UnpackNormal (RGB or RG/AG); alpha stays one.</summary>
-        public static byte[] BakeNormals(int size, int seed)
+        // Derivatives are dh/du and dh/dv, packed as 0.5 + derivative / 32.
+        public const double DerivativeRange = 16;
+        public static byte[] BakeSwell(int size, int seed)
         {
             if (size <= 0) throw new ArgumentOutOfRangeException(nameof(size));
             var rgba = new byte[size * size * 4];
-            double delta = 1.0 / size;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                    rgba[(y * size + x) * 4] = ToByte(Fbm((double)x / size, (double)y / size, seed, 2, 3));
+            double Height(int x, int y) => rgba[(((y + size) % size) * size + (x + size) % size) * 4] / 255.0;
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
-                    double u = x * delta, v = y * delta;
-                    double nx = -(Fbm(u + delta, v, seed, 4, 2) - Fbm(u - delta, v, seed, 4, 2)) / (2 * delta) * 0.15;
-                    double ny = -(Fbm(u, v + delta, seed, 4, 2) - Fbm(u, v - delta, seed, 4, 2)) / (2 * delta) * 0.15;
-                    double inv = 1 / Math.Sqrt(nx * nx + ny * ny + 1);
                     int at = (y * size + x) * 4;
-                    rgba[at] = ToByte(nx * inv * 0.5 + 0.5);
-                    rgba[at + 1] = ToByte(ny * inv * 0.5 + 0.5);
-                    rgba[at + 2] = ToByte(inv * 0.5 + 0.5);
+                    rgba[at + 1] = ToByte(0.5 + (Height(x + 1, y) - Height(x - 1, y)) * size / (4 * DerivativeRange));
+                    rgba[at + 2] = ToByte(0.5 + (Height(x, y + 1) - Height(x, y - 1)) * size / (4 * DerivativeRange));
                     rgba[at + 3] = 255;
                 }
             return rgba;

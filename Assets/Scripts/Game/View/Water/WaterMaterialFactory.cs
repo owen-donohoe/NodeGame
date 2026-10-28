@@ -4,7 +4,7 @@ namespace NodeWar.View
 {
     public static class WaterMaterialFactory
     {
-        private static Texture2D surfaceFoam, normals;
+        private static Texture2D surfaceFoam, swell;
         private static Material fallback, runtime;
         private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
 
@@ -45,22 +45,22 @@ namespace NodeWar.View
             return texture == null || texture == Texture2D.blackTexture || texture.name == "black";
         }
 
-        public static bool NeedsNormals(Material material)
+        public static bool NeedsSwell(Material material)
         {
-            Texture texture = material.GetTexture("_NormalsTex");
-            return texture == null || texture == Texture2D.normalTexture || texture.name == "bump";
+            Texture texture = material.GetTexture("_SwellTex");
+            return texture == null || texture == Texture2D.blackTexture || texture.name == "black";
         }
 
         public static Texture2D SurfaceFoam()
         {
-            if (surfaceFoam == null) surfaceFoam = Bake("Water surface foam", FoamNoise.BakeVoronoi(512, 0x71ab, 6, 0.65), 512);
+            if (surfaceFoam == null) surfaceFoam = Bake("Water surface foam", FoamNoise.BakeVoronoi(256, 0x71ab, 6, 0.65));
             return surfaceFoam;
         }
 
-        public static Texture2D Normals()
+        public static Texture2D Swell()
         {
-            if (normals == null) normals = Bake("Water normals", FoamNoise.BakeNormals(256, 0x5e19));
-            return normals;
+            if (swell == null) swell = Bake("Water swell", FoamNoise.BakeSwell(256, 0x5e19));
+            return swell;
         }
 
         private static Texture2D Bake(string name, byte[] rgba, int size = 256)
@@ -84,8 +84,8 @@ namespace NodeWar.View
         private static void ResetTextures()
         {
             if (surfaceFoam != null) Object.Destroy(surfaceFoam);
-            if (normals != null) Object.Destroy(normals);
-            surfaceFoam = normals = null;
+            if (swell != null) Object.Destroy(swell);
+            surfaceFoam = swell = null;
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
             if (runtime != null) Release(runtime);

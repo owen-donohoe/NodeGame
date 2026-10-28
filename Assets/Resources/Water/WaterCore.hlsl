@@ -5,14 +5,14 @@
 
 TEXTURE2D(_ShoreTex); SAMPLER(sampler_ShoreTex);
 TEXTURE2D(_ShorePrevTex); SAMPLER(sampler_ShorePrevTex);
-TEXTURE2D(_SurfaceFoamTex); SAMPLER(sampler_SurfaceFoamTex);
-TEXTURE2D(_NormalsTex); SAMPLER(sampler_NormalsTex);
+TEXTURE2D(_FoamTex); SAMPLER(sampler_FoamTex);
+TEXTURE2D(_SwellTex); SAMPLER(sampler_SwellTex);
 CBUFFER_START(UnityPerMaterial)
 float4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 float4 _HorizonColor, _SurfaceFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
-float4 _SurfaceFoamTex_ST, _NormalsTex_ST;
+float4 _FoamTex_ST, _SwellTex_ST;
 float4 _BoardRect, _CrestColor, _LapColor;
 float _CrestSharpness;
 float _CrestStrength, _WaveScale;
@@ -94,7 +94,7 @@ Varyings WaterVertex(Attributes input)
     amplitudeSum += (_WaveC.z * _WaveC.w + _WaveD.z * _WaveD.w) * _WaveScale / 6.2831853;
     steepnessSum += _WaveC.z + _WaveD.z;
 #endif
-    float groupNoise = SAMPLE_TEXTURE2D_LOD(_SurfaceFoamTex, sampler_SurfaceFoamTex,
+    float groupNoise = SAMPLE_TEXTURE2D_LOD(_FoamTex, sampler_FoamTex,
         xz * _WaveGroupScale + _Time.y * _WaveGroupSpeed * float2(0.6, 0.8), 0).b;
     float groupAmount = lerp(1 - _WaveGroupStrength, 1 + _WaveGroupStrength, groupNoise);
     float waveScale = min(_WaveSteepnessScale * groupAmount, 0.95 / max(steepnessSum, 0.0001));
@@ -122,18 +122,18 @@ float3 WaterNormal(Varyings input)
     if (_WATER_MACRO_NORMALS)
     {
         float2 uv = input.positionWS.xz * _MacroNormalsScale + _Time.y * _NormalsSpeed * 0.2 * float2(0.6, -0.4);
-        float3 macro = UnpackNormal(SAMPLE_TEXTURE2D(_NormalsTex, sampler_NormalsTex, uv * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
+        float3 macro = float3((SAMPLE_TEXTURE2D(_SwellTex, sampler_SwellTex, uv * _SwellTex_ST.xy + _SwellTex_ST.zw).gb - 0.5) * -4.8, 1);
         normal = normalize(normal + float3(macro.x, 0, macro.y) * _MacroNormalsStrength * fade);
     }
     if (_WATER_DETAIL_NORMALS)
     {
         float2 uv = input.positionWS.xz * _NormalsScale;
-        float3 detail = UnpackNormal(SAMPLE_TEXTURE2D(_NormalsTex, sampler_NormalsTex,
-            (uv + _Time.y * _NormalsSpeed * float2(1, 0.63)) * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
+        float3 detail = float3((SAMPLE_TEXTURE2D(_SwellTex, sampler_SwellTex,
+            (uv + _Time.y * _NormalsSpeed * float2(1, 0.63)) * _SwellTex_ST.xy + _SwellTex_ST.zw).gb - 0.5) * -4.8, 1);
         if (_DetailNormalSamples > 1)
         {
-            float3 second = UnpackNormal(SAMPLE_TEXTURE2D(_NormalsTex, sampler_NormalsTex,
-                (uv * 1.71 + _Time.y * _NormalsSpeed * float2(-0.7, 1.2)) * _NormalsTex_ST.xy + _NormalsTex_ST.zw));
+            float3 second = float3((SAMPLE_TEXTURE2D(_SwellTex, sampler_SwellTex,
+                (uv * 1.71 + _Time.y * _NormalsSpeed * float2(-0.7, 1.2)) * _SwellTex_ST.xy + _SwellTex_ST.zw).gb - 0.5) * -4.8, 1);
             detail = normalize(float3(detail.xy + second.xy, detail.z * second.z));
         }
         detail = normalize(float3(detail.xy * _NormalsStrength * fade, detail.z));
@@ -181,8 +181,8 @@ half4 WaterFragment(Varyings input) : SV_Target
     if (true)
     {
         float2 uv = input.positionWS.xz * _ShoreNoiseScale;
-        noise = (SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, uv + _Time.y * _ShoreNoiseSpeed * float2(1, 0.7)).b
-            + SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, uv * 1.13 + _Time.y * _ShoreNoiseSpeed * float2(-0.6, 1)).b) * 0.5;
+        noise = (SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex, uv + _Time.y * _ShoreNoiseSpeed * float2(1, 0.7)).b
+            + SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex, uv * 1.13 + _Time.y * _ShoreNoiseSpeed * float2(-0.6, 1)).b) * 0.5;
         distance = max(0, distance + (noise - 0.5) * 2 * _ShoreNoiseAmount);
     }
     float alpha = 1;
@@ -225,14 +225,14 @@ half4 WaterFragment(Varyings input) : SV_Target
     float angle = _SurfaceFoamDirection * 6.2831853;
     float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
         + _Time.y * _SurfaceFoamSpeed * float2(cos(angle), sin(angle));
-    float surface = SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex,
-        DistortFoam(foamUV) * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
+    float surface = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
+        DistortFoam(foamUV) * _FoamTex_ST.xy + _FoamTex_ST.zw).r;
     float surfaceCoverage = FoamLine(surface, _SurfaceFoamWidth);
     if (_WATER_SECOND_FOAM_LAYER)
     {
         float2 uv = input.positionWS.xz * _SurfaceFoamTiling * 1.37 + _Time.y * _SurfaceFoamSpeed * 0.6 * float2(-0.71, 0.7);
-        float edge = SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex,
-            DistortFoam(uv) * _SurfaceFoamTex_ST.xy + _SurfaceFoamTex_ST.zw).r;
+        float edge = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
+            DistortFoam(uv) * _FoamTex_ST.xy + _FoamTex_ST.zw).r;
         surfaceCoverage = max(surfaceCoverage, FoamLine(edge, _SurfaceFoamWidth));
     }
     surfaceCoverage *= lerp(0.025, 1, detailFade);
