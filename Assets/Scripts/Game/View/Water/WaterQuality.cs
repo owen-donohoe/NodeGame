@@ -26,6 +26,7 @@ namespace NodeWar.View
 
         public static void Apply()
         {
+            GraphicsTierRenderer.Apply(Current);
             int features = Features;
             for (int i = 0; i < flags.Length; i++) SetKeyword(keywords[i], (features & (int)flags[i]) != 0);
             SetKeyword("_WATER_WAVES_NOISE", Waves == 1);

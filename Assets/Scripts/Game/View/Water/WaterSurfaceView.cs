@@ -187,7 +187,7 @@ namespace NodeWar.View
             properties.SetFloat("_DetailFadeEnd", Padding);
             Material material = surfaceRenderer.sharedMaterial;
             generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
-            generatedSwell = WaterMaterialFactory.NeedsNormals(material);
+            generatedSwell = WaterMaterialFactory.NeedsSwell(material);
             if (generatedSurfaceFoam) properties.SetTexture("_FoamTex", WaterMaterialFactory.SurfaceFoam());
             if (generatedSwell) properties.SetTexture("_SwellTex", WaterMaterialFactory.Swell());
             surfaceRenderer.SetPropertyBlock(properties);
