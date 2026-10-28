@@ -226,13 +226,15 @@ namespace NodeWar.View.Tests
         }
 
         [TestCase(0, 1)] [TestCase(1, 3)] [TestCase(2, 6)] [TestCase(3, 8)]
-        public void MeshCountsMatchTierAndOmitLand(int tier, int n)
+        public void MeshCountsMatchTierAndIncludeCoveredLand(int tier, int n)
         {
             Assert.AreEqual(n, WaterMeshBuilder.SubdivisionsForTier(tier));
             var m = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Land }, n, 0, 0);
-            Assert.AreEqual((n + 1) * (n + 1) * 3, m.positions.Length);
-            Assert.AreEqual(n * n * 6, m.indices.Length);
-            for (int i = 0; i < m.positions.Length; i += 3) Assert.LessOrEqual(m.positions[i], 0.5f);
+            Assert.AreEqual((2 * n + 1) * (n + 1) * 3, m.positions.Length);
+            Assert.AreEqual(2 * n * n * 6, m.indices.Length);
+                        var open = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Ocean }, n, 0, 0);
+            CollectionAssert.AreEqual(open.positions, m.positions);
+            CollectionAssert.AreEqual(open.indices, m.indices);
         }
 
         [TestCase(1, 1)] [TestCase(4, 1)] [TestCase(6, 1)] [TestCase(8, 1)]
@@ -263,4 +265,5 @@ namespace NodeWar.View.Tests
         }
     }
 }
+
 

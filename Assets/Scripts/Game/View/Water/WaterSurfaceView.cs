@@ -117,7 +117,11 @@ namespace NodeWar.View
             LastBakeMs = LastUploadMs = LastMeshMs = LastProbeMs = 0;
             System.Array.Copy(resolved, terrain, terrain.Length);
             requestVersion++;
-            RebuildMesh(resolved);
+            if (mesh == null)
+            {
+                meshPadding = Padding;
+                RebuildMesh(resolved);
+            }
             probeDirty = true;
             probeAfterSettled = true;
             StartBake();
@@ -402,6 +406,7 @@ namespace NodeWar.View
         }
     }
 }
+
 
 
 

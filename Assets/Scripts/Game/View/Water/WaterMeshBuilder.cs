@@ -30,12 +30,9 @@ namespace NodeWar.View
                 int a = Vertex(x0, z0), b = Vertex(x0, z1), c = Vertex(x1, z1), d = Vertex(x1, z0);
                 Triangle(a, b, c); Triangle(a, c, d);
             }
-            bool Water(int x, int z) => x >= 0 && x < cols && z >= 0 && z < rows && resolved[z * cols + x] != TerrainType.Land;
             for (int z = -padCells; z < rows + padCells; z++)
                 for (int x = -padCells; x < cols + padCells; x++)
                 {
-                    bool inside = x >= 0 && x < cols && z >= 0 && z < rows;
-                    if (inside && !Water(x, z)) continue;
                     int ox = x * lattice, oz = z * lattice;
                     // Padding carries waves too, so retain the same sampling density to the fade edge.
                     for (int v = 0; v < n; v++)
@@ -75,3 +72,4 @@ namespace NodeWar.View
         }
     }
 }
+
