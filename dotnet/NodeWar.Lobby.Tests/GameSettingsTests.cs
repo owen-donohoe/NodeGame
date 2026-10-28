@@ -137,6 +137,26 @@ namespace NodeWar.Lobby.Tests
             Assert.IsFalse(GameSettingsData.Differ(low, GameSettingsData.Normalized(low)));
         }
 
+        [Test]
+        public void RetiredWaterBitsAreMaskedWithoutChangingLiveFlags()
+        {
+            var stored = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 4);
+            stored.graphicsFeatures = 512 | 1024 | 4096 | (int)NodeWar.View.GraphicsFeature.LappingLines;
+            Assert.AreEqual((int)NodeWar.View.GraphicsFeature.LappingLines, GameSettingsData.Normalized(stored).graphicsFeatures);
+        }
+
+        [Test]
+        public void WaveModeCycleIncludesNoiseAndReturnsToOff()
+        {
+            int mode = 0;
+            foreach (int expected in new[] { 1, 2, 4, 0 })
+            {
+                mode = NodeWar.View.WaterFeatures.NextWaves(mode);
+                Assert.AreEqual(expected, mode);
+                Assert.AreEqual(mode, NodeWar.View.WaterFeatures.NormalizeWaves(mode));
+            }
+        }
+
         // ===== FRAME CAP =====
 
         [Test]

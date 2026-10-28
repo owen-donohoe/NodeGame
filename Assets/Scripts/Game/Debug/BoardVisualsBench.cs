@@ -134,13 +134,17 @@ namespace NodeWar.View
             GUILayout.EndHorizontal();
             GUILayout.Label($"Step seconds: {stepSeconds:F2}");
             stepSeconds = GUILayout.HorizontalSlider(stepSeconds, 0.05f, 3f);
-            if (GUILayout.Button("Waves: " + (WaterQuality.Waves == 0 ? "Off" : WaterQuality.Waves.ToString())))
+            GUILayout.Label("Waves: " + WaterFeatures.WaveName(WaterQuality.Waves));
+            GUILayout.BeginHorizontal();
+            foreach (int mode in new[] { 0, 1, 2, 4 })
             {
-                int waves = WaterFeatures.NextWaves(WaterQuality.Waves);
+                string label = mode == 0 ? "Off" : mode == 1 ? "Noise" : mode == 2 ? "G2" : "G4";
+                if (!GUILayout.Button(label)) continue;
                 SelectCustom();
-                WaterQuality.CustomWaves = waves;
+                WaterQuality.CustomWaves = mode;
                 WaterQuality.Apply();
             }
+            GUILayout.EndHorizontal();
             FeatureToggle(GraphicsFeature.Transparency, "Transparent shallows");
             FeatureToggle(GraphicsFeature.SurfaceFoamDistortion, "Foam ripple");
             FeatureToggle(GraphicsFeature.HorizonFresnel, "Horizon sheen");
@@ -151,10 +155,13 @@ namespace NodeWar.View
             FeatureToggle(GraphicsFeature.DetailNormals, "Detail ripples");
             FeatureToggle(GraphicsFeature.MacroNormals, "Large swells");
             FeatureToggle(GraphicsFeature.Reflections, "Reflections");
-            FeatureToggle(GraphicsFeature.LappingLines, "Lapping lines");
+            FeatureToggle(GraphicsFeature.LappingLines, "Swash lapping");
             FeatureToggle(GraphicsFeature.SecondFoamLayer, "Double foam");
             Material material = WaterMaterialFactory.Shared();
             GUILayout.Label("Waves");
+            MaterialSlider(material, "_NoiseWaveHeight", "Noise wave height", 0f, 1f);
+            MaterialSlider(material, "_NoiseWaveScale", "Noise wave scale", 0.002f, 0.15f);
+            MaterialSlider(material, "_NoiseWaveSpeed", "Noise wave speed", 0f, 0.1f);
             MaterialSlider(material, "_WaveScale", "Wave scale", 0.25f, 4f);
             MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 1.5f);
             MaterialSlider(material, "_WaveGroupStrength", "Wave group strength", 0f, 1f);
@@ -172,6 +179,7 @@ namespace NodeWar.View
             MaterialSlider(material, "_ShallowAlpha", "Shallow alpha", 0f, 1f);
             MaterialSlider(material, "_ClearDepth", "Clear depth (cells)", 0.01f, 3f);
             GUILayout.Label("Colour");
+            MaterialSlider(material, "_BodyNoiseAmount", "Body noise amount", 0f, 1f);
             MaterialSlider(material, "_BodyStepA", "Body step A", 0f, 1f);
             MaterialSlider(material, "_BodyStepB", "Body step B", 0f, 1f);
             MaterialSlider(material, "_ColorSteps", "Colour steps", 0f, 16f, true);
@@ -184,7 +192,9 @@ namespace NodeWar.View
             MaterialSlider(material, "_ShoreFoamColor", "Shore foam strength", 0f, 1f, false, true);
             MaterialSlider(material, "_SwashOpacity", "Swash opacity", 0f, 1f);
             MaterialSlider(material, "_SwashWidth", "Swash width", 0f, 0.3f);
-            MaterialSlider(material, "_SwashFrequency", "Swash frequency", 0.1f, 4f);
+            MaterialSlider(material, "_SwashRange", "Swash range (cells)", 0.01f, 3f);
+            MaterialSlider(material, "_SwashDesync", "Swash desync", 0f, 2f);
+            MaterialSlider(material, "_SwashWetStrength", "Swash wet strength", 0f, 1f);
             MaterialSlider(material, "_SwashSpeed", "Swash speed", 0f, 1f);
             MaterialSlider(material, "_SurfaceFoamWidth", "Surface foam width", 0f, 0.3f);
             MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);

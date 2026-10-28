@@ -99,9 +99,11 @@ namespace NodeWar.Lobby
         // ---- Display.
         /// <summary>Index into <see cref="FrameCapRates"/>. Presentation only; added in version 4.</summary>
         public int frameCap;
-        /// <summary>Low, Medium, High, Ultra. Presentation only; added in version 7.</summary>
+        /// <summary>Low, Medium, High, Ultra, Custom. Presentation only; added in version 7.</summary>
         public int graphicsQuality;
+        /// <summary>Custom feature mask; retired bits are cleared by Normalized. Added in version 8.</summary>
         public int graphicsFeatures;
+        /// <summary>Custom mode: 0 Off, 1 Noise, 2 Gerstner 2, 4 Gerstner 4. Version 8.</summary>
         public int waterWaves;
 
         // ---- Gameplay.
