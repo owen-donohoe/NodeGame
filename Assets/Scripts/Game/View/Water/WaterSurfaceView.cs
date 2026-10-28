@@ -3,12 +3,24 @@ using NodeWar.Simulation;
 using UnityEngine;
 using UnityEngine.Rendering;
 using System.Collections.Generic;
+using System.Diagnostics;
+using Unity.Profiling;
 
 namespace NodeWar.View
 {
     /// <summary>Owns the runtime water resources; terrain is copied, never modified.</summary>
     public sealed class WaterSurfaceView : MonoBehaviour
     {
+        private static readonly ProfilerMarker BakeMarker = new ProfilerMarker("Water.ShoreBake");
+        private static readonly ProfilerMarker UploadMarker = new ProfilerMarker("Water.ShoreUpload");
+        private static readonly ProfilerMarker MeshMarker = new ProfilerMarker("Water.MeshRebuild");
+        private static readonly ProfilerMarker ProbeMarker = new ProfilerMarker("Water.ProbeSubmit");
+        public static double LastBakeMs { get; private set; }
+        public static double LastUploadMs { get; private set; }
+        public static double LastMeshMs { get; private set; }
+        public static double LastProbeMs { get; private set; }
+        public static string PlacementTimings => $"Water ms: bake {LastBakeMs:F2}, upload {LastUploadMs:F2}, mesh {LastMeshMs:F2}, probe submit {LastProbeMs:F2}";
+        private static double Milliseconds(long start) => (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
         private int Padding => WaterFeatures.PaddingFor(WaterQuality.Current);
         private int meshPadding;
         private static readonly List<WaterSurfaceView> active = new List<WaterSurfaceView>();
@@ -89,7 +101,14 @@ namespace NodeWar.View
         public void SetTerrain(TerrainType[] resolved)
         {
             if (SameTerrain(resolved)) return;
-            ShoreFieldData field = ShoreField.Bake(cols, rows, resolved);
+            LastBakeMs = LastUploadMs = LastMeshMs = LastProbeMs = 0;
+            long bakeStart = Stopwatch.GetTimestamp();
+            ShoreFieldData field;
+            using (BakeMarker.Auto()) field = ShoreField.Bake(cols, rows, resolved);
+            LastBakeMs = Milliseconds(bakeStart);
+            long uploadStart = Stopwatch.GetTimestamp();
+            using (UploadMarker.Auto())
+            {
             var texture = new Texture2D(field.width, field.height, TextureFormat.RGBA32, false, true)
             {
                 name = "Water shore field", filterMode = FilterMode.Bilinear, wrapMode = TextureWrapMode.Clamp
@@ -117,6 +136,8 @@ namespace NodeWar.View
                 1f / (field.width * field.worldPerTexel * scale), 1f / (field.height * field.worldPerTexel * scale));
             ApplyProperties();
 
+            }
+            LastUploadMs = Milliseconds(uploadStart);
             RebuildMesh(resolved);
             terrain = (TerrainType[])resolved.Clone();
             probeDirty = true;
@@ -126,6 +147,9 @@ namespace NodeWar.View
 
         private void RebuildMesh(TerrainType[] resolved)
         {
+            long started = Stopwatch.GetTimestamp();
+            using (MeshMarker.Auto())
+            {
             var data = WaterMeshBuilder.Build(cols, rows, resolved, subdivisions, Padding, skirtCells);
             var vertices = new Vector3[data.positions.Length / 3];
             for (int i = 0; i < vertices.Length; i++)
@@ -143,6 +167,8 @@ namespace NodeWar.View
             filter.sharedMesh = nextMesh;
             Release(mesh);
             mesh = nextMesh;
+            }
+            LastMeshMs = Milliseconds(started);
         }
 
         private bool SameTerrain(TerrainType[] resolved)
@@ -285,17 +311,25 @@ namespace NodeWar.View
             surfaceRenderer.reflectionProbeUsage = ReflectionProbeUsage.Simple;
         }
 
+        private void SubmitProbe()
+        {
+            long started = Stopwatch.GetTimestamp();
+            using (ProbeMarker.Auto()) reflectionProbe.RenderProbe();
+            LastProbeMs = Milliseconds(started);
+            UnityEngine.Debug.Log(PlacementTimings, this);
+        }
+
         private void LateUpdate()
         {
             if (reflectionProbe == null || !reflectionProbe.isActiveAndEnabled || terrain == null) return;
             if (probeDirty)
             {
-                reflectionProbe.RenderProbe();
+                SubmitProbe();
                 probeDirty = false;
             }
             else if (probeAfterSettled && blend >= 1f && (boardView == null || boardView.PlinthsSettled))
             {
-                reflectionProbe.RenderProbe();
+                SubmitProbe();
                 probeAfterSettled = false;
             }
         }
@@ -314,4 +348,5 @@ namespace NodeWar.View
         }
     }
 }
+
 

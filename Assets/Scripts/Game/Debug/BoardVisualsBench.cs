@@ -28,6 +28,8 @@ namespace NodeWar.View
         private Vector2 panelScroll;
         private float frameSeconds, frameSum;
         private int frameCount;
+        private readonly Queue<Vector2> recentFrames = new Queue<Vector2>();
+        private float worstFrameMs;
 
         private void Start() => ReplayDraft();
 
@@ -74,6 +76,10 @@ namespace NodeWar.View
 #elif ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.F1)) panelVisible = !panelVisible;
 #endif
+            recentFrames.Enqueue(new Vector2(Time.unscaledTime, Time.unscaledDeltaTime * 1000f));
+            while (recentFrames.Count > 0 && recentFrames.Peek().x < Time.unscaledTime - 2f) recentFrames.Dequeue();
+            worstFrameMs = 0;
+            foreach (Vector2 frame in recentFrames) worstFrameMs = Mathf.Max(worstFrameMs, frame.y);
             frameSum += Time.unscaledDeltaTime;
             frameCount++;
             if (frameSum >= 0.5f)
@@ -116,6 +122,8 @@ namespace NodeWar.View
             GUILayout.BeginArea(new Rect(12, 12, 330, Mathf.Max(120, Mathf.Min(Screen.height - 24, 740))), GUI.skin.box);
             panelScroll = GUILayout.BeginScrollView(panelScroll);
             GUILayout.Label($"Water tuning (F1)   {frameSeconds * 1000f:F2} ms");
+            GUILayout.Label($"Worst frame (2 s): {worstFrameMs:F2} ms");
+            GUILayout.Label(WaterSurfaceView.PlacementTimings);
             GUILayout.BeginHorizontal();
             string[] tiers = { "Low", "Medium", "High", "Ultra", "Custom" };
             for (int i = 0; i < tiers.Length; i++)
@@ -343,3 +351,4 @@ namespace NodeWar.View
         private void OnDestroy() => ReleaseBoard();
     }
 }
+
