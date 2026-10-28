@@ -5,7 +5,7 @@ namespace NodeWar.View
     public static class WaterMaterialFactory
     {
         private static Texture2D surfaceFoam, swell;
-        private static Material fallback, runtime;
+        private static Material fallback, runtime, far;
         private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
 
         public static Material ForQuality(int features, int waves, int tier)
@@ -27,6 +27,19 @@ namespace NodeWar.View
             // Render state belongs to this runtime copy; bench edits deliberately target Shared().
             runtime = new Material(Shared()) { name = "NodeWarWater runtime", hideFlags = HideFlags.HideAndDontSave };
             return runtime;
+        }
+
+        public static Material Far()
+        {
+            if (far == null) far = new Material(Resources.Load<Shader>("Water/WaterFar")) { name = "Water far ocean", hideFlags = HideFlags.HideAndDontSave };
+            Material source = Runtime;
+            far.SetColor("_OceanDeepColor", source.GetColor("_OceanDeepColor"));
+            far.SetColor("_HorizonColor", source.GetColor("_HorizonColor"));
+            far.SetFloat("_HorizonDistance", source.GetFloat("_HorizonDistance"));
+            far.SetFloat("_ReflectionMin", source.GetFloat("_ReflectionMin"));
+            far.SetFloat("_ReflectionStrength", source.GetFloat("_ReflectionStrength"));
+            far.SetFloat("_HorizonEnabled", WaterQuality.Has(GraphicsFeature.HorizonFresnel) ? 1 : 0);
+            return far;
         }
 
         public static Material Shared()
@@ -88,6 +101,8 @@ namespace NodeWar.View
             surfaceFoam = swell = null;
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
+            if (far != null) Release(far);
+            far = null;
             if (runtime != null) Release(runtime);
             runtime = null;
             runtimeFeatures = runtimeWaves = runtimeTier = -1;

@@ -19,6 +19,7 @@ Shader "NodeWar/Water"
         _SurfaceFoamDirection("Surface foam direction (turns)", Range(0,1)) = 0.09
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
         _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.06
+        [HideInInspector] _FoamDistortionQuality("Distortion sine count", Float) = 9
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
@@ -97,6 +98,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
+            #pragma multi_compile_local _ _WATER_LITE
             #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
@@ -122,6 +124,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepth
+            #pragma multi_compile_local _ _WATER_LITE
             #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
@@ -145,6 +148,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepthNormals
+            #pragma multi_compile_local _ _WATER_LITE
             #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION

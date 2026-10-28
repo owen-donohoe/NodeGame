@@ -32,6 +32,9 @@ namespace NodeWar.View
             SetKeyword("_WATER_WAVES_2", Waves == 2);
             SetKeyword("_WATER_WAVES_4", Waves == 4);
             Material material = WaterMaterialFactory.ForQuality(features, Waves, Current);
+            if (Current == 0) material.EnableKeyword("_WATER_LITE"); else material.DisableKeyword("_WATER_LITE");
+            material.SetFloat("_FoamDistortionQuality", Current == 1 ? 2 : 9);
+            material.SetFloat("_Hardness", 0); // Broad, soft specular on every full tier.
             bool transparent = Has(GraphicsFeature.Transparency);
             material.SetFloat("_SrcBlend", (float)(transparent ? BlendMode.SrcAlpha : BlendMode.One));
             material.SetFloat("_DstBlend", (float)(transparent ? BlendMode.OneMinusSrcAlpha : BlendMode.Zero));
@@ -39,6 +42,7 @@ namespace NodeWar.View
             material.SetFloat("_DetailNormalSamples", Current == 3 ? 2 : 1);
             material.renderQueue = (int)(transparent ? RenderQueue.Transparent : RenderQueue.Geometry);
             material.SetOverrideTag("RenderType", transparent ? "Transparent" : "Opaque");
+            WaterMaterialFactory.Far();
             PlinthFactory.ApplyTransparency(transparent);
             WaterSurfaceView.RefreshActive();
         }

@@ -15,6 +15,25 @@ namespace NodeWar.View.Tests
             var mesh = WaterMeshBuilder.Build(10, 10, terrain, WaterMeshBuilder.SubdivisionsForTier(tier), WaterFeatures.PaddingFor(tier), 40);
             Assert.AreEqual(count, mesh.positions.Length / 3);
         }
+        [Test]
+        public void FarSubmeshBeginsExactlyAtPaddingEdge()
+        {
+            var m = WaterMeshBuilder.Build(2, 2, new[] { TerrainType.Ocean, TerrainType.Lake, TerrainType.DeepLake, TerrainType.Land }, 3, 6, 40);
+            Assert.AreEqual(m.indices.Length, m.nearIndices.Length + m.farIndices.Length);
+            CollectionAssert.AreEqual(m.nearIndices, new ArraySegment<int>(m.indices, 0, m.nearIndices.Length));
+            CollectionAssert.AreEqual(m.farIndices, new ArraySegment<int>(m.indices, m.nearIndices.Length, m.farIndices.Length));
+            foreach (int id in m.farIndices)
+            {
+                float x = m.positions[id * 3], z = m.positions[id * 3 + 2];
+                Assert.IsTrue(x <= -6.5f || x >= 7.5f || z <= -6.5f || z >= 7.5f, "Far vertices must be on or beyond the fade boundary.");
+            }
+            foreach (int id in m.nearIndices)
+            {
+                Assert.That(m.positions[id * 3], Is.InRange(-6.5f, 7.5f));
+                Assert.That(m.positions[id * 3 + 2], Is.InRange(-6.5f, 7.5f));
+            }
+        }
+
         [TestCase(TerrainType.Lake)] [TestCase(TerrainType.DeepLake)]
         public void BodyMixIsMonotonicSymmetricAndClamped(TerrainType lake)
         {

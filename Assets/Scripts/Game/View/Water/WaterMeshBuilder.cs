@@ -7,7 +7,7 @@ namespace NodeWar.View
     {
         public static int SubdivisionsForTier(int tier, float waveScale = 1f, float cellSize = 6f) => WaterFeatures.SubdivisionsFor(tier, WaterFeatures.WavesFor(tier), waveScale, cellSize);
 
-        public static (float[] positions, int[] indices) Build(int cols, int rows, TerrainType[] resolved,
+        public static (float[] positions, int[] indices, int[] nearIndices, int[] farIndices) Build(int cols, int rows, TerrainType[] resolved,
             int subdivisionsPerCell, int padCells, int skirtCells)
         {
             ShoreField.Validate(cols, rows, resolved, subdivisionsPerCell, padCells);
@@ -46,6 +46,7 @@ namespace NodeWar.View
                             Triangle(a, b, c); Triangle(a, c, d);
                         }
                 }
+            int nearCount = indices.Count;
             if (skirtCells > padCells)
             {
                 int left = -padCells * lattice, right = (cols + padCells) * lattice;
@@ -70,7 +71,7 @@ namespace NodeWar.View
                 Quad(outerLeft, top, left, outerTop);
                 Quad(right, top, outerRight, outerTop);
             }
-            return (positions.ToArray(), indices.ToArray());
+            return (positions.ToArray(), indices.ToArray(), indices.GetRange(0, nearCount).ToArray(), indices.GetRange(nearCount, indices.Count - nearCount).ToArray());
         }
     }
 }

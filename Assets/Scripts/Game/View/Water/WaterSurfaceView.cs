@@ -52,7 +52,7 @@ namespace NodeWar.View
         private void RefreshQuality()
         {
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
-            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
+            surfaceRenderer.sharedMaterials = new[] { WaterMaterialFactory.Runtime, WaterMaterialFactory.Far() };
             ApplyProperties();
             int next = WaterFeatures.SubdivisionsFor(WaterQuality.Current, WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             RefreshProbe();
@@ -131,7 +131,9 @@ namespace NodeWar.View
                 vertices[i] = new Vector3(data.positions[i * 3] * scale, surfaceY, data.positions[i * 3 + 2] * scale);
             var nextMesh = new Mesh { name = "Water surface", indexFormat = IndexFormat.UInt32 };
             nextMesh.vertices = vertices;
-            nextMesh.triangles = data.indices;
+            nextMesh.subMeshCount = 2;
+            nextMesh.SetTriangles(data.nearIndices, 0);
+            nextMesh.SetTriangles(data.farIndices, 1);
             nextMesh.RecalculateBounds();
             // Recalculated bounds include the whole skirt; expand further for GPU Gerstner displacement.
             Bounds bounds = nextMesh.bounds;
@@ -182,7 +184,7 @@ namespace NodeWar.View
             properties.SetVector("_BoardRect", new Vector4(min.x, min.z, max.x, max.z));
             properties.SetFloat("_CellSize", scale);
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
-            properties.SetFloat("_DetailFadeEnd", Mathf.Min(Padding + 6, WaterMaterialFactory.Runtime.GetFloat("_DetailFadeEnd")));
+            properties.SetFloat("_DetailFadeEnd", Padding);
             Material material = surfaceRenderer.sharedMaterial;
             generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
             generatedSwell = WaterMaterialFactory.NeedsNormals(material);
