@@ -15,8 +15,10 @@ namespace NodeWar.View
         [SerializeField] private float stepSeconds = 0.8f;
         [SerializeField] private bool autoReplay = true;
         [SerializeField] private bool frameCamera = true;
+        [SerializeField] private bool includeDeepLake = true;
 
         private BoardConfig runtimeConfig;
+        private BoardConfigData runtimeBoard;
         private BoardTerrainView view;
         private DraftPlacement[] sample;
         private readonly List<DraftPlacement> placed = new List<DraftPlacement>();
@@ -55,10 +57,14 @@ namespace NodeWar.View
             // Match GameManager's Create(config) path without editing the shared config asset.
             runtimeConfig = Instantiate(boardConfig);
             runtimeConfig.nodeScale = boardConfig.nodeScale * Mathf.Max(0.01f, nodeScale);
-            view = BoardTerrainView.Create(runtimeConfig);
+            runtimeBoard = runtimeConfig.Data;
+            if (includeDeepLake) runtimeBoard = BoardVisualsBenchDraft.IncludeDeepLake(runtimeBoard);
+            var boardObject = new GameObject("BoardTerrainView");
+            view = boardObject.AddComponent<BoardTerrainView>();
+            view.Build(runtimeBoard, runtimeConfig.nodeScale);
             view.transform.SetParent(transform, true);
             sample = BoardVisualsBenchDraft.Create();
-            occupied = new bool[runtimeConfig.Data.gridCols * runtimeConfig.Data.gridRows];
+            occupied = new bool[runtimeBoard.gridCols * runtimeBoard.gridRows];
             placed.Clear();
             next = 0;
             elapsed = 0f;
@@ -106,7 +112,7 @@ namespace NodeWar.View
                 return;
             }
             DraftPlacement placement = sample[next++];
-            BoardConfigData board = runtimeConfig.Data;
+            BoardConfigData board = runtimeBoard;
             if (PlacementLegality.CanPlace(board, occupied, placement.districtType, placement.gridX, placement.gridZ))
             {
                 occupied[placement.gridZ * board.gridCols + placement.gridX] = true;
@@ -316,7 +322,7 @@ namespace NodeWar.View
         {
             Camera camera = Camera.main;
             if (camera == null) return;
-            BoardConfigData board = runtimeConfig.Data;
+            BoardConfigData board = runtimeBoard;
             float scale = runtimeConfig.nodeScale;
             Vector3 centre = new Vector3((board.gridCols - 1) * scale * 0.5f, 0f, (board.gridRows - 1) * scale * 0.5f);
             float radius = Mathf.Sqrt(board.gridCols * board.gridCols + board.gridRows * board.gridRows) * scale * 0.5f;
@@ -351,4 +357,5 @@ namespace NodeWar.View
         private void OnDestroy() => ReleaseBoard();
     }
 }
+
 
