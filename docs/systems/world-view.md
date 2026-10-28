@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 1c42739e1decb37891c6d57fe53d26388c42ad39
+verified: 33ad3190
 ---
 
 # World view
@@ -53,7 +53,7 @@ Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers
 Rendering and effects never mutate simulation. Tick logs are reused output; retain copies only. Walking/routes share curve shape and leg boundaries. Interpolation anchors to `movePath[movePathIndex]`, including reversal, never a guessed sprite position. Hidden enemy route tails cannot influence visible grouping. Outline priority and ID lifecycle remain deterministic presentation contracts.
 
 ## How it works
-State supplies conditions; `TickSimulated` supplies per-tick moments. HP decreases flash; fighting cooldown resets swing the Billboard child. First observation, respawn and combat entry/exit do not swing. Reduced motion disables swing.
+State supplies conditions; `TickSimulated` supplies per-tick moments. HP decreases flash; fighting cooldown resets swing the Billboard child. Reduced motion disables swing.
 
 Sprites default to 20-degree pitch, while canvases/floor items stay untilted. Camera POV changes billboard facing and horizontal CustomAxis; node/draft art uses SortingGroups, internal order `height * 256 + depth rank`, ties by index. Recompute on POV/art changes rather than every frame; ground moves to its own group.
 
@@ -63,13 +63,13 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water owns meshes, blended fields and a transparency-only floor; reduced motion snaps the 0.4-second blend. `WaterMaterialFactory` copies assets into runtime materials and caches fallback textures. Shore RG encode land distance/damping; A mixes bodies over one cell; B selects the lake palette. Grouped waves scale wavelength/amplitude with clamped steepness and local land clearance. Crests/whitecaps follow height/compression. Wave/detail fades converge on far ocean; forward/depth passes agree.
+Water owns blended fields, meshes and floor; reduced motion snaps the 0.4-second blend. Shore R encodes distance, G static swash phase, B lake palette and A body mix. Textures hold swell height/derivatives and foam/noise. Shared-fetch noise breaks depth/body bands; solid shore foam precedes phased swash. Noise/Gerstner waves share damping, clearance and fades; crests only lighten. Far submesh uses fetch-free vertex fresnel matching the seam. PC SSAO requires DepthNormals.
 
-`WaterFeatures` defines presets, scale-aware density and padding. `WaterQuality.Apply()` sets features, runtime render state, plinth blocks, floor and probes. `RefreshAll` preserves blends; Custom selects flags and 0/2/4 waves. Water sorts at -10 before runtime cue materials. High/Ultra probes capture changed terrain and settled plinths.
+`WaterFeatures` defines budgets and Off/Noise/Gerstner 2/4 modes. Low compiles optional paths out. `WaterQuality.Apply()` refreshes water, plinths, floor, probes and `GraphicsTierRenderer`'s runtime URP clone; HDR stays authored for bloom. `RefreshAll` preserves blends. Tuning copies migrate shipped defaults without asset writes. Water sorts at -10; High/Ultra probes capture terrain and settled plinths.
 
 Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
 
-`BoardVisualsBench` replays drafting/shoals without simulation. Its scrolling F1 panel groups asset sliders/reset, presets/Custom, replay/pause and frame time. Inspector controls spacing/framing.
+`BoardVisualsBench` replays drafting/shoals without simulation. Its scrolling F1 panel groups runtime sliders/reset, presets/Custom, replay/pause and frame time.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
@@ -85,4 +85,4 @@ Per-tick state diffs miss damage cancelled by healing. Multiple visual systems n
 - Add outlines: use driver intents and test priority, ID release/reuse and both renderer assets.
 
 ## Tests
-`NodeWar.View.Tests` covers presentation maths, shore encoding/body blends, mesh seams/counts, texture bakes, wave clearance/density, fold coverage and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
+`NodeWar.View.Tests` covers presentation maths, shore encoding/body blends, mesh seams/counts, texture bakes, wave clearance/density, swell derivatives, swash phase and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
