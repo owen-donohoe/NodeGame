@@ -29,6 +29,9 @@ namespace NodeWar.View
                 runtime.hideFlags = HideFlags.HideAndDontSave;
                 QualitySettings.renderPipeline = runtime;
                 Application.quitting += Release;
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.playModeStateChanged += OnPlayModeChanged;
+#endif
             }
             // Custom uses High's renderer budget; its controls customise water features only.
             int budget = tier == 4 ? 2 : tier;
@@ -38,10 +41,20 @@ namespace NodeWar.View
             // Preserve authored HDR: SampleSceneProfile enables Bloom (0.25) and tonemapping.
         }
 
+#if UNITY_EDITOR
+        private static void OnPlayModeChanged(UnityEditor.PlayModeStateChange state)
+        {
+            if (state == UnityEditor.PlayModeStateChange.ExitingPlayMode) Release();
+        }
+#endif
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Release()
         {
             Application.quitting -= Release;
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+#endif
             if (runtime == null) return;
             if (QualitySettings.renderPipeline == runtime) QualitySettings.renderPipeline = originalQualityAsset;
             if (Application.isPlaying) Object.Destroy(runtime);
