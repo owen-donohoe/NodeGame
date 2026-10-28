@@ -24,11 +24,11 @@ namespace NodeWar.View
     {
         public const int All = 32767 & ~(4096 | 512 | 1024); // Retired caustics bit stays reserved.
         private const GraphicsFeature Medium = GraphicsFeature.Transparency | GraphicsFeature.SurfaceFoamDistortion
-            | GraphicsFeature.HorizonFresnel | GraphicsFeature.Specular | GraphicsFeature.CrestColour
+            | GraphicsFeature.Specular | GraphicsFeature.CrestColour
             | GraphicsFeature.Dither | GraphicsFeature.MacroNormals | GraphicsFeature.LappingLines;
-        private const GraphicsFeature High = Medium | GraphicsFeature.Shadows | GraphicsFeature.DetailNormals
+        private const GraphicsFeature High = Medium | GraphicsFeature.HorizonFresnel | GraphicsFeature.Shadows | GraphicsFeature.DetailNormals
             | GraphicsFeature.MacroNormals | GraphicsFeature.Reflections | GraphicsFeature.LappingLines;
-        public static int FeaturesFor(int preset) => preset == 0 ? (int)(GraphicsFeature.HorizonFresnel | GraphicsFeature.LappingLines) : preset == 1 ? (int)Medium : preset == 3 ? All : (int)High;
+        public static int FeaturesFor(int preset) => preset == 0 ? (int)GraphicsFeature.LappingLines : preset == 1 ? (int)Medium : preset == 3 ? All : (int)High;
         public static int WavesFor(int preset) => preset == 0 ? 0 : preset == 1 ? 1 : 4;
         public static int PaddingFor(int tier) => tier == 0 ? 4 : tier == 1 ? 6 : 10;
         // Preset tessellation; unusually small Gerstner scales increase density to avoid aliasing.

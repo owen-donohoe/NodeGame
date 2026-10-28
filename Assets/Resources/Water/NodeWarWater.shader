@@ -18,7 +18,7 @@ Shader "NodeWar/Water"
         _SurfaceFoamTiling("Surface foam tiling", Float) = 0.05
         _SurfaceFoamDirection("Surface foam direction (turns)", Range(0,1)) = 0.09
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
-        _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.07
+        _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.08
         [HideInInspector] _FoamDistortionQuality("Distortion sine count", Float) = 9
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
@@ -42,10 +42,10 @@ Shader "NodeWar/Water"
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
         _SwashDesync("Swash desync", Float) = 1
         _SwashWetStrength("Swash wet strength", Range(0,1)) = 0.15
-        _SwashSpeed("Swash speed", Float) = 0.25
+        _SwashSpeed("Swash speed", Float) = 0.07
         _SwashRange("Swash range (cells)", Float) = 1.2
-        _SwashWidth("Swash width", Float) = 0.08
-        _SwashOpacity("Swash opacity", Range(0,1)) = 0.85
+        _SwashWidth("Swash width", Float) = 0.05
+        _SwashOpacity("Swash opacity", Range(0,1)) = 0.5
         _SwashColor("Swash colour", Color) = (0.909804,0.956863,1,1)
         _CellSize("Cell size", Float) = 6
         _BoardRect("Board bounds", Vector) = (-3,-3,3,3)
@@ -62,7 +62,7 @@ Shader "NodeWar/Water"
         _WaveSpeed("Wave speed", Float) = 1
         _WaveSteepnessScale("Wave steepness scale", Range(0,1.5)) = 1
         _WaveScale("Wave scale", Range(0.25,4)) = 1.0
-        _ShoreWaveDamping("Shore wave damping", Range(0,3)) = 1
+        _ShoreWaveDamping("Shore wave damping", Range(0,3)) = 0.6
         _ShoreMaxAmplitude("Shore maximum amplitude", Float) = 0.35
         _ShoreCalmDistance("Shore calm distance (cells)", Float) = 1.5
         _WaveGroupScale("Wave group scale", Float) = 0.012

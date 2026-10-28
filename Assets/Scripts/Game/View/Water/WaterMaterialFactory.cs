@@ -66,6 +66,11 @@ namespace NodeWar.View
                     if (fallback.GetVector(property) == previous)
                         fallback.SetVector(property, defaults.GetVector(property));
                 }
+                MigrateFloat("_SwashSpeed", 0.25f);
+                MigrateFloat("_SwashOpacity", 0.85f);
+                MigrateFloat("_SwashWidth", 0.08f);
+                MigrateFloat("_SurfaceFoamWidth", 0.07f);
+                MigrateFloat("_ShoreWaveDamping", 1f);
                 MigrateFloat("_WaveScale", 1.5f);
                 MigrateFloat("_BodyStepA", 0.25f);
                 MigrateFloat("_BodyStepB", 0.6f);
