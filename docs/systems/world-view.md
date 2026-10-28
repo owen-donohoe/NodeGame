@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: b4ab7762
+verified: 939a2475
 ---
 
 # World view
@@ -63,9 +63,9 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water owns blended fields, meshes and floor; reduced motion snaps the 0.4-second blend. Shore R encodes distance, G static swash phase, B lake palette and A body mix. Textures hold swell height/derivatives and foam/noise. Shared-fetch noise breaks depth/body bands; solid shore foam precedes phased swash. Noise/Gerstner waves share damping, clearance and fades; crests only lighten. Far submesh uses fetch-free vertex fresnel matching the seam. PC SSAO requires DepthNormals.
+Water owns fields/meshes/floor; reduced motion snaps its 0.4-second blend. Shore R=distance, G=swash phase, A=inward mix from nearest shallower body. B=0 ocean, 255 lake-from-ocean, 128 deep-from-lake, 64 deep-from-ocean. Texel-centre body sampling contains noise/steps. Textures hold swell height/derivatives and foam/noise; shore foam precedes swash. Waves share damping/clearance/fades; Gerstner follows wind/spread with staggered phases. Crests only lighten. Far fresnel matches the seam; SSAO needs DepthNormals.
 
-`WaterFeatures` defines budgets and Off/Noise/Gerstner 2/4 modes. Low compiles optional paths out. `WaterQuality.Apply()` refreshes water, plinths, floor, probes and `GraphicsTierRenderer`'s runtime URP clone; HDR stays authored for bloom. `RefreshAll` preserves blends. Tuning copies migrate shipped defaults without asset writes. Water sorts at -10; High/Ultra probes capture terrain and settled plinths.
+`WaterFeatures` defines budgets and Off/Noise/Gerstner 2/4 modes. Low compiles optional paths out. Low/Medium disable horizon sheen; Custom can enable it. `WaterQuality.Apply()` refreshes water, plinths, floor, probes and `GraphicsTierRenderer`'s runtime URP clone; HDR stays authored for bloom. `RefreshAll` preserves blends. Tuning migrates defaults without asset writes. Water sorts at -10; High/Ultra probes capture terrain and settled plinths.
 
 Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
 
