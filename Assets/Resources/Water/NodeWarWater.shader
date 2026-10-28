@@ -36,6 +36,8 @@ Shader "NodeWar/Water"
         _ShallowAlpha("Shallow alpha", Range(0,1)) = 0.35
         _ClearDepth("Clear depth (cells)", Float) = 0.8
         _FloorDepth("Floor depth (world units)", Float) = 1.2
+        _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.12
+        _ShoreFoamColor("Shore foam (alpha = strength)", Color) = (1,1,1,1)
         _BodyNoiseAmount("Body noise amount", Float) = 0.25
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
         _SwashDesync("Swash desync", Float) = 1

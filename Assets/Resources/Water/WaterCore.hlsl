@@ -10,7 +10,8 @@ TEXTURE2D(_SwellTex); SAMPLER(sampler_SwellTex);
 CBUFFER_START(UnityPerMaterial)
 half4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 half4 _DeepLakeShallowColor, _DeepLakeDeepColor;
-half4 _HorizonColor, _SurfaceFoamColor, _SpecularColor;
+half4 _HorizonColor, _SurfaceFoamColor, _SpecularColor, _ShoreFoamColor;
+float _ShoreFoamWidth;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _FoamTex_ST, _SwellTex_ST;
 float4 _BoardRect, _CrestColor, _SwashColor;
@@ -276,6 +277,10 @@ half4 WaterFragment(Varyings input) : SV_Target
     surfaceCoverage *= detailFade;
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
+    half shoreAA = max(fwidth(distance), 0.0001h);
+    half shoreCoverage = (1 - smoothstep(_ShoreFoamWidth - shoreAA, _ShoreFoamWidth + shoreAA, distance)) * detailFade;
+    color = lerp(color, _ShoreFoamColor.rgb, saturate(shoreCoverage * _ShoreFoamColor.a));
+    alpha = max(alpha, shoreCoverage * _ShoreFoamColor.a);
     if (_WATER_LAPPING_LINES)
     {
         float cycle = frac(_Time.y * _SwashSpeed + shore.g * _SwashDesync);

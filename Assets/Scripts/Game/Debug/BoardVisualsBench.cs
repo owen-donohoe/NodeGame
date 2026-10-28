@@ -180,6 +180,8 @@ namespace NodeWar.View
             MaterialSlider(material, "_ReflectionStrength", "Reflection strength", 0f, 1f);
             MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
             GUILayout.Label("Foam");
+            MaterialSlider(material, "_ShoreFoamWidth", "Shore foam width", 0f, 1f);
+            MaterialSlider(material, "_ShoreFoamColor", "Shore foam strength", 0f, 1f, false, true);
             MaterialSlider(material, "_SwashOpacity", "Swash opacity", 0f, 1f);
             MaterialSlider(material, "_SwashWidth", "Swash width", 0f, 0.3f);
             MaterialSlider(material, "_SwashFrequency", "Swash frequency", 0.1f, 4f);
