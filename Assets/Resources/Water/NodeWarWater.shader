@@ -6,8 +6,8 @@ Shader "NodeWar/Water"
         _OceanDeepColor("Ocean deep", Color) = (0.180392,0.164706,0.419608,1)
         _LakeShallowColor("Lake shallow", Color) = (0.603922,0.839216,0.949020,1)
         _LakeDeepColor("Lake deep", Color) = (0.243137,0.560784,0.819608,1)
-        _DeepLakeShallowColor("Deep lake shallow", Color) = (0.243137,0.560784,0.819608,1)
-        _DeepLakeDeepColor("Deep lake deep", Color) = (0.243137,0.560784,0.819608,1)
+        _DeepLakeShallowColor("Deep lake shallow", Color) = (0.427922,0.653804,0.759216,1)
+        _DeepLakeDeepColor("Deep lake deep", Color) = (0.102274,0.407215,0.655686,1)
         _DepthRange("Depth range (cells)", Float) = 2
         _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 6
         _BodyStepA("Body blend step A", Range(0,1)) = 0.30

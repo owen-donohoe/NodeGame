@@ -37,11 +37,13 @@ namespace NodeWar.View
             Validate(cols, rows, resolved, texelsPerCell, padCells);
             if (blendCells <= 0) throw new ArgumentOutOfRangeException(nameof(blendCells));
             var ocean = new List<int>();
+            var lakes = new List<int>();
 
             var land = new List<int>();
             for (int i = 0; i < resolved.Length; i++)
                 if (resolved[i] == TerrainType.Land) land.Add(i);
                 else if (resolved[i] == TerrainType.Ocean) ocean.Add(i);
+                else if (resolved[i] != TerrainType.DeepLake) lakes.Add(i);
 
             var field = new ShoreFieldData
             {
@@ -77,7 +79,8 @@ namespace NodeWar.View
                     field.rgba[at] = Encode(distance / 3);
                     field.rgba[at + 2] = WaterBodyOf(terrain);
                     // R: land distance; G: static swash phase; B: own body ID.
-                    // A: ocean-to-lake mix, entirely inside the lake.
+                    // A: ramp from nearest shallower body into this body, never outside it.
+                    // B: 0 ocean, 255 lake from ocean, 128 deep from lake, 64 deep from ocean.
                     bool isLake = terrain != TerrainType.Ocean && terrain != TerrainType.Land;
                     double bodyDistanceSquared = double.PositiveInfinity;
                     if (isLake)
@@ -88,6 +91,16 @@ namespace NodeWar.View
                         // The area outside the board is ocean, even without ocean cells.
                         double edgeDistance = Math.Min(Math.Min(px + 0.5, cols - 0.5 - px), Math.Min(pz + 0.5, rows - 0.5 - pz));
                         bodyDistanceSquared = Math.Min(bodyDistanceSquared, edgeDistance * edgeDistance);
+                    }
+                    if (terrain == TerrainType.DeepLake)
+                    {
+                        double lakeDistanceSquared = double.PositiveInfinity;
+                        for (int i = 0; i < lakes.Count; i++)
+                            lakeDistanceSquared = Math.Min(lakeDistanceSquared,
+                                DistanceSquaredToSquare(px, pz, lakes[i] % cols, lakes[i] / cols));
+                        bool fromLake = lakeDistanceSquared <= bodyDistanceSquared;
+                        field.rgba[at + 2] = fromLake ? (byte)128 : (byte)64;
+                        bodyDistanceSquared = Math.Min(bodyDistanceSquared, lakeDistanceSquared);
                     }
                     field.rgba[at + 3] = isLake ? Encode(Math.Sqrt(bodyDistanceSquared) / blendCells) : (byte)0;
                 }

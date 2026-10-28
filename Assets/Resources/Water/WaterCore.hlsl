@@ -233,12 +233,13 @@ half4 WaterFragment(Varyings input) : SV_Target
     }
 #endif
     half noise = foam.g;
-    half displacedMix = shore.b >= 0.25 ? saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
-    half lake = step(0.25, shore.b);
+    half displacedMix = shore.b >= 0.125 ? saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
+    half lake = step(0.125, shore.b);
     half deepLake = lake * (1 - step(0.75, shore.b));
+    half fromLake = step(0.375, shore.b) * (1 - step(0.75, shore.b));
     half bodyMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
-    half3 shallow = lerp(_OceanShallowColor.rgb, lerp(_LakeShallowColor.rgb, _DeepLakeShallowColor.rgb, deepLake), bodyMix);
-    half3 deep = lerp(_OceanDeepColor.rgb, lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix);
+    half3 shallow = lerp(lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, fromLake), lerp(_LakeShallowColor.rgb, _DeepLakeShallowColor.rgb, deepLake), bodyMix);
+    half3 deep = lerp(lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, fromLake), lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix);
     half distance = max(0, shore.r * 3 + (noise - 0.5) * 2 * _ShoreNoiseAmount);
     half detailFade = DetailFade(input.positionWS.xz);
     half alpha = 1;

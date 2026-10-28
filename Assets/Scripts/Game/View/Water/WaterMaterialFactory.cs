@@ -77,6 +77,11 @@ namespace NodeWar.View
                 MigrateWave("_WaveB", new Vector4(0.422618f, 0.906308f, 0.22f, 11));
                 MigrateWave("_WaveC", new Vector4(-0.766044f, 0.642788f, 0.14f, 6));
                 MigrateWave("_WaveD", new Vector4(-0.422618f, -0.906308f, 0.1f, 3.5f));
+                // Deep-lake defaults are HSV(lake): saturation * 1.2, value * 0.8.
+                Color previousDeepLake = new Color(0.243137f, 0.560784f, 0.819608f, 1f);
+                foreach (string property in new[] { "_DeepLakeShallowColor", "_DeepLakeDeepColor" })
+                    if (fallback.GetColor(property) == previousDeepLake)
+                        fallback.SetColor(property, defaults.GetColor(property));
                 Release(defaults);
             }
             return fallback;

@@ -57,6 +57,32 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(255, Mix(80));
         }
         [Test]
+        public void DeepLakeBlendsFromNearestShallowerBodyOnItsOwnSide()
+        {
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++)
+                    terrain[z * 10 + x] = x < 2 ? TerrainType.Ocean : x < 4 ? TerrainType.Lake : TerrainType.DeepLake;
+            var f = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int Channel(int x, int channel) => f.rgba[(64 * f.width + x) * 4 + channel];
+            Assert.AreEqual(255, Channel(79, 2), "Lake side keeps its palette.");
+            Assert.AreEqual(255, Channel(79, 3), "Deep lake does not fade the lake side.");
+            Assert.AreEqual(128, Channel(80, 2), "Deep lake transitions from lake here.");
+            Assert.That(Channel(80, 3), Is.InRange(1, 254));
+            for (int x = 80; x < 104; x++)
+                Assert.That(Channel(x, 3), Is.LessThanOrEqualTo(Channel(x + 1, 3)));
+            Assert.AreEqual(255, Channel(96, 3));
+            Assert.AreEqual(64, Channel(175, 2), "Deep lake at board edge transitions from exterior ocean.");
+            Assert.That(Channel(175, 3), Is.InRange(1, 254));
+            for (int z = 0; z < f.height; z++)
+                for (int x = 0; x < f.width; x++)
+                {
+                    int at = (z * f.width + x) * 4;
+                    if (f.rgba[at + 2] == 0) Assert.AreEqual(0, f.rgba[at + 3]);
+                }
+        }
+
+        [Test]
         public void FieldEncodesLandDistanceDampingAndBody()
         {
             var f = ShoreField.Bake(4, 1, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Ocean }, 1, 1);
