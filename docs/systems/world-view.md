@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 939a2475
+verified: 30a6dd77
 ---
 
 # World view
@@ -31,7 +31,7 @@ Render deterministic state as a readable board without changing results. Share m
 
 `IndicatorDirector(state, tickProvider, settings, opponentSettings, localPlayer)` exposes `Active` indicators and `TryGetAnchor`; bind positioners/transforms and `Dispose` subscriptions. `IndicatorPlacement` is pure placement maths; HUD `IndicatorLayer` renders/clicks them. `ScreenShakeDirector` subscribes to ticks, invokes a supplied shake callback and is disposable.
 
-`DistrictVisual`/`DistrictVisualTable` share district prefabs, icons and metadata. `BoardArtPlacer` applies offsets/rotation/scale; `DistrictFallback`/`DistrictFallbackArt` supply missing-art glyphs/bridges. `TerrainPresentation.Describe(board, placed, hasPick, pick, draftComplete)` uses resolved terrain; its four-argument overload describes drafting. `BoardTerrainView.ShowDraft`/`ShowMatch` outline unresolved shoals and enable lazy plinths only on Land. `PlinthFactory` loads `Board/DistrictPlinth` from Resources or builds a cube with the plinth shader. `PlinthLayout` supplies top-centre positions; `PlinthMotion` supplies clamped cubic rise maths. Resolved terrain feeds `WaterSurfaceView.SetTerrain`; `ShoreField.Bake` and `WaterMeshBuilder.Build` supply the field and shared-edge mesh.
+`DistrictVisual`/`DistrictVisualTable` share district prefabs, icons and metadata. `BoardArtPlacer` applies offsets/rotation/scale; `DistrictFallback`/`DistrictFallbackArt` supply missing-art glyphs/bridges. `TerrainPresentation.Describe(board, placed, hasPick, pick, draftComplete)` uses resolved terrain; its four-argument overload describes drafting. `BoardTerrainView.ShowDraft`/`ShowMatch` outline unresolved shoals and enable lazy plinths only on Land. `PlinthFactory` loads `Board/DistrictPlinth` from Resources or builds a cube with the plinth shader. `PlinthLayout` supplies top-centre positions; `PlinthMotion` supplies clamped cubic rise maths. Resolved terrain feeds `WaterSurfaceView.SetTerrain`; `ShoreField.Workspace` and `WaterMeshBuilder.Build` supply shore data and full-grid geometry.
 
 Outline is assembly `NodeWar.View.Outline`: `OutlineGroup.Attach(root, renderers)` supplies one silhouette; `SetIntent`, `SetTint` and renderer rebuild/exclusion methods update it. `OutlineDriver` alone decides intents from hover, selection, inspected node and presence. `OutlineRegistry` exposes active groups to URP mask/composite passes and allocates IDs only while style is non-None. `OutlineStyle` numeric order is priority; ownership tint is separate. `OutlineRendererFeature` must be installed in both Mobile_Renderer and PC_Renderer assets.
 
@@ -63,13 +63,12 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water owns fields/meshes/floor; reduced motion snaps its 0.4-second blend. Shore R=distance, G=swash phase, A=inward mix from nearest shallower body. B=0 ocean, 255 lake-from-ocean, 128 deep-from-lake, 64 deep-from-ocean. Texel-centre body sampling contains noise/steps. Textures hold swell height/derivatives and foam/noise; shore foam precedes swash. Waves share damping/clearance/fades; Gerstner follows wind/spread with staggered phases. Crests only lighten. Far fresnel matches the seam; SSAO needs DepthNormals.
+Water retains its full grid under plinths until board/density changes. Worker-owned `ShoreField.Workspace` reuses buffers: exact square-distance FH EDT for full bakes, local minima for land additions. Body-source changes refresh body EDTs; stale results drop. Textures crossfade for 0.4 seconds; reduced motion snaps. Shore R=distance, G=swash phase, A=inward shallower-body mix. B=0 ocean, 255 lake-from-ocean, 128 deep-from-lake, 64 deep-from-ocean. Texel-centre sampling contains noise/steps. Floor depth includes wave amplitude.
 
-`WaterFeatures` defines budgets and Off/Noise/Gerstner 2/4 modes. Low compiles optional paths out. Low/Medium disable horizon sheen; Custom can enable it. `WaterQuality.Apply()` refreshes water, plinths, floor, probes and `GraphicsTierRenderer`'s runtime URP clone; HDR stays authored for bloom. `RefreshAll` preserves blends. Tuning migrates defaults without asset writes. Water sorts at -10; High/Ultra probes capture terrain and settled plinths.
-
+`WaterFeatures` budgets Off/Noise/Gerstner 2/4. Low compiles optional paths out; Low/Medium disable sheen. `WaterQuality.Apply()` refreshes presentation and the URP clone; HDR stays authored. Board creation warms shader variants. High/Ultra probes slice faces after 1.5 quiet seconds and settled plinths. Water sorts at -10; SSAO needs DepthNormals.
 Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
 
-`BoardVisualsBench` replays drafting/shoals without simulation. Its scrolling F1 panel groups runtime sliders/reset, presets/Custom, replay/pause and frame time.
+`BoardVisualsBench` replays drafting/shoals without simulation. Runtime deep lake preserves slots/shoals. F1 and Console report bake/upload/mesh/probe-submission milliseconds and two-second worst frame.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
@@ -85,4 +84,4 @@ Per-tick state diffs miss damage cancelled by healing. Multiple visual systems n
 - Add outlines: use driver intents and test priority, ID release/reuse and both renderer assets.
 
 ## Tests
-`NodeWar.View.Tests` covers presentation maths, shore encoding/body blends, mesh seams/counts, texture bakes, wave clearance/density, swell derivatives, swash phase and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
+`NodeWar.View.Tests` covers presentation maths, EDT/brute-force equivalence, incremental placement, shore encoding/body blends, full-grid seams/counts, texture bakes, wave clearance/density, swell derivatives, swash phase and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
