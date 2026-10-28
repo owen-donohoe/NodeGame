@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.Rendering;
+using System.Collections.Generic;
 
 namespace NodeWar.View
 {
@@ -8,6 +10,39 @@ namespace NodeWar.View
         private static Material fallback, runtime, far;
         private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
 
+        private static readonly HashSet<int> warmedModes = new HashSet<int>();
+
+        /// <summary>URP variants are SRP passes. Dynamic-branch feature keywords do not create variants.</summary>
+        public static void WarmCurrentTier()
+        {
+            int mode = WaterQuality.Current == 0 ? -1 : WaterQuality.Waves;
+            if (!warmedModes.Add(mode)) return;
+            var variants = new ShaderVariantCollection { name = "Board water warm-up" };
+            Shader water = Runtime.shader;
+            var keywords = new List<string>();
+            if (mode == -1) keywords.Add("_WATER_LITE");
+            else if (mode != 0) keywords.Add(mode == 1 ? "_WATER_WAVES_NOISE" : mode == 2 ? "_WATER_WAVES_2" : "_WATER_WAVES_4");
+            // Forward shadows and depth-normal encoding are separate pass variants.
+            for (int shadows = 0; shadows < 3; shadows++)
+            {
+                var combination = new List<string>(keywords);
+                if (shadows > 0) combination.Add(shadows == 1 ? "_MAIN_LIGHT_SHADOWS" : "_MAIN_LIGHT_SHADOWS_CASCADE");
+                variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, combination.ToArray()));
+            }
+            var normals = new List<string>(keywords) { "_GBUFFER_NORMALS_OCT" };
+            variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, normals.ToArray()));            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFar"));
+            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFloor"));
+            Shader plinth = Resources.Load<Shader>("Board/NodeWarPlinth");
+            AddSimpleVariant(variants, plinth);
+            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ScriptableRenderPipeline, "_GBUFFER_NORMALS_OCT"));
+            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ShadowCaster));
+            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ShadowCaster, "_CASTING_PUNCTUAL_LIGHT_SHADOW"));
+            variants.WarmUp();
+            Release(variants);
+        }
+
+        private static void AddSimpleVariant(ShaderVariantCollection collection, Shader shader) =>
+            collection.Add(new ShaderVariantCollection.ShaderVariant(shader, PassType.ScriptableRenderPipeline));
         public static Material ForQuality(int features, int waves, int tier)
         {
             if (runtime == null || features != runtimeFeatures || waves != runtimeWaves || tier != runtimeTier)
@@ -134,6 +169,7 @@ namespace NodeWar.View
             if (surfaceFoam != null) Object.Destroy(surfaceFoam);
             if (swell != null) Object.Destroy(swell);
             surfaceFoam = swell = null;
+            warmedModes.Clear();
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
             if (far != null) Release(far);
@@ -144,3 +180,5 @@ namespace NodeWar.View
         }
     }
 }
+
+

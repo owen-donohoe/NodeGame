@@ -33,7 +33,9 @@ namespace NodeWar.View
         private bool generatedSurfaceFoam, generatedSwell;
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
-        private bool probeDirty, probeAfterSettled;
+        private bool probeDirty;
+        private float probeNotBefore, lastProbeAt = float.NegativeInfinity;
+        private int probeRenderId = -1;
         private float floorY = float.NaN;
         private Mesh floorMesh;
         private Material floorMaterial;
@@ -78,6 +80,7 @@ namespace NodeWar.View
             RefreshProbe();
             RefreshFloor();
             surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
+            WaterMaterialFactory.WarmCurrentTier();
             if (next == subdivisions && meshPadding == Padding) return;
             subdivisions = next;
             meshPadding = Padding;
@@ -106,6 +109,7 @@ namespace NodeWar.View
             surfaceRenderer.sortingOrder = TerrainPresentation.WaterSortingOrder;
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
             surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
+            WaterMaterialFactory.WarmCurrentTier();
             RefreshProbe();
             RefreshFloor();
         }
@@ -123,7 +127,7 @@ namespace NodeWar.View
                 RebuildMesh(resolved);
             }
             probeDirty = true;
-            probeAfterSettled = true;
+            probeNotBefore = Time.unscaledTime + 1.5f;
             StartBake();
         }
 
@@ -350,7 +354,7 @@ namespace NodeWar.View
                 reflectionProbe = child.AddComponent<ReflectionProbe>();
                 reflectionProbe.mode = ReflectionProbeMode.Realtime;
                 reflectionProbe.refreshMode = ReflectionProbeRefreshMode.ViaScripting;
-                reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.AllFacesAtOnce;
+                reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
                 reflectionProbe.boxProjection = true;
                 reflectionProbe.size = new Vector3((cols + Padding * 2) * scale, 4 * scale, (rows + Padding * 2) * scale);
                 reflectionProbe.cullingMask = ~(1 << gameObject.layer);
@@ -370,26 +374,21 @@ namespace NodeWar.View
         private void SubmitProbe()
         {
             long started = Stopwatch.GetTimestamp();
-            using (ProbeMarker.Auto()) reflectionProbe.RenderProbe();
+            using (ProbeMarker.Auto()) probeRenderId = reflectionProbe.RenderProbe();
             LastProbeMs = Milliseconds(started);
             UnityEngine.Debug.Log(PlacementTimings, this);
         }
 
         private void LateUpdate()
         {
-            if (reflectionProbe == null || !reflectionProbe.isActiveAndEnabled || terrain == null) return;
-            if (probeDirty)
-            {
-                SubmitProbe();
-                probeDirty = false;
-            }
-            else if (probeAfterSettled && blend >= 1f && (boardView == null || boardView.PlinthsSettled))
-            {
-                SubmitProbe();
-                probeAfterSettled = false;
-            }
+            if (reflectionProbe == null || !reflectionProbe.isActiveAndEnabled || !probeDirty || current == null) return;
+            if (requestVersion != appliedVersion || blend < 1f || (boardView != null && !boardView.PlinthsSettled)) return;
+            if (Time.unscaledTime < probeNotBefore || Time.unscaledTime - lastProbeAt < 1.5f) return;
+            if (probeRenderId >= 0 && !reflectionProbe.IsFinishedRendering(probeRenderId)) return;
+            SubmitProbe();
+            lastProbeAt = Time.unscaledTime;
+            probeDirty = false;
         }
-
         private void OnDestroy()
         {
             if (bakeTask != null)
@@ -406,6 +405,8 @@ namespace NodeWar.View
         }
     }
 }
+
+
 
 
 
