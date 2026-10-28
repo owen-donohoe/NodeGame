@@ -102,8 +102,8 @@ Material:
     m_Colors:
     - _BoardRect: {r: -3, g: -3, b: 3, a: 3}
     - _CrestColor: {r: 1.15, g: 1.15, b: 1.15, a: 1}
-    - _DeepLakeDeepColor: {r: 0.10227398, g: 0.40721497, b: 0.65568596, a: 1}
-    - _DeepLakeShallowColor: {r: 0.42792198, g: 0.653804, b: 0.7592159, a: 1}
+    - _DeepLakeDeepColor: {r: 0.560784, g: 0.737255, b: 0.560784, a: 1}
+    - _DeepLakeShallowColor: {r: 0.40196097, g: 0.648693, b: 0.690196, a: 1}
     - _HorizonColor: {r: 0.5490199, g: 0.560784, b: 0.85098, a: 1}
     - _LakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _LakeShallowColor: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
@@ -115,8 +115,8 @@ Material:
     - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.6}
     - _SwashColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _WaveA: {r: 1, g: 0, b: 0.28, a: 18}
-    - _WaveB: {r: 0.422618, g: 0.906308, b: 0.22, a: 11.124}
-    - _WaveC: {r: -0.766044, g: 0.642788, b: 0.14, a: 6.876}
+    - _WaveB: {r: 0.422618, g: 0.906308, b: 0.2, a: 6.876}
+    - _WaveC: {r: -0.766044, g: 0.642788, b: 0.14, a: 11.124}
     - _WaveD: {r: -0.422618, g: -0.906308, b: 0.1, a: 4.248}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
