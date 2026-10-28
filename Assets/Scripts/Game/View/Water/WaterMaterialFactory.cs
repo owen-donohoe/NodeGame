@@ -44,11 +44,36 @@ namespace NodeWar.View
 
         public static Material Shared()
         {
+            if (fallback != null) return fallback;
             Material asset = Resources.Load<Material>("Water/NodeWarWater");
-            if (asset != null) return asset;
-            if (fallback == null)
-                fallback = new Material(Resources.Load<Shader>("Water/NodeWarWater"))
-                { name = "NodeWarWater fallback", hideFlags = HideFlags.HideAndDontSave };
+            Shader shader = Resources.Load<Shader>("Water/NodeWarWater");
+            // The bench edits this view-owned tuning copy. Never dirty the imported .mat.
+            fallback = asset != null ? new Material(asset) : new Material(shader);
+            fallback.name = "NodeWarWater tuning";
+            fallback.hideFlags = HideFlags.HideAndDontSave;
+            if (asset != null)
+            {
+                // The shipped material serializes the previous defaults. Migrate only those
+                // known values, preserving deliberate artist overrides and assigned textures.
+                var defaults = new Material(shader);
+                void MigrateFloat(string property, float previous)
+                {
+                    if (Mathf.Approximately(fallback.GetFloat(property), previous))
+                        fallback.SetFloat(property, defaults.GetFloat(property));
+                }
+                void MigrateWave(string property, Vector4 previous)
+                {
+                    if (fallback.GetVector(property) == previous)
+                        fallback.SetVector(property, defaults.GetVector(property));
+                }
+                MigrateFloat("_WaveScale", 1.5f);
+                MigrateFloat("_BodyStepA", 0.25f);
+                MigrateFloat("_BodyStepB", 0.6f);
+                MigrateWave("_WaveB", new Vector4(0.422618f, 0.906308f, 0.22f, 11));
+                MigrateWave("_WaveC", new Vector4(-0.766044f, 0.642788f, 0.14f, 6));
+                MigrateWave("_WaveD", new Vector4(-0.422618f, -0.906308f, 0.1f, 3.5f));
+                Release(defaults);
+            }
             return fallback;
         }
 
