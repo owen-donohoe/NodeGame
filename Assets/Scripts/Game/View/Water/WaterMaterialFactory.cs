@@ -27,23 +27,29 @@ namespace NodeWar.View
             {
                 var combination = new List<string>(keywords);
                 if (shadows > 0) combination.Add(shadows == 1 ? "_MAIN_LIGHT_SHADOWS" : "_MAIN_LIGHT_SHADOWS_CASCADE");
-                variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, combination.ToArray()));
+                TryAdd(variants, water, PassType.ScriptableRenderPipeline, combination.ToArray());
             }
             var normals = new List<string>(keywords) { "_GBUFFER_NORMALS_OCT" };
-            variants.Add(new ShaderVariantCollection.ShaderVariant(water, PassType.ScriptableRenderPipeline, normals.ToArray()));
-            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFar"));
-            AddSimpleVariant(variants, Resources.Load<Shader>("Water/WaterFloor"));
+            TryAdd(variants, water, PassType.ScriptableRenderPipeline, normals.ToArray());
+            // Far ocean and floor are LightMode SRPDefaultUnlit, which is a different pass type.
+            TryAdd(variants, Resources.Load<Shader>("Water/WaterFar"), PassType.ScriptableRenderPipelineDefaultUnlit);
+            TryAdd(variants, Resources.Load<Shader>("Water/WaterFloor"), PassType.ScriptableRenderPipelineDefaultUnlit);
             Shader plinth = Resources.Load<Shader>("Board/NodeWarPlinth");
-            AddSimpleVariant(variants, plinth);
-            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ScriptableRenderPipeline, "_GBUFFER_NORMALS_OCT"));
-            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ShadowCaster));
-            variants.Add(new ShaderVariantCollection.ShaderVariant(plinth, PassType.ShadowCaster, "_CASTING_PUNCTUAL_LIGHT_SHADOW"));
+            TryAdd(variants, plinth, PassType.ScriptableRenderPipeline);
+            TryAdd(variants, plinth, PassType.ScriptableRenderPipeline, "_GBUFFER_NORMALS_OCT");
+            TryAdd(variants, plinth, PassType.ShadowCaster);
+            TryAdd(variants, plinth, PassType.ShadowCaster, "_CASTING_PUNCTUAL_LIGHT_SHADOW");
             variants.WarmUp();
             Release(variants);
         }
 
-        private static void AddSimpleVariant(ShaderVariantCollection collection, Shader shader) =>
-            collection.Add(new ShaderVariantCollection.ShaderVariant(shader, PassType.ScriptableRenderPipeline));
+        // Warm-up is an optimisation: a variant Unity rejects must never abort building the board.
+        private static void TryAdd(ShaderVariantCollection collection, Shader shader, PassType pass, params string[] keywords)
+        {
+            if (shader == null) return;
+            try { collection.Add(new ShaderVariantCollection.ShaderVariant(shader, pass, keywords)); }
+            catch (System.ArgumentException e) { Debug.LogWarning($"Skipped water warm-up variant: {e.Message}"); }
+        }
         public static Material ForQuality(int features, int waves, int tier)
         {
             if (runtime == null || features != runtimeFeatures || waves != runtimeWaves || tier != runtimeTier)

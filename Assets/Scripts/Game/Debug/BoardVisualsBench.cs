@@ -99,7 +99,7 @@ namespace NodeWar.View
                 Debug.Log($"Water bench tier {WaterQuality.Current}: worst frame (2 s) {worstFrameMs:F2} ms; {WaterSurfaceView.PlacementTimings}", this);
                 nextTimingLog = Time.unscaledTime + 2f;
             }
-            if (view == null || paused) return;
+            if (view == null || sample == null || paused) return;
             elapsed += Time.unscaledDeltaTime;
             if (elapsed < Mathf.Max(0.05f, stepSeconds)) return;
             elapsed = 0f;
