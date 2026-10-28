@@ -55,10 +55,11 @@ namespace NodeWar.View
                 for (int x = 0; x < field.width; x++)
                 {
                     int at = (z * field.width + x) * 4;
+                    field.rgba[at + 1] = Encode((FoamNoise.Fbm((double)x / Math.Max(1, field.width - 1), (double)z / Math.Max(1, field.height - 1), 0x39a7, 2, 3) - 0.5) * 2.5 + 0.5);
                     // Clamp sampling beyond the baked padding must remain deep, fully waving ocean.
                     if (x == 0 || z == 0 || x == field.width - 1 || z == field.height - 1)
                     {
-                        field.rgba[at] = 255; field.rgba[at + 1] = 255;
+                        field.rgba[at] = 255;
                         field.rgba[at + 2] = 0; field.rgba[at + 3] = 0;
                         continue;
                     }
@@ -74,9 +75,8 @@ namespace NodeWar.View
                     TerrainType terrain = cx >= 0 && cx < cols && cz >= 0 && cz < rows
                         ? resolved[cz * cols + cx] : TerrainType.Ocean;
                     field.rgba[at] = Encode(distance / 3);
-                    field.rgba[at + 1] = Encode(distance / 1.5);
                     field.rgba[at + 2] = WaterBodyOf(terrain);
-                    // RG retain land distance and damping; B retains body ID. A is ocean/lake mix.
+                    // R retains land distance; G holds static swash phase; B retains body ID. A is ocean/lake mix.
                     // Land is already identifiable by R=0 within the plinth, so no mask is lost.
                     bool isLake = terrain != TerrainType.Ocean && terrain != TerrainType.Land;
                     List<int> opposite = isLake ? ocean : lakes;

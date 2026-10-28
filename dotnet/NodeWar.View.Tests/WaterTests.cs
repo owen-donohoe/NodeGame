@@ -38,10 +38,28 @@ namespace NodeWar.View.Tests
         {
             var f = ShoreField.Bake(4, 1, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Ocean }, 1, 1);
             int at = (f.width + 1) * 4;
-            Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 1]); Assert.AreEqual(0, f.rgba[at + 3]);
-            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(85, f.rgba[at + 5]); Assert.AreEqual(0, f.rgba[at + 7]);
+            Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 3]);
+            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(0, f.rgba[at + 7]);
             Assert.Less(f.rgba[at + 4], f.rgba[at + 8]); Assert.Less(f.rgba[at + 8], f.rgba[at + 12]);
             Assert.AreEqual(0, f.rgba[at + 6]); Assert.AreEqual(255, f.rgba[at + 10]);
+        }
+
+        [Test]
+        public void PhaseIsStaticPeriodicAndVariesAlongCoast()
+        {
+            var a = ShoreField.Bake(2, 2, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Land });
+            var b = ShoreField.Bake(2, 2, new[] { TerrainType.Ocean, TerrainType.Land, TerrainType.Land, TerrainType.Lake });
+            byte min = 255, max = 0;
+            for (int z = 0; z < a.height; z++)
+                for (int x = 0; x < a.width; x++)
+                {
+                    int at = (z * a.width + x) * 4 + 1;
+                    Assert.AreEqual(a.rgba[at], b.rgba[at], "Terrain changes must preserve local phase.");
+                    min = Math.Min(min, a.rgba[at]); max = Math.Max(max, a.rgba[at]);
+                    if (x == 0) Assert.AreEqual(a.rgba[at], a.rgba[(z * a.width + a.width - 1) * 4 + 1]);
+                    if (z == 0) Assert.AreEqual(a.rgba[at], a.rgba[((a.height - 1) * a.width + x) * 4 + 1]);
+                }
+            Assert.Greater(max - min, 100);
         }
 
         [Test]
@@ -55,7 +73,6 @@ namespace NodeWar.View.Tests
             // Texel (4,4) is (1,1): half a cell from each edge of the land square.
             int at = (4 * f.width + 4) * 4;
             Assert.AreEqual(Math.Round(Math.Sqrt(0.5) / 3 * 255), f.rgba[at]);
-            Assert.AreEqual(Math.Round(Math.Sqrt(0.5) / 1.5 * 255), f.rgba[at + 1]);
         }
 
         [Test]
@@ -67,7 +84,7 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(144, a.width); Assert.AreEqual(144, a.height);
             Assert.AreEqual(-4.5f, a.originX); Assert.AreEqual(-4.5f, a.originZ);
             Assert.AreEqual(1f / 16, a.worldPerTexel);
-            Assert.AreEqual(255, a.rgba[0]); Assert.AreEqual(255, a.rgba[1]);
+            Assert.AreEqual(255, a.rgba[0]);
             Assert.AreEqual(0, a.rgba[2]); Assert.AreEqual(0, a.rgba[3]);
             CollectionAssert.AreEqual(a.rgba, b.rgba);
         }
@@ -82,7 +99,6 @@ namespace NodeWar.View.Tests
                     if (x != 0 && z != 0 && x != f.width - 1 && z != f.height - 1) continue;
                     int at = (z * f.width + x) * 4;
                     Assert.AreEqual(255, f.rgba[at], "R: saturated distance");
-                    Assert.AreEqual(255, f.rgba[at + 1], "G: full wave amplitude");
                     Assert.AreEqual(0, f.rgba[at + 2], "B: ocean palette");
                     Assert.AreEqual(0, f.rgba[at + 3], "A: ocean mix");
                 }

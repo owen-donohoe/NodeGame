@@ -13,7 +13,7 @@ float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 float4 _HorizonColor, _SurfaceFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _FoamTex_ST, _SwellTex_ST;
-float4 _BoardRect, _CrestColor, _LapColor;
+float4 _BoardRect, _CrestColor, _SwashColor;
 float _CrestSharpness;
 float _CrestStrength, _WaveScale;
 float _NoiseWaveHeight, _NoiseWaveScale, _NoiseWaveSpeed;
@@ -22,7 +22,7 @@ float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
 float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
 float _DetailNormalSamples;
-float _LapFrequency, _LapSpeed, _LapRange, _LapWidth, _LapOpacity;
+float _SwashDesync, _SwashWetStrength, _SwashSpeed, _SwashRange, _SwashWidth, _SwashOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _BodyStepA, _BodyStepB;
 float _DepthRange, _ColorSteps, _HorizonDistance;
@@ -254,11 +254,14 @@ half4 WaterFragment(Varyings input) : SV_Target
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
     if (_WATER_LAPPING_LINES)
     {
-        float lapPhase = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);
-        float lap = FoamLine(lapPhase, _LapWidth) * (1 - smoothstep(0, max(_LapRange, 0.001), distance))
-            * step(0.45, noise) * detailFade * _LapOpacity;
-        color = lerp(color, _LapColor.rgb, saturate(lap * _LapColor.a));
-        alpha = max(alpha, lap * _LapColor.a);
+        float cycle = frac(_Time.y * _SwashSpeed + shore.g * _SwashDesync);
+        float reach = _SwashRange * sin(3.14159265 * saturate(cycle / 0.6));
+        float swashOpacity = _SwashOpacity * smoothstep(0, 0.15, reach) * (1 - smoothstep(0.6, 1, cycle));
+        float swash = FoamLine(abs(distance - reach), _SwashWidth) * swashOpacity * detailFade;
+        float wet = (1 - smoothstep(reach, reach + 0.02, distance)) * smoothstep(0, 0.15, reach) * detailFade;
+        color *= 1 - wet * _SwashWetStrength;
+        color = lerp(color, _SwashColor.rgb, saturate(swash * _SwashColor.a));
+        alpha = max(alpha, swash * _SwashColor.a);
     }
     float shadow = 1;
     if (_WATER_SHADOWS)
