@@ -15,10 +15,10 @@ Shader "NodeWar/Water"
         _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
         _HorizonDistance("Horizon exponent", Float) = 4
         _FoamTex("Surface foam", 2D) = "black" {}
-        _SurfaceFoamTiling("Surface foam tiling", Float) = 0.2
+        _SurfaceFoamTiling("Surface foam tiling", Float) = 0.05
         _SurfaceFoamDirection("Surface foam direction (turns)", Range(0,1)) = 0.09
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
-        _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.06
+        _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.07
         [HideInInspector] _FoamDistortionQuality("Distortion sine count", Float) = 9
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)

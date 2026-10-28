@@ -76,7 +76,7 @@ namespace NodeWar.View
             properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();
             surfaceRenderer = gameObject.AddComponent<MeshRenderer>();
-            surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
+            surfaceRenderer.sharedMaterials = new[] { WaterMaterialFactory.Runtime, WaterMaterialFactory.Far() };
             ApplyProperties();
             surfaceRenderer.sortingOrder = TerrainPresentation.WaterSortingOrder;
             surfaceRenderer.shadowCastingMode = ShadowCastingMode.Off;
