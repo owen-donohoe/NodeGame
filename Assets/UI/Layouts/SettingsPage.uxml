@@ -155,10 +155,6 @@
                             <engine:Label class="lb-grow__label ui-w500" text="Wave crests" picking-mode="Ignore" />
                             <lobby:LobbyToggle name="settings-crest-colour" value="false" />
                         </lobby:PaperButton>
-                        <lobby:PaperButton name="settings-row-shore-noise" class="ui-reset-button lb-grow">
-                            <engine:Label class="lb-grow__label ui-w500" text="Shore wobble" picking-mode="Ignore" />
-                            <lobby:LobbyToggle name="settings-shore-noise" value="false" />
-                        </lobby:PaperButton>
                         <lobby:PaperButton name="settings-row-dither" class="ui-reset-button lb-grow">
                             <engine:Label class="lb-grow__label ui-w500" text="Smooth gradients" picking-mode="Ignore" />
                             <lobby:LobbyToggle name="settings-dither" value="false" />
@@ -182,10 +178,6 @@
                         <lobby:PaperButton name="settings-row-lapping-lines" class="ui-reset-button lb-grow">
                             <engine:Label class="lb-grow__label ui-w500" text="Lapping lines" picking-mode="Ignore" />
                             <lobby:LobbyToggle name="settings-lapping-lines" value="false" />
-                        </lobby:PaperButton>
-                        <lobby:PaperButton name="settings-row-crest-foam" class="ui-reset-button lb-grow">
-                            <engine:Label class="lb-grow__label ui-w500" text="Crest foam" picking-mode="Ignore" />
-                            <lobby:LobbyToggle name="settings-crest-foam" value="false" />
                         </lobby:PaperButton>
                         <lobby:PaperButton name="settings-row-second-foam-layer" class="ui-reset-button lb-grow">
                             <engine:Label class="lb-grow__label ui-w500" text="Double foam" picking-mode="Ignore" />

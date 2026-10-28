@@ -146,14 +146,12 @@ namespace NodeWar.View
             FeatureToggle(GraphicsFeature.HorizonFresnel, "Horizon sheen");
             FeatureToggle(GraphicsFeature.Specular, "Sun glints");
             FeatureToggle(GraphicsFeature.CrestColour, "Wave crests");
-            FeatureToggle(GraphicsFeature.ShoreNoise, "Shore wobble");
             FeatureToggle(GraphicsFeature.Dither, "Smooth gradients");
             FeatureToggle(GraphicsFeature.Shadows, "Shadows on water");
             FeatureToggle(GraphicsFeature.DetailNormals, "Detail ripples");
             FeatureToggle(GraphicsFeature.MacroNormals, "Large swells");
             FeatureToggle(GraphicsFeature.Reflections, "Reflections");
             FeatureToggle(GraphicsFeature.LappingLines, "Lapping lines");
-            FeatureToggle(GraphicsFeature.CrestFoam, "Crest foam");
             FeatureToggle(GraphicsFeature.SecondFoamLayer, "Double foam");
             Material material = WaterMaterialFactory.Shared();
             GUILayout.Label("Waves");
@@ -167,8 +165,6 @@ namespace NodeWar.View
             GUILayout.Label("Crests");
             MaterialSlider(material, "_CrestSharpness", "Crest sharpness", 0.1f, 8f);
             MaterialSlider(material, "_CrestStrength", "Crest strength", 0f, 1f);
-            MaterialSlider(material, "_CrestFoamThreshold", "Crest foam threshold", 0f, 1f);
-            MaterialSlider(material, "_CrestFoamStrength", "Crest foam strength", 0f, 1f);
             GUILayout.Label("Shore");
             MaterialSlider(material, "_ShoreWaveDamping", "Shore wave damping", 0f, 3f);
             MaterialSlider(material, "_ShoreMaxAmplitude", "Shore max amplitude", 0f, 0.4f);
@@ -188,9 +184,6 @@ namespace NodeWar.View
             MaterialSlider(material, "_LapWidth", "Lap width", 0f, 0.3f);
             MaterialSlider(material, "_LapFrequency", "Lap frequency", 0.1f, 4f);
             MaterialSlider(material, "_LapSpeed", "Lap speed", 0f, 1f);
-            MaterialSlider(material, "_IntersectionFoamColor", "Intersection foam strength", 0f, 1f, false, true);
-            MaterialSlider(material, "_IntersectionFoamSolid", "Intersection foam solid (cells)", 0f, 1f);
-            MaterialSlider(material, "_IntersectionFoamBreakup", "Intersection foam breakup (cells)", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamWidth", "Surface foam width", 0f, 0.3f);
             MaterialSlider(material, "_SurfaceFoamTiling", "Surface foam tiling", 0.01f, 2f);
             MaterialSlider(material, "_SurfaceFoamDistortion", "Surface foam distortion", 0f, 10f);

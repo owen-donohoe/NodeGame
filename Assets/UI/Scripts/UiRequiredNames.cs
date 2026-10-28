@@ -147,8 +147,6 @@ namespace NodeWar.UI
             public const string GraphicsRowSpecular = "settings-row-specular";
             public const string GraphicsCrestColour = "settings-crest-colour";
             public const string GraphicsRowCrestColour = "settings-row-crest-colour";
-            public const string GraphicsShoreNoise = "settings-shore-noise";
-            public const string GraphicsRowShoreNoise = "settings-row-shore-noise";
             public const string GraphicsDither = "settings-dither";
             public const string GraphicsRowDither = "settings-row-dither";
             public const string GraphicsShadows = "settings-shadows";
@@ -161,12 +159,10 @@ namespace NodeWar.UI
             public const string GraphicsRowReflections = "settings-row-reflections";
             public const string GraphicsLappingLines = "settings-lapping-lines";
             public const string GraphicsRowLappingLines = "settings-row-lapping-lines";
-            public const string GraphicsCrestFoam = "settings-crest-foam";
-            public const string GraphicsRowCrestFoam = "settings-row-crest-foam";
             public const string GraphicsSecondFoamLayer = "settings-second-foam-layer";
             public const string GraphicsRowSecondFoamLayer = "settings-row-second-foam-layer";
-            public static readonly string[] GraphicsToggles = { GraphicsTransparency, GraphicsSurfaceFoamDistortion, GraphicsHorizonFresnel, GraphicsSpecular, GraphicsCrestColour, GraphicsShoreNoise, GraphicsDither, GraphicsShadows, GraphicsDetailNormals, GraphicsMacroNormals, GraphicsReflections, GraphicsLappingLines, GraphicsCrestFoam, GraphicsSecondFoamLayer };
-            public static readonly string[] GraphicsRows = { GraphicsRowTransparency, GraphicsRowSurfaceFoamDistortion, GraphicsRowHorizonFresnel, GraphicsRowSpecular, GraphicsRowCrestColour, GraphicsRowShoreNoise, GraphicsRowDither, GraphicsRowShadows, GraphicsRowDetailNormals, GraphicsRowMacroNormals, GraphicsRowReflections, GraphicsRowLappingLines, GraphicsRowCrestFoam, GraphicsRowSecondFoamLayer };
+            public static readonly string[] GraphicsToggles = { GraphicsTransparency, GraphicsSurfaceFoamDistortion, GraphicsHorizonFresnel, GraphicsSpecular, GraphicsCrestColour, GraphicsDither, GraphicsShadows, GraphicsDetailNormals, GraphicsMacroNormals, GraphicsReflections, GraphicsLappingLines, GraphicsSecondFoamLayer };
+            public static readonly string[] GraphicsRows = { GraphicsRowTransparency, GraphicsRowSurfaceFoamDistortion, GraphicsRowHorizonFresnel, GraphicsRowSpecular, GraphicsRowCrestColour, GraphicsRowDither, GraphicsRowShadows, GraphicsRowDetailNormals, GraphicsRowMacroNormals, GraphicsRowReflections, GraphicsRowLappingLines, GraphicsRowSecondFoamLayer };
             public static readonly string[] All =
             {
                 SettingsAccountStatus,
@@ -194,14 +190,12 @@ namespace NodeWar.UI
                 GraphicsHorizonFresnel, GraphicsRowHorizonFresnel,
                 GraphicsSpecular, GraphicsRowSpecular,
                 GraphicsCrestColour, GraphicsRowCrestColour,
-                GraphicsShoreNoise, GraphicsRowShoreNoise,
                 GraphicsDither, GraphicsRowDither,
                 GraphicsShadows, GraphicsRowShadows,
                 GraphicsDetailNormals, GraphicsRowDetailNormals,
                 GraphicsMacroNormals, GraphicsRowMacroNormals,
                 GraphicsReflections, GraphicsRowReflections,
                 GraphicsLappingLines, GraphicsRowLappingLines,
-                GraphicsCrestFoam, GraphicsRowCrestFoam,
                 GraphicsSecondFoamLayer, GraphicsRowSecondFoamLayer,
                 SettingsRowSize,
                 SettingsRowFramecap,

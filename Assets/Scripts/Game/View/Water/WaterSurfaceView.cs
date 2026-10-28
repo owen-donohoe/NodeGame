@@ -17,7 +17,7 @@ namespace NodeWar.View
         private TerrainType[] terrain;
         private MaterialPropertyBlock properties;
         private Vector4 shoreST;
-        private bool generatedSurfaceFoam, generatedIntersectionFoam, generatedNormals;
+        private bool generatedSurfaceFoam, generatedNormals;
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
         private bool probeDirty, probeAfterSettled;
@@ -154,7 +154,6 @@ namespace NodeWar.View
             if (surfaceRenderer == null) return;
             Material material = surfaceRenderer.sharedMaterial;
             if (WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex") != generatedSurfaceFoam
-                || WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex") != generatedIntersectionFoam
                 || WaterMaterialFactory.NeedsNormals(material) != generatedNormals) ApplyProperties();
             if (floorRenderer != null && floorRenderer.gameObject.activeSelf)
                 floorRenderer.transform.localPosition = new Vector3(0, surfaceY - material.GetFloat("_FloorDepth"), 0);
@@ -186,10 +185,8 @@ namespace NodeWar.View
             properties.SetFloat("_DetailFadeEnd", Mathf.Min(Padding + 6, WaterMaterialFactory.Runtime.GetFloat("_DetailFadeEnd")));
             Material material = surfaceRenderer.sharedMaterial;
             generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_SurfaceFoamTex");
-            generatedIntersectionFoam = WaterMaterialFactory.NeedsFoam(material, "_IntersectionFoamTex");
             generatedNormals = WaterMaterialFactory.NeedsNormals(material);
             if (generatedSurfaceFoam) properties.SetTexture("_SurfaceFoamTex", WaterMaterialFactory.SurfaceFoam());
-            if (generatedIntersectionFoam) properties.SetTexture("_IntersectionFoamTex", WaterMaterialFactory.IntersectionFoam());
             if (generatedNormals) properties.SetTexture("_NormalsTex", WaterMaterialFactory.Normals());
             surfaceRenderer.SetPropertyBlock(properties);
             if (floorRenderer != null)

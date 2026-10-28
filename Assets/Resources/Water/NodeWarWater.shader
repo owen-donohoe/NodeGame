@@ -21,12 +21,6 @@ Shader "NodeWar/Water"
         _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.06
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
         _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
-        _IntersectionFoamTex("Intersection foam", 2D) = "black" {}
-        _IntersectionFoamSolid("Intersection solid band (cells)", Float) = 0.12
-        _IntersectionFoamBreakup("Intersection breakup (cells)", Float) = 0.5
-        _IntersectionFoamTiling("Intersection foam tiling", Float) = 0.6
-        _IntersectionFoamSpeed("Intersection foam speed", Float) = 0.05
-        _IntersectionFoamColor("Intersection foam (alpha = amount)", Color) = (0.909804,0.956863,1,1)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
         _NormalsTex("Normals", 2D) = "bump" {}
         _NormalsScale("Normals scale", Float) = 0.4
@@ -61,7 +55,7 @@ Shader "NodeWar/Water"
         _WaveD("Wave D", Vector) = (-0.422618,-0.906308,0.1,3.5)
         _WaveSpeed("Wave speed", Float) = 1
         _WaveSteepnessScale("Wave steepness scale", Range(0,1.5)) = 1
-        _WaveScale("Wave scale", Range(0.25,4)) = 1.5
+        _WaveScale("Wave scale", Range(0.25,4)) = 1.0
         _ShoreWaveDamping("Shore wave damping", Range(0,3)) = 1
         _ShoreMaxAmplitude("Shore maximum amplitude", Float) = 0.35
         _ShoreCalmDistance("Shore calm distance (cells)", Float) = 1.5
@@ -70,10 +64,7 @@ Shader "NodeWar/Water"
         _WaveGroupStrength("Wave group strength", Range(0,1)) = 0.5
         _CrestColor("Crest tint (shallow multiplier)", Color) = (1.15,1.15,1.15,1)
         _CrestStrength("Crest strength", Range(0,1)) = 0.45
-        _TroughStrength("Trough strength", Range(0,1)) = 0.2
         _CrestSharpness("Crest sharpness", Float) = 2.5
-        _CrestFoamThreshold("Crest foam threshold", Range(0,1)) = 0.45
-        _CrestFoamStrength("Crest foam strength", Range(0,1)) = 1
         _ReflectionStrength("Reflection strength", Range(0,1)) = 0.6
         _ReflectionMin("Reflection floor", Range(0,1)) = 0.25
         _ReflectionSteps("Reflection steps (0 = smooth)", Range(0,16)) = 0
@@ -113,8 +104,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_MACRO_NORMALS
             #pragma dynamic_branch _WATER_REFLECTIONS
             #pragma dynamic_branch _WATER_CREST_COLOUR
-            #pragma dynamic_branch _WATER_CREST_FOAM
-            #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
@@ -140,8 +129,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_MACRO_NORMALS
             #pragma dynamic_branch _WATER_REFLECTIONS
             #pragma dynamic_branch _WATER_CREST_COLOUR
-            #pragma dynamic_branch _WATER_CREST_FOAM
-            #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER
@@ -165,8 +152,6 @@ Shader "NodeWar/Water"
             #pragma dynamic_branch _WATER_MACRO_NORMALS
             #pragma dynamic_branch _WATER_REFLECTIONS
             #pragma dynamic_branch _WATER_CREST_COLOUR
-            #pragma dynamic_branch _WATER_CREST_FOAM
-            #pragma dynamic_branch _WATER_SHORE_NOISE
             #pragma dynamic_branch _WATER_LAPPING_LINES
             #pragma dynamic_branch _WATER_SECOND_FOAM_LAYER
             #pragma dynamic_branch _WATER_DITHER

@@ -6,17 +6,16 @@
 TEXTURE2D(_ShoreTex); SAMPLER(sampler_ShoreTex);
 TEXTURE2D(_ShorePrevTex); SAMPLER(sampler_ShorePrevTex);
 TEXTURE2D(_SurfaceFoamTex); SAMPLER(sampler_SurfaceFoamTex);
-TEXTURE2D(_IntersectionFoamTex); SAMPLER(sampler_IntersectionFoamTex);
 TEXTURE2D(_NormalsTex); SAMPLER(sampler_NormalsTex);
 CBUFFER_START(UnityPerMaterial)
 float4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 float4 _DeepLakeShallowColor, _DeepLakeDeepColor;
-float4 _HorizonColor, _SurfaceFoamColor, _IntersectionFoamColor, _SpecularColor;
+float4 _HorizonColor, _SurfaceFoamColor, _SpecularColor;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
-float4 _SurfaceFoamTex_ST, _IntersectionFoamTex_ST, _NormalsTex_ST;
+float4 _SurfaceFoamTex_ST, _NormalsTex_ST;
 float4 _BoardRect, _CrestColor, _LapColor;
-float _CrestSharpness, _CrestFoamStrength;
-float _CrestStrength, _TroughStrength, _CrestFoamThreshold, _WaveScale;
+float _CrestSharpness;
+float _CrestStrength, _WaveScale;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
@@ -27,7 +26,6 @@ float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _BodyStepA, _BodyStepB;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
-float _IntersectionFoamSolid, _IntersectionFoamBreakup, _IntersectionFoamTiling, _IntersectionFoamSpeed;
 float _NormalsScale, _NormalsSpeed, _NormalsStrength;
 float _Smoothness, _Hardness, _WaveSpeed, _WaveSteepnessScale, _ReflectionStrength, _ShoreBlend;
 CBUFFER_END
@@ -39,7 +37,6 @@ struct Varyings
     float3 normalWS : TEXCOORD1;
     float2 shoreUV : TEXCOORD2;
     float crest : TEXCOORD3;
-    float fold : TEXCOORD4;
 };
 
 float4 Shore(float2 uv)
@@ -50,7 +47,7 @@ float4 Shore(float2 uv)
 }
 
 void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
-    inout float3 tangent, inout float3 binormal, inout float fold)
+    inout float3 tangent, inout float3 binormal)
 {
     float2 direction = wave.xy / max(length(wave.xy), 0.001);
     float k = 6.2831853 / max(wave.w * _WaveScale, 0.01);
@@ -58,7 +55,6 @@ void Gerstner(float4 wave, float2 xz, float damping, inout float3 position,
     float steepness = wave.z * damping;
     float amplitude = steepness / k;
     float s = sin(phase), c = cos(phase);
-    fold += steepness * s;
     position += float3(direction.x * amplitude * c, amplitude * s, direction.y * amplitude * c);
     tangent += float3(-direction.x * direction.x * steepness * s, direction.x * steepness * c,
         -direction.x * direction.y * steepness * s);
@@ -87,7 +83,6 @@ Varyings WaterVertex(Attributes input)
     output.shoreUV = (xz - _ShoreST.xy) * _ShoreST.zw;
     float3 tangent = float3(1, 0, 0), binormal = float3(0, 0, 1);
     output.crest = 0;
-    output.fold = 0;
 #if defined(_WATER_WAVES_2) || defined(_WATER_WAVES_4)
     float4 shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0),
         SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0), _ShoreBlend);
@@ -106,13 +101,12 @@ Varyings WaterVertex(Attributes input)
     float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
-    Gerstner(_WaveA, xz, damping, position, tangent, binormal, output.fold);
-    Gerstner(_WaveB, xz, damping, position, tangent, binormal, output.fold);
+    Gerstner(_WaveA, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveB, xz, damping, position, tangent, binormal);
 #if defined(_WATER_WAVES_4)
-    Gerstner(_WaveC, xz, damping, position, tangent, binormal, output.fold);
-    Gerstner(_WaveD, xz, damping, position, tangent, binormal, output.fold);
+    Gerstner(_WaveC, xz, damping, position, tangent, binormal);
+    Gerstner(_WaveD, xz, damping, position, tangent, binormal);
 #endif
-    output.fold /= max(steepnessSum, 0.0001); // Threshold is a fraction of authored summed steepness.
     output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);
 #endif
     output.positionWS = position;
@@ -184,12 +178,12 @@ half4 WaterFragment(Varyings input) : SV_Target
     float rawDistance = shore.r * 3;
     float distance = rawDistance, noise = 0.5;
     float detailFade = DetailFade(input.positionWS.xz);
-    if (_WATER_SHORE_NOISE || _WATER_LAPPING_LINES)
+    if (true)
     {
         float2 uv = input.positionWS.xz * _ShoreNoiseScale;
         noise = (SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, uv + _Time.y * _ShoreNoiseSpeed * float2(1, 0.7)).b
             + SAMPLE_TEXTURE2D(_SurfaceFoamTex, sampler_SurfaceFoamTex, uv * 1.13 + _Time.y * _ShoreNoiseSpeed * float2(-0.6, 1)).b) * 0.5;
-        if (_WATER_SHORE_NOISE) distance = max(0, distance + (noise - 0.5) * 2 * _ShoreNoiseAmount);
+        distance = max(0, distance + (noise - 0.5) * 2 * _ShoreNoiseAmount);
     }
     float alpha = 1;
     if (_WATER_TRANSPARENCY) alpha = lerp(_ShallowAlpha, 1, smoothstep(0, max(_ClearDepth, 0.001), distance));
@@ -200,8 +194,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     {
         float crestHighlight = pow(saturate(input.crest), max(_CrestSharpness, 0.001));
         if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
-        color = lerp(color, saturate(shallow * _CrestColor.rgb), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz));
-        color = lerp(color, deep, saturate(-input.crest) * _TroughStrength * WaveFade(input.positionWS.xz));
+        color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz));
     }
     float3 normal = WaterNormal(input);
     float3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
@@ -245,20 +238,6 @@ half4 WaterFragment(Varyings input) : SV_Target
     surfaceCoverage *= lerp(0.025, 1, detailFade);
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
-    if (_WATER_CREST_FOAM)
-    {
-        float crestFoam = smoothstep(_CrestFoamThreshold, _CrestFoamThreshold + 0.15, input.fold)
-            * FoamLine(surface, 0.35) * _CrestFoamStrength * detailFade;
-        color = lerp(color, float3(1, 1, 1), saturate(crestFoam));
-        alpha = max(alpha, saturate(crestFoam));
-    }
-    float2 intersectionUV = input.positionWS.xz * _IntersectionFoamTiling + _Time.y * _IntersectionFoamSpeed * float2(-0.63, 1);
-    float intersection = SAMPLE_TEXTURE2D(_IntersectionFoamTex, sampler_IntersectionFoamTex,
-        intersectionUV * _IntersectionFoamTex_ST.xy + _IntersectionFoamTex_ST.zw).g;
-    float breakup = saturate((distance - _IntersectionFoamSolid) / max(_IntersectionFoamBreakup, 0.001));
-    float coverage = (distance <= _IntersectionFoamSolid ? 1 : FoamLine(intersection, 0.35 * (1 - breakup))) * detailFade;
-    color = lerp(color, _IntersectionFoamColor.rgb, saturate(coverage * _IntersectionFoamColor.a));
-    alpha = max(alpha, coverage * _IntersectionFoamColor.a);
     if (_WATER_LAPPING_LINES)
     {
         float lapPhase = abs(frac(distance * _LapFrequency - _Time.y * _LapSpeed) - 0.5);

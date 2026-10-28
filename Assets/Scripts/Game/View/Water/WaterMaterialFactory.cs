@@ -4,7 +4,7 @@ namespace NodeWar.View
 {
     public static class WaterMaterialFactory
     {
-        private static Texture2D surfaceFoam, intersectionFoam, normals;
+        private static Texture2D surfaceFoam, normals;
         private static Material fallback, runtime;
         private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
 
@@ -57,12 +57,6 @@ namespace NodeWar.View
             return surfaceFoam;
         }
 
-        public static Texture2D IntersectionFoam()
-        {
-            if (intersectionFoam == null) intersectionFoam = Bake("Water intersection foam", FoamNoise.BakeVoronoi(512, 0x36c1, 6, 0.65), 512);
-            return intersectionFoam;
-        }
-
         public static Texture2D Normals()
         {
             if (normals == null) normals = Bake("Water normals", FoamNoise.BakeNormals(256, 0x5e19));
@@ -90,9 +84,8 @@ namespace NodeWar.View
         private static void ResetTextures()
         {
             if (surfaceFoam != null) Object.Destroy(surfaceFoam);
-            if (intersectionFoam != null) Object.Destroy(intersectionFoam);
             if (normals != null) Object.Destroy(normals);
-            surfaceFoam = intersectionFoam = normals = null;
+            surfaceFoam = normals = null;
             if (fallback != null) Object.Destroy(fallback);
             fallback = null;
             if (runtime != null) Release(runtime);

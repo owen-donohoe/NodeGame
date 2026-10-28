@@ -117,7 +117,7 @@ namespace NodeWar.Lobby.Tests
             var stored = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 4);
             stored.graphicsFeatures = int.MaxValue; stored.waterWaves = waves;
             var result = GameSettingsData.Normalized(stored);
-            Assert.AreEqual(28671, result.graphicsFeatures);
+            Assert.AreEqual(27135, result.graphicsFeatures);
             Assert.AreEqual(expected, result.waterWaves);
             var changed = result; changed.graphicsFeatures ^= 1;
             Assert.IsTrue(GameSettingsData.Differ(result, changed));
@@ -130,7 +130,7 @@ namespace NodeWar.Lobby.Tests
         {
             var source = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 3);
             var custom = GameSettingsData.WithGraphicsQuality(source, 4);
-            Assert.AreEqual(28671, custom.graphicsFeatures); Assert.AreEqual(4, custom.waterWaves);
+            Assert.AreEqual(27135, custom.graphicsFeatures); Assert.AreEqual(4, custom.waterWaves);
             custom.graphicsFeatures = 1; custom.waterWaves = 0;
             var low = GameSettingsData.WithGraphicsQuality(custom, 0);
             Assert.AreEqual(1, low.graphicsFeatures); Assert.AreEqual(0, low.waterWaves);
