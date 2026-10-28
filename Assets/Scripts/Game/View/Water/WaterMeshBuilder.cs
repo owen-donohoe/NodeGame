@@ -5,7 +5,7 @@ namespace NodeWar.View
 {
     public static class WaterMeshBuilder
     {
-        public static int SubdivisionsForTier(int tier, float waveScale = 1.5f, float cellSize = 6f) => WaterFeatures.Subdivisions(WaterFeatures.WavesFor(tier), waveScale, cellSize);
+        public static int SubdivisionsForTier(int tier, float waveScale = 1f, float cellSize = 6f) => WaterFeatures.SubdivisionsFor(tier, WaterFeatures.WavesFor(tier), waveScale, cellSize);
 
         public static (float[] positions, int[] indices) Build(int cols, int rows, TerrainType[] resolved,
             int subdivisionsPerCell, int padCells, int skirtCells)

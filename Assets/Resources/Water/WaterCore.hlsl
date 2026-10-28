@@ -16,6 +16,7 @@ float4 _FoamTex_ST, _SwellTex_ST;
 float4 _BoardRect, _CrestColor, _LapColor;
 float _CrestSharpness;
 float _CrestStrength, _WaveScale;
+float _NoiseWaveHeight, _NoiseWaveScale, _NoiseWaveSpeed;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
@@ -39,6 +40,10 @@ struct Varyings
     float crest : TEXCOORD3;
 };
 
+// Rotation 33.7 degrees, golden scale; wrap scrolls before adding world coordinates.
+float2 RotateNoise(float2 uv) { return float2(0.831954 * uv.x - 0.554844 * uv.y, 0.554844 * uv.x + 0.831954 * uv.y); }
+float2 UnrotateNoise(float2 uv) { return float2(0.831954 * uv.x + 0.554844 * uv.y, -0.554844 * uv.x + 0.831954 * uv.y); }
+float2 Scroll(float speed, float2 direction) { return frac(_Time.y * speed * direction); }
 float4 Shore(float2 uv)
 {
     if (_ShoreBlend >= 1.0) return SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
@@ -83,22 +88,35 @@ Varyings WaterVertex(Attributes input)
     output.shoreUV = (xz - _ShoreST.xy) * _ShoreST.zw;
     float3 tangent = float3(1, 0, 0), binormal = float3(0, 0, 1);
     output.crest = 0;
-#if defined(_WATER_WAVES_2) || defined(_WATER_WAVES_4)
-    float4 shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0),
-        SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0), _ShoreBlend);
-    float damping = _ShoreWaveDamping <= 0 ? 1 : pow(saturate(shoreVertex.g), _ShoreWaveDamping);
+#if defined(_WATER_WAVES_NOISE) || defined(_WATER_WAVES_2) || defined(_WATER_WAVES_4)
+    float4 shoreVertex = SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0);
+    if (_ShoreBlend < 1) shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0), shoreVertex, _ShoreBlend);
+    float damping = _ShoreWaveDamping <= 0 ? 1 : pow(saturate(shoreVertex.r * 2), _ShoreWaveDamping);
     damping *= WaveFade(xz);
+    float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
+#if defined(_WATER_WAVES_NOISE)
+    float2 waveUV = xz * _NoiseWaveScale;
+    float4 swellA = SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (waveUV + Scroll(_NoiseWaveSpeed, float2(0.6, 0.8))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0);
+    float4 swellB = SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (RotateNoise(waveUV) * 1.618034 + Scroll(_NoiseWaveSpeed, float2(-0.8, 0.6))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0);
+    float heightScale = min(max(_NoiseWaveHeight, 0) * damping, max(shoreLimit, 0));
+    float height = swellA.r + swellB.r - 1;
+    position.y += height * heightScale;
+    float2 gradient = ((swellA.gb - 0.5) * _SwellTex_ST.xy + UnrotateNoise((swellB.gb - 0.5) * _SwellTex_ST.xy) * 1.618034) * 32 * _NoiseWaveScale * heightScale;
+    tangent.y = gradient.x;
+    binormal.y = gradient.y;
+    output.crest = height;
+#else
     float amplitudeSum = (_WaveA.z * _WaveA.w + _WaveB.z * _WaveB.w) * _WaveScale / 6.2831853;
     float steepnessSum = _WaveA.z + _WaveB.z;
 #if defined(_WATER_WAVES_4)
     amplitudeSum += (_WaveC.z * _WaveC.w + _WaveD.z * _WaveD.w) * _WaveScale / 6.2831853;
     steepnessSum += _WaveC.z + _WaveD.z;
 #endif
-    float groupNoise = SAMPLE_TEXTURE2D_LOD(_FoamTex, sampler_FoamTex,
-        xz * _WaveGroupScale + _Time.y * _WaveGroupSpeed * float2(0.6, 0.8), 0).b;
+    float2 groupUV = xz * _WaveGroupScale;
+    float groupNoise = (SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (groupUV + Scroll(_WaveGroupSpeed, float2(0.6, 0.8))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r
+        + SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (RotateNoise(groupUV) * 1.618034 + Scroll(_WaveGroupSpeed, float2(-0.8, 0.6))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r) * 0.5;
     float groupAmount = lerp(1 - _WaveGroupStrength, 1 + _WaveGroupStrength, groupNoise);
     float waveScale = min(_WaveSteepnessScale * groupAmount, 0.95 / max(steepnessSum, 0.0001));
-    float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
     Gerstner(_WaveA, xz, damping, position, tangent, binormal);
@@ -108,6 +126,7 @@ Varyings WaterVertex(Attributes input)
     Gerstner(_WaveD, xz, damping, position, tangent, binormal);
 #endif
     output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);
+#endif
 #endif
     output.positionWS = position;
     output.normalWS = normalize(cross(binormal, tangent));

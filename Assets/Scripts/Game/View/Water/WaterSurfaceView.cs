@@ -54,7 +54,7 @@ namespace NodeWar.View
             if (surfaceRenderer == null) return; // AddComponent enables before Initialize.
             surfaceRenderer.sharedMaterial = WaterMaterialFactory.Runtime;
             ApplyProperties();
-            int next = WaterFeatures.Subdivisions(WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
+            int next = WaterFeatures.SubdivisionsFor(WaterQuality.Current, WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             RefreshProbe();
             RefreshFloor();
             surfaceRenderer.receiveShadows = WaterQuality.Has(GraphicsFeature.Shadows);
@@ -71,7 +71,7 @@ namespace NodeWar.View
             boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
-            subdivisions = WaterFeatures.Subdivisions(WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
+            subdivisions = WaterFeatures.SubdivisionsFor(WaterQuality.Current, WaterQuality.Waves, WaterMaterialFactory.Runtime.GetFloat("_WaveScale"), scale);
             WaterQuality.Apply();
             properties = new MaterialPropertyBlock();
             filter = gameObject.AddComponent<MeshFilter>();

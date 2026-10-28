@@ -111,7 +111,7 @@ namespace NodeWar.Lobby.Tests
             Assert.AreEqual(0.12f, result.musicVolume);
         }
 
-        [TestCase(-5, 0)] [TestCase(0, 0)] [TestCase(1, 2)] [TestCase(2, 2)] [TestCase(3, 2)] [TestCase(4, 4)] [TestCase(99, 4)]
+        [TestCase(-5, 0)] [TestCase(0, 0)] [TestCase(1, 1)] [TestCase(2, 2)] [TestCase(3, 2)] [TestCase(4, 4)] [TestCase(99, 4)]
         public void CustomValuesAreNormalizedAndDifferTracksThem(int waves, int expected)
         {
             var stored = GameSettingsData.WithGraphicsQuality(GameSettingsData.CreateDefault(), 4);

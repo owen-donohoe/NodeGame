@@ -28,6 +28,7 @@ namespace NodeWar.View
         {
             int features = Features;
             for (int i = 0; i < flags.Length; i++) SetKeyword(keywords[i], (features & (int)flags[i]) != 0);
+            SetKeyword("_WATER_WAVES_NOISE", Waves == 1);
             SetKeyword("_WATER_WAVES_2", Waves == 2);
             SetKeyword("_WATER_WAVES_4", Waves == 4);
             Material material = WaterMaterialFactory.ForQuality(features, Waves, Current);

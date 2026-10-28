@@ -50,9 +50,12 @@ Shader "NodeWar/Water"
         _WaveFadeEnd("Wave fade end (cells)", Float) = 10
         _DetailFadeEnd("Detail fade end (cells)", Float) = 16
         _WaveA("Wave A", Vector) = (1,0,0.28,18)
-        _WaveB("Wave B", Vector) = (0.422618,0.906308,0.22,11)
-        _WaveC("Wave C", Vector) = (-0.766044,0.642788,0.14,6)
-        _WaveD("Wave D", Vector) = (-0.422618,-0.906308,0.1,3.5)
+        _WaveB("Wave B", Vector) = (0.422618,0.906308,0.22,11.124)
+        _WaveC("Wave C", Vector) = (-0.766044,0.642788,0.14,6.876)
+        _WaveD("Wave D", Vector) = (-0.422618,-0.906308,0.1,4.248)
+        _NoiseWaveHeight("Noise wave height (world)", Float) = 0.25
+        _NoiseWaveScale("Noise wave scale", Float) = 0.025
+        _NoiseWaveSpeed("Noise wave speed", Float) = 0.02
         _WaveSpeed("Wave speed", Float) = 1
         _WaveSteepnessScale("Wave steepness scale", Range(0,1.5)) = 1
         _WaveScale("Wave scale", Range(0.25,4)) = 1.0
@@ -94,7 +97,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterFragment
-            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
             #pragma dynamic_branch _WATER_HORIZON_FRESNEL
@@ -119,7 +122,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepth
-            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
             #pragma dynamic_branch _WATER_HORIZON_FRESNEL
@@ -142,7 +145,7 @@ Shader "NodeWar/Water"
             #pragma target 3.5
             #pragma vertex WaterVertex
             #pragma fragment WaterDepthNormals
-            #pragma multi_compile _ _WATER_WAVES_2 _WATER_WAVES_4
+            #pragma multi_compile _ _WATER_WAVES_NOISE _WATER_WAVES_2 _WATER_WAVES_4
             #pragma dynamic_branch _WATER_TRANSPARENCY
             #pragma dynamic_branch _WATER_SURFACE_FOAM_DISTORTION
             #pragma dynamic_branch _WATER_HORIZON_FRESNEL

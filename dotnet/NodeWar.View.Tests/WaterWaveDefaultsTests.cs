@@ -12,7 +12,7 @@ namespace NodeWar.View.Tests
         private static double Scalar(string name) => double.Parse(Regex.Match(Shader, name + @"\([^\r\n]*= ([0-9.]+)").Groups[1].Value, CultureInfo.InvariantCulture);
         private static double[] Wave(int index) => Array.ConvertAll(Regex.Match(Shader, "_Wave" + (char)('A' + index) + @"\([^\r\n]*= \(([^)]+)\)").Groups[1].Value.Split(','), x => double.Parse(x, CultureInfo.InvariantCulture));
 
-        [TestCase(1, 2)] [TestCase(2, 4)] [TestCase(3, 4)]
+        [TestCase(2, 4)] [TestCase(3, 4)]
         public void ScaledWavesResolveAtDefaultAndMinimumScale(int tier, int count)
         {
             double amplitude = 0, shortest = double.MaxValue;
@@ -24,7 +24,7 @@ namespace NodeWar.View.Tests
             }
             Assert.That(amplitude * Scalar("_WaveScale") * Scalar("_WaveSteepnessScale"), Is.GreaterThan(0.4), "Open water must exceed the old global cap.");
             Assert.That(Scalar("_ShoreMaxAmplitude"), Is.LessThanOrEqualTo(0.45 - 0.05));
-            foreach (float scale in new[] { 0.25f, 1.5f, 4f })
+            foreach (float scale in new[] { 0.25f, 1f, 4f })
                 Assert.That(shortest * scale / (6.0 / WaterMeshBuilder.SubdivisionsForTier(tier, scale)), Is.GreaterThanOrEqualTo(4));
         }
 

@@ -7,7 +7,7 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
-        [TestCase(0, 441)] [TestCase(1, 8281)] [TestCase(2, 59049)] [TestCase(3, 59049)]
+        [TestCase(0, 441)] [TestCase(1, 4761)] [TestCase(2, 33489)] [TestCase(3, 59049)]
         public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count)
         {
             var terrain = new TerrainType[100];
@@ -112,7 +112,7 @@ namespace NodeWar.View.Tests
             CheckExtent(match.positions, 40); CheckExtent(lobby.positions, 80);
         }
 
-        [TestCase(0, 1)] [TestCase(1, 4)] [TestCase(2, 8)] [TestCase(3, 8)]
+        [TestCase(0, 1)] [TestCase(1, 3)] [TestCase(2, 6)] [TestCase(3, 8)]
         public void MeshCountsMatchTierAndOmitLand(int tier, int n)
         {
             Assert.AreEqual(n, WaterMeshBuilder.SubdivisionsForTier(tier));

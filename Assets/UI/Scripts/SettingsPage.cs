@@ -389,7 +389,7 @@ namespace NodeWar.Lobby
             bool wasLoading = loading;
             loading = true;
             if (graphicsDetails != null) graphicsDetails.style.display = graphicsIndex == 4 ? DisplayStyle.Flex : DisplayStyle.None;
-            if (wavesLabel != null) wavesLabel.text = current.waterWaves == 0 ? "Off" : current.waterWaves.ToString();
+            if (wavesLabel != null) wavesLabel.text = NodeWar.View.WaterFeatures.WaveName(current.waterWaves);
             for (int i = 0; i < graphicsToggles.Length; i++)
                 SetSwitch(graphicsToggles[i], (current.graphicsFeatures & (int)graphicsFlags[i]) != 0);
             loading = wasLoading;
