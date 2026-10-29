@@ -27,7 +27,7 @@ float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmou
 float _DetailNormalSamples, _FoamDistortionQuality;
 float _SwashDesync, _SwashWetStrength, _SwashSpeed, _SwashRange, _SwashWidth, _SwashOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
-float _BodyStepA, _BodyStepB;
+float _BodyStepA, _BodyStepB, _DeepLakeEdge;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _NormalsScale, _NormalsSpeed, _NormalsStrength;
@@ -236,13 +236,19 @@ half4 WaterFragment(Varyings input) : SV_Target
     }
 #endif
     half noise = foam.g;
-    half displacedMix = shore.b >= 0.125 ? saturate(shore.a + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
     half lake = step(0.125, shore.b);
     half deepLake = lake * (1 - step(0.75, shore.b));
     half fromLake = step(0.375, shore.b) * (1 - step(0.75, shore.b));
+    // A is depth into the body over one cell. Deep lake is a solid block, so its rim is
+    // compressed to _DeepLakeEdge cells and even a lone 1x1 cell is mostly solid.
+    half edgeMix = deepLake > 0 ? saturate(shore.a / max(_DeepLakeEdge, 0.01)) : shore.a;
+    half displacedMix = lake > 0 ? saturate(edgeMix + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
     half bodyMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
-    half3 shallow = lerp(lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, fromLake), lerp(_LakeShallowColor.rgb, _DeepLakeShallowColor.rgb, deepLake), bodyMix);
-    half3 deep = lerp(lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, fromLake), lerp(_LakeDeepColor.rgb, _DeepLakeDeepColor.rgb, deepLake), bodyMix);
+    // Colour of the body this texel's blend starts from (ocean, or lake for deep-from-lake).
+    half3 fromShallow = lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, fromLake);
+    half3 fromDeep = lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, fromLake);
+    half3 shallow = lerp(fromShallow, _LakeShallowColor.rgb, bodyMix * (1 - deepLake));
+    half3 deep = lerp(fromDeep, _LakeDeepColor.rgb, bodyMix * (1 - deepLake));
     half distance = max(0, shore.r * 3 + (noise - 0.5) * 2 * _ShoreNoiseAmount);
     half detailFade = DetailFade(input.positionWS.xz);
     half alpha = 1;
@@ -252,6 +258,11 @@ half4 WaterFragment(Varyings input) : SV_Target
     half depth = saturate(distance / max(_DepthRange, 0.001));
     if (_ColorSteps >= 2) depth = floor(depth * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
     half3 color = lerp(shallow, deep, depth);
+    // Deep lake ignores shoreline shading: the rim steps through the tween colour, the cell is solid green.
+    half deepBlend = deepLake * bodyMix;
+    half3 deepTarget = bodyMix >= 0.999 ? _DeepLakeDeepColor.rgb : _DeepLakeShallowColor.rgb;
+    color = lerp(color, deepTarget, deepBlend);
+    alpha = lerp(alpha, 1, deepBlend);
 #if !defined(_WATER_LITE)
     if (_WATER_CREST_COLOUR)
     {

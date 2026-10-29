@@ -212,6 +212,7 @@ namespace NodeWar.View
             MaterialSlider(material, "_BodyNoiseAmount", "Body noise amount", 0f, 1f);
             MaterialSlider(material, "_BodyStepA", "Body step A", 0f, 1f);
             MaterialSlider(material, "_BodyStepB", "Body step B", 0f, 1f);
+            MaterialSlider(material, "_DeepLakeEdge", "Deep lake rim width", 0.01f, 1f);
             MaterialSlider(material, "_ColorSteps", "Colour steps", 0f, 16f, true);
             MaterialSlider(material, "_DepthRange", "Depth range", 0.1f, 3f);
             MaterialSlider(material, "_ReflectionMin", "Reflection floor", 0f, 1f);
