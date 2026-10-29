@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 30a6dd77
+verified: 058b62ab
 ---
 
 # World view
@@ -63,7 +63,7 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water retains its full grid under plinths until board/density changes. Worker-owned `ShoreField.Workspace` reuses buffers: exact square-distance FH EDT for full bakes, local minima for land additions. Body-source changes refresh body EDTs; stale results drop. Textures crossfade for 0.4 seconds; reduced motion snaps. Shore R=distance, G=swash phase, A=inward shallower-body mix. B=0 ocean, 255 lake-from-ocean, 128 deep-from-lake, 64 deep-from-ocean. Texel-centre sampling contains noise/steps. Floor depth includes wave amplitude.
+Water keeps full-grid geometry. `ShoreField.Workspace` reuses square-distance EDT buffers and local land minima. Lake removal refreshes nearby ocean A; deep-body changes refresh EDTs. Stale results drop. Crossfade: 0.4 seconds; reduced motion snaps. R=land distance, G=swash phase; filtered ocean/lake A=signed border distance (one-cell range), with noise-bounded steps. Unfiltered deep A=inward ramp with compressed solid-colour rim. B=0 ocean, 255 lake, 128 deep-from-lake, 64 deep-from-ocean. Floor depth includes waves.
 
 `WaterFeatures` budgets Off/Noise/Gerstner 2/4. Low compiles optional paths out; Low/Medium disable sheen. `WaterQuality.Apply()` refreshes presentation and the URP clone; HDR stays authored. Board creation warms shader variants. High/Ultra probes slice faces after 1.5 quiet seconds and settled plinths. Water sorts at -10; SSAO needs DepthNormals.
 Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
