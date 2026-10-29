@@ -28,6 +28,7 @@ float _DetailNormalSamples, _FoamDistortionQuality;
 float _SwashDesync, _SwashWetStrength, _SwashSpeed, _SwashRange, _SwashWidth, _SwashOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _BodyStepA, _BodyStepB, _DeepLakeEdge;
+float _BorderStepWidth, _BorderOceanStep, _BorderLakeStep, _BorderNoise;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _NormalsScale, _NormalsSpeed, _NormalsStrength;
@@ -51,14 +52,18 @@ float2 UnrotateNoise(float2 uv) { return float2(0.831954 * uv.x + 0.554844 * uv.
 float2 Scroll(float speed, float2 direction) { return frac(_Time.y * speed * direction); }
 half4 Shore(float2 uv)
 {
-    // Body id and body mix are categorical: filtering them across a lake/deep-lake edge
-    // averages two bodies' mixes into a false full-strength line. Distance and phase stay filtered.
+    // Body ID stays categorical; only deep lake keeps its unfiltered inward mix.
+    // Ocean/lake A is a continuous signed distance, so it uses the filtered read.
     float2 bodyUV = (floor(uv * _ShoreTex_TexelSize.zw) + 0.5) * _ShoreTex_TexelSize.xy;
     half4 currentShore = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
-    currentShore.ba = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).ba;
+    half2 currentBody = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).ba;
+    currentShore.b = currentBody.x;
+    if (currentBody.x > 0.125 && currentBody.x < 0.75) currentShore.a = currentBody.y;
     if (_ShoreBlend >= 1.0) return currentShore;
     half4 previousShore = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv);
-    previousShore.ba = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).ba;
+    half2 previousBody = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).ba;
+    previousShore.b = previousBody.x;
+    if (previousBody.x > 0.125 && previousBody.x < 0.75) previousShore.a = previousBody.y;
     return lerp(previousShore, currentShore, _ShoreBlend);
 }
 void Gerstner(float4 wave, float spreadOffset, float phaseOffset, float2 xz, float damping, inout float3 position,
@@ -240,11 +245,16 @@ half4 WaterFragment(Varyings input) : SV_Target
     half lake = step(0.125, shore.b);
     half deepLake = lake * (1 - step(0.75, shore.b));
     half fromLake = step(0.375, shore.b) * (1 - step(0.75, shore.b));
-    // A is depth into the body over one cell. Deep lake is a solid block, so its rim is
-    // compressed to _DeepLakeEdge cells and even a lone 1x1 cell is mostly solid.
+    // Deep lake retains its compressed inward rim and existing noise/steps.
     half edgeMix = deepLake > 0 ? saturate(shore.a / max(_DeepLakeEdge, 0.01)) : shore.a;
     half displacedMix = lake > 0 ? saturate(edgeMix + (noise - 0.5) * 2 * _BodyNoiseAmount) : 0;
-    half bodyMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
+    half deepMix = displacedMix < 0.166667 ? 0 : displacedMix < 0.5 ? _BodyStepA : displacedMix < 0.833333 ? _BodyStepB : 1;
+    // Decode signed distance with R=1 cell. Noise cannot exceed either step's width.
+    float borderWidth = max(_BorderStepWidth, 0);
+    float borderNoise = clamp(_BorderNoise, 0, borderWidth);
+    float borderDistance = (shore.a - 0.5) * 2 + (noise - 0.5) * 2 * borderNoise;
+    half borderMix = borderDistance < -borderWidth ? 0 : borderDistance < 0 ? _BorderOceanStep : borderDistance < borderWidth ? _BorderLakeStep : 1;
+    half bodyMix = deepLake > 0 ? deepMix : borderMix;
     // Colour of the body this texel's blend starts from (ocean, or lake for deep-from-lake).
     half3 fromShallow = lerp(_OceanShallowColor.rgb, _LakeShallowColor.rgb, fromLake);
     half3 fromDeep = lerp(_OceanDeepColor.rgb, _LakeDeepColor.rgb, fromLake);

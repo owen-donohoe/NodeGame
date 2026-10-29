@@ -209,6 +209,10 @@ namespace NodeWar.View
             MaterialSlider(material, "_ShallowAlpha", "Shallow alpha", 0f, 1f);
             MaterialSlider(material, "_ClearDepth", "Clear depth (cells)", 0.01f, 3f);
             GUILayout.Label("Colour");
+            MaterialSlider(material, "_BorderStepWidth", "Border step width", 0f, 1f);
+            MaterialSlider(material, "_BorderOceanStep", "Border ocean step", 0f, 1f);
+            MaterialSlider(material, "_BorderLakeStep", "Border lake step", 0f, 1f);
+            MaterialSlider(material, "_BorderNoise", "Border noise", 0f, 1f);
             MaterialSlider(material, "_BodyNoiseAmount", "Body noise amount", 0f, 1f);
             MaterialSlider(material, "_BodyStepA", "Body step A", 0f, 1f);
             MaterialSlider(material, "_BodyStepB", "Body step B", 0f, 1f);

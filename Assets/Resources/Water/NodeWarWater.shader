@@ -10,6 +10,10 @@ Shader "NodeWar/Water"
         _DeepLakeDeepColor("Deep lake", Color) = (0.560784,0.737255,0.560784,1)
         _DepthRange("Depth range (cells)", Float) = 2
         _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 6
+        _BorderStepWidth("Border step width (cells)", Range(0,1)) = 0.2
+        _BorderOceanStep("Border ocean step", Range(0,1)) = 0.30
+        _BorderLakeStep("Border lake step", Range(0,1)) = 0.70
+        _BorderNoise("Border noise (cells)", Range(0,1)) = 0.1
         _BodyStepA("Body blend step A", Range(0,1)) = 0.30
         _BodyStepB("Body blend step B", Range(0,1)) = 0.65
         _DeepLakeEdge("Deep lake rim width (cells)", Range(0.01,1)) = 0.2
