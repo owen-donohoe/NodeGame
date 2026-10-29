@@ -82,7 +82,7 @@ namespace NodeWar.View.Tests
             }
         }
 
-        [TestCase(TerrainType.Lake)] [TestCase(TerrainType.DeepLake)]
+        [TestCase(TerrainType.DeepLake)]
         public void BodyMixIsContainedMonotonicAndClamped(TerrainType lake)
         {
             var terrain = new TerrainType[60];
@@ -105,6 +105,53 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(255, Mix(80));
         }
         [Test]
+        public void SignedBorderIsMonotonicAndFilteredMidpointIsHalf()
+        {
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++) terrain[z * 10 + x] = x < 3 ? TerrainType.Ocean : TerrainType.Lake;
+            var field = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int A(int x) => field.rgba[(64 * field.width + x) * 4 + 3];
+            for (int x = 40; x < 88; x++) Assert.LessOrEqual(A(x), A(x + 1));
+            Assert.AreEqual(0, A(47));
+            Assert.AreEqual(255, A(80));
+            Assert.That(A(63), Is.InRange(1, 127));
+            Assert.That(A(64), Is.InRange(128, 254));
+            Assert.AreEqual(0.5, (A(63) + A(64)) / 510.0, 1.0 / 255);
+        }
+
+        [Test]
+        public void LandAdjacencyDoesNotMoveSignedLakeDistance()
+        {
+            var terrain = new TerrainType[49];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = i % 7 == 0 ? TerrainType.Ocean : TerrainType.Lake;
+            var before = ShoreField.Bake(7, 7, terrain);
+            terrain[24] = TerrainType.Land;
+            var after = ShoreField.Bake(7, 7, terrain);
+            for (int z = 0; z < before.height; z++)
+                for (int x = 0; x < before.width; x++)
+                {
+                    int at = (z * before.width + x) * 4;
+                    int cx = x / 16 - 4, cz = z / 16 - 4;
+                    if (cx > 0 && cx < 7 && cz >= 0 && cz < 7 && !(cx == 3 && cz == 3))
+                        Assert.AreEqual(before.rgba[at + 3], after.rgba[at + 3]);
+                }
+        }
+
+        [TestCase(1)] [TestCase(3)] [TestCase(16)]
+        public void RemovingLastLakeRefreshesOceanBorderIncrementally(int resolution)
+        {
+            var terrain = new TerrainType[25];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
+            terrain[12] = TerrainType.Lake;
+            var workspace = new ShoreField.Workspace(5, 5, resolution);
+            workspace.Bake(terrain);
+            terrain[12] = TerrainType.Land;
+            Assert.IsTrue(workspace.TryAddLand(terrain));
+            CollectionAssert.AreEqual(ShoreField.Bake(5, 5, terrain, resolution).rgba, workspace.Field.rgba);
+        }
+
+        [Test]
         public void DeepLakeBlendsFromNearestShallowerBodyOnItsOwnSide()
         {
             var terrain = new TerrainType[60];
@@ -126,7 +173,7 @@ namespace NodeWar.View.Tests
                 for (int x = 0; x < f.width; x++)
                 {
                     int at = (z * f.width + x) * 4;
-                    if (f.rgba[at + 2] == 0) Assert.AreEqual(0, f.rgba[at + 3]);
+                    if (f.rgba[at + 2] == 0 && x >= 176) Assert.AreEqual(0, f.rgba[at + 3]);
                 }
         }
 
@@ -136,7 +183,7 @@ namespace NodeWar.View.Tests
             var f = ShoreField.Bake(4, 1, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Ocean }, 1, 1);
             int at = (f.width + 1) * 4;
             Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 3]);
-            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(0, f.rgba[at + 7]);
+            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(64, f.rgba[at + 7]);
             Assert.Less(f.rgba[at + 4], f.rgba[at + 8]); Assert.Less(f.rgba[at + 8], f.rgba[at + 12]);
             Assert.AreEqual(0, f.rgba[at + 6]); Assert.AreEqual(255, f.rgba[at + 10]);
         }

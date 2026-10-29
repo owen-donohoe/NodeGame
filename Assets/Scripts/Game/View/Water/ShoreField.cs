@@ -79,7 +79,7 @@ namespace NodeWar.View
                     field.rgba[at] = Encode(distance / 3);
                     field.rgba[at + 2] = WaterBodyOf(terrain);
                     // R: land distance; G: static swash phase; B: own body ID.
-                    // A: ramp from nearest shallower body into this body, never outside it.
+                    // A: signed ocean/lake distance (R=1); deep lake keeps its inward ramp.
                     // B: 0 ocean, 255 lake from ocean, 128 deep from lake, 64 deep from ocean.
                     bool isLake = terrain != TerrainType.Ocean && terrain != TerrainType.Land;
                     double bodyDistanceSquared = double.PositiveInfinity;
@@ -102,7 +102,17 @@ namespace NodeWar.View
                         field.rgba[at + 2] = fromLake ? (byte)128 : (byte)64;
                         bodyDistanceSquared = Math.Min(bodyDistanceSquared, lakeDistanceSquared);
                     }
-                    field.rgba[at + 3] = isLake ? Encode(Math.Sqrt(bodyDistanceSquared) / blendCells) : (byte)0;
+                    if (terrain == TerrainType.Ocean)
+                    {
+                        double lakeDistanceSquared = double.PositiveInfinity;
+                        for (int i = 0; i < lakes.Count; i++)
+                            lakeDistanceSquared = Math.Min(lakeDistanceSquared,
+                                DistanceSquaredToSquare(px, pz, lakes[i] % cols, lakes[i] / cols));
+                        field.rgba[at + 3] = EncodeBorder(-Math.Sqrt(lakeDistanceSquared));
+                    }
+                    else field.rgba[at + 3] = terrain == TerrainType.DeepLake
+                        ? Encode(Math.Sqrt(bodyDistanceSquared) / blendCells)
+                        : terrain == TerrainType.Land ? (byte)0 : EncodeBorder(Math.Sqrt(bodyDistanceSquared));
                 }
             return field;
         }
@@ -175,6 +185,8 @@ namespace NodeWar.View
                 {
                     if (resolved[i] == terrain[i]) continue;
                     bodyInputsChanged |= (terrain[i] == TerrainType.Ocean && hasLake) || (terrain[i] == TerrainType.Lake && hasDeep);
+                    if (terrain[i] == TerrainType.Lake && !hasDeep)
+                        RefreshOceanBorder(resolved, i % cols, i / cols);
                     int cx = i % cols, cz = i / cols;
                     int x0 = Math.Max(1, (cx + pad - 3) * resolution), x1 = Math.Min(Field.width - 2, (cx + pad + 4) * resolution - 1);
                     int z0 = Math.Max(1, (cz + pad - 3) * resolution), z1 = Math.Min(Field.height - 2, (cz + pad + 4) * resolution - 1);
@@ -196,14 +208,36 @@ namespace NodeWar.View
                 return true;
             }
 
+            // Removed lake sources affect ocean A only within R=1 plus one filtered texel.
+            private void RefreshOceanBorder(TerrainType[] resolved, int cx, int cz)
+            {
+                int reach = resolution + 1;
+                int x0 = Math.Max(1, (cx + pad) * resolution - reach);
+                int x1 = Math.Min(Field.width - 2, (cx + pad + 1) * resolution - 1 + reach);
+                int z0 = Math.Max(1, (cz + pad) * resolution - reach);
+                int z1 = Math.Min(Field.height - 2, (cz + pad + 1) * resolution - 1 + reach);
+                for (int z = z0; z <= z1; z++)
+                    for (int x = x0; x <= x1; x++)
+                    {
+                        int tx = x / resolution - pad, tz = z / resolution - pad;
+                        if (tx >= 0 && tx < cols && tz >= 0 && tz < rows && resolved[tz * cols + tx] != TerrainType.Ocean) continue;
+                        double px = Field.originX + (x + 0.5) / resolution, pz = Field.originZ + (z + 0.5) / resolution;
+                        double nearest = double.PositiveInfinity;
+                        for (int cell = 0; cell < resolved.Length; cell++)
+                            if (resolved[cell] == TerrainType.Lake)
+                                nearest = Math.Min(nearest, DistanceSquaredToSquare(px, pz, cell % cols, cell / cols));
+                        Field.rgba[(z * Field.width + x) * 4 + 3] = EncodeBorder(-Math.Sqrt(nearest));
+                    }
+            }
+
             private bool Border(int x, int z) => x == 0 || z == 0 || x == Field.width - 1 || z == Field.height - 1;
 
             private void BakeBodies(TerrainType[] resolved)
             {
-                bool hasLake = false, hasDeep = false;
-                for (int i = 0; i < resolved.Length; i++) { hasLake |= resolved[i] == TerrainType.Lake || resolved[i] == TerrainType.DeepLake; hasDeep |= resolved[i] == TerrainType.DeepLake; }
+                bool hasLake = false;
+                for (int i = 0; i < resolved.Length; i++) hasLake |= resolved[i] == TerrainType.Lake || resolved[i] == TerrainType.DeepLake;
                 if (hasLake) Transform(resolved, TerrainType.Ocean, ocean);
-                if (hasDeep) Transform(resolved, TerrainType.Lake, lakes);
+                if (hasLake) Transform(resolved, TerrainType.Lake, lakes);
                 for (int z = 0; z < Field.height; z++)
                     for (int x = 0; x < Field.width; x++)
                     {
@@ -216,7 +250,7 @@ namespace NodeWar.View
                             double px = Field.originX + (x + 0.5) / resolution, pz = Field.originZ + (z + 0.5) / resolution;
                             double edge = Math.Min(Math.Min(px + 0.5, cols - 0.5 - px), Math.Min(pz + 0.5, rows - 0.5 - pz));
                             double distance = Math.Min(ocean[pixel], edge * edge);
-                                                        if (own == TerrainType.DeepLake)
+                            if (own == TerrainType.DeepLake)
                             {
                                 double lakeDistance = lakes[pixel];
                                 // Preserve the old body-ID decision at floating-point ties (notably odd resolutions).
@@ -234,8 +268,10 @@ namespace NodeWar.View
                                 body = lakeDistance <= distance ? (byte)128 : (byte)64;
                                 distance = Math.Min(distance, lakeDistance);
                             }
-                            mix = Encode(Math.Sqrt(distance) / blendCells);
+                            mix = own == TerrainType.DeepLake ? Encode(Math.Sqrt(distance) / blendCells) : EncodeBorder(Math.Sqrt(distance));
                         }
+                        if (own == TerrainType.Ocean && hasLake && !Border(x, z))
+                            mix = EncodeBorder(-Math.Sqrt(lakes[pixel]));
                         Field.rgba[at + 2] = body; Field.rgba[at + 3] = mix;
                     }
             }
@@ -301,6 +337,8 @@ namespace NodeWar.View
             double dz = Math.Max(Math.Abs(z - landZ) - (0.5 - inset), 0);
             return dx * dx + dz * dz;
         }
+
+        private static byte EncodeBorder(double signedDistance) => Encode(0.5 + Math.Min(1, Math.Max(-1, signedDistance)) / 2);
 
         private static byte Encode(double value) => (byte)Math.Round(Math.Min(1, Math.Max(0, value)) * 255);
     }
