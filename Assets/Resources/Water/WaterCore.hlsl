@@ -51,13 +51,14 @@ float2 UnrotateNoise(float2 uv) { return float2(0.831954 * uv.x + 0.554844 * uv.
 float2 Scroll(float speed, float2 direction) { return frac(_Time.y * speed * direction); }
 half4 Shore(float2 uv)
 {
-    // Keep categorical body ownership exact while filtering distance, phase and mix.
+    // Body id and body mix are categorical: filtering them across a lake/deep-lake edge
+    // averages two bodies' mixes into a false full-strength line. Distance and phase stay filtered.
     float2 bodyUV = (floor(uv * _ShoreTex_TexelSize.zw) + 0.5) * _ShoreTex_TexelSize.xy;
     half4 currentShore = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, uv);
-    currentShore.b = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).b;
+    currentShore.ba = SAMPLE_TEXTURE2D(_ShoreTex, sampler_ShoreTex, bodyUV).ba;
     if (_ShoreBlend >= 1.0) return currentShore;
     half4 previousShore = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, uv);
-    previousShore.b = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).b;
+    previousShore.ba = SAMPLE_TEXTURE2D(_ShorePrevTex, sampler_ShorePrevTex, bodyUV).ba;
     return lerp(previousShore, currentShore, _ShoreBlend);
 }
 void Gerstner(float4 wave, float spreadOffset, float phaseOffset, float2 xz, float damping, inout float3 position,
@@ -268,7 +269,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     {
         half crestHighlight = pow(saturate(input.crest), max(_CrestSharpness, 0.001));
         if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
-        color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz));
+        color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz) * (1 - deepBlend)); // Deep lake stays one solid colour.
     }
     half3 normal = WaterNormal(input);
     half3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
