@@ -147,9 +147,15 @@ Varyings WaterVertex(Attributes input)
 #endif
 #endif
     // Same seam formula as WaterFar: geometric-normal vertex fresnel, then palette lerp.
-    half3 viewDir = GetWorldSpaceNormalizeViewDir(position);
-    half3 geometricNormal = TransformObjectToWorldNormal(float3(0, 1, 0));
-    half farWeight = (_WATER_HORIZON_FRESNEL ? 1 : 0) * lerp(_ReflectionMin, 1, pow(1 - saturate(dot(geometricNormal, viewDir)), max(_HorizonDistance, 0.001h))) * _ReflectionStrength;
+    half farWeight = 0;
+#if !defined(_WATER_LITE)
+    if (_WATER_HORIZON_FRESNEL)
+    {
+        half3 viewDir = GetWorldSpaceNormalizeViewDir(position);
+        half3 geometricNormal = TransformObjectToWorldNormal(float3(0, 1, 0));
+        farWeight = lerp(_ReflectionMin, 1, pow(1 - saturate(dot(geometricNormal, viewDir)), max(_HorizonDistance, 0.001h))) * _ReflectionStrength;
+    }
+#endif
     output.farOcean = lerp(_OceanDeepColor.rgb, _HorizonColor.rgb, farWeight);
     output.horizonWeight = farWeight;
     output.positionWS = position;
