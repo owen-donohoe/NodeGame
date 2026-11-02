@@ -79,13 +79,15 @@ Material:
     - _ShoreCalmDistance: 1.5
     - _ShoreFoamMin: 0.05
     - _ShoreFoamWidth: 0.12
+    - _ShoreFoamWobble: 0.6
+    - _ShoreFoamWobbleScale: 0.25
     - _ShoreMaxAmplitude: 0.35
     - _ShoreNoiseAmount: 0.25
     - _ShoreWaveDamping: 0.6
     - _Smoothness: 0.6
     - _SrcBlend: 1
     - _SurfaceFoamDirection: 0.09
-    - _SurfaceFoamDistortion: 1
+    - _SurfaceFoamDistortion: 0.5
     - _SurfaceFoamSpeed: 0.03
     - _SurfaceFoamTiling: 0.05
     - _SurfaceFoamWidth: 0.08
@@ -121,7 +123,7 @@ Material:
     - _ShoreFoamColor: {r: 1, g: 1, b: 1, a: 1}
     - _ShoreST: {r: 0, g: 0, b: 1, a: 1}
     - _SpecularColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
-    - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.3}
+    - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.2}
     - _SwashColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _WaveA: {r: 1, g: 0, b: 0.28, a: 18}
     - _WaveB: {r: 0.422618, g: 0.906308, b: 0.2, a: 6.876}
