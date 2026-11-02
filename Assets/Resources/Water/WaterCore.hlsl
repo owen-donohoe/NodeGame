@@ -359,7 +359,10 @@ half4 WaterFragment(Varyings input) : SV_Target
         half softSpec = pow(saturate(dot(normal, halfDirection)), exp2(10 * _Smoothness + 1));
         half spec = softSpec;
         if (_Hardness > 0) spec = lerp(softSpec, step(0.5, smoothstep(0.005, 0.01, softSpec)), _Hardness);
-        color += spec * _SpecularColor.rgb * mainLight.color * shadow;
+        // Glints are stylised: cap the light at intensity 1 so a brighter scene sun (the match uses 2)
+        // and bloom do not turn them into blown-out patches. The hue still follows the light.
+        half3 glintLight = mainLight.color / max(max(max(mainLight.color.r, mainLight.color.g), mainLight.color.b), 1.0h);
+        color = min(color + spec * _SpecularColor.rgb * glintLight * shadow, 1.0h);
         alpha = max(alpha, spec * shadow);
     }
     if (_WATER_DITHER)
