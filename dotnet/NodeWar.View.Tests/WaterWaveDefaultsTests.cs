@@ -43,7 +43,7 @@ namespace NodeWar.View.Tests
             }
             Assert.That(amplitude * Scalar("_WaveScale") * Scalar("_WaveSteepnessScale"), Is.GreaterThan(0.4), "Open water must exceed the old global cap.");
             Assert.That(Scalar("_ShoreMaxAmplitude"), Is.LessThanOrEqualTo(0.45 - 0.05));
-            foreach (float scale in new[] { 0.25f, 1f, 4f })
+            foreach (float scale in new[] { 0.25f, (float)Scalar("_WaveScale"), 1f, 4f })
                 Assert.That(shortest * scale / (6.0 / WaterMeshBuilder.SubdivisionsForTier(tier, scale)), Is.GreaterThanOrEqualTo(4));
         }
 

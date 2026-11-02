@@ -56,11 +56,13 @@ namespace NodeWar.View.Tests
             CollectionAssert.AreEqual(ShoreField.BakeBruteForce(2, 2, terrain).rgba, workspace.Field.rgba);
         }
         [TestCase(0, 441)] [TestCase(1, 4761)] [TestCase(2, 33489)] [TestCase(3, 59049)]
-        public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count)
+        [TestCase(0, 441, 0.6f)] [TestCase(1, 4761, 0.6f)]
+        [TestCase(2, 91809, 0.6f)] [TestCase(3, 91809, 0.6f)]
+        public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count, float waveScale = 1f)
         {
             var terrain = new TerrainType[100];
             for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
-            var mesh = WaterMeshBuilder.Build(10, 10, terrain, WaterMeshBuilder.SubdivisionsForTier(tier), WaterFeatures.PaddingFor(tier), 40);
+            var mesh = WaterMeshBuilder.Build(10, 10, terrain, WaterMeshBuilder.SubdivisionsForTier(tier, waveScale), WaterFeatures.PaddingFor(tier), 40);
             Assert.AreEqual(count, mesh.positions.Length / 3);
         }
         [Test]
