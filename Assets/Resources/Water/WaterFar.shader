@@ -33,9 +33,13 @@ Shader "NodeWar/WaterFar"
                 float3 positionWS = TransformObjectToWorld(input.positionOS.xyz);
                 output.positionCS = TransformWorldToHClip(positionWS);
                 // Same seam formula as WaterVertex: geometric-normal vertex fresnel, then palette lerp.
-                half3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
-                half3 geometricNormal = TransformObjectToWorldNormal(float3(0, 1, 0));
-                half farWeight = _HorizonEnabled * lerp(_ReflectionMin, 1, pow(1 - saturate(dot(geometricNormal, viewDir)), max(_HorizonDistance, 0.001h))) * _ReflectionStrength;
+                half farWeight = 0;
+                if (_HorizonEnabled > 0)
+                {
+                    half3 viewDir = GetWorldSpaceNormalizeViewDir(positionWS);
+                    half3 geometricNormal = TransformObjectToWorldNormal(float3(0, 1, 0));
+                    farWeight = _HorizonEnabled * lerp(_ReflectionMin, 1, pow(1 - saturate(dot(geometricNormal, viewDir)), max(_HorizonDistance, 0.001h))) * _ReflectionStrength;
+                }
                 output.farOcean = lerp(_OceanDeepColor.rgb, _HorizonColor.rgb, farWeight);
                 return output;
             }

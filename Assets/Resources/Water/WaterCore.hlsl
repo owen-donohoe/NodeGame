@@ -349,8 +349,8 @@ half4 WaterFragment(Varyings input) : SV_Target
         Light mainLight = GetMainLight();
         half3 halfDirection = SafeNormalize(mainLight.direction + view);
         half softSpec = pow(saturate(dot(normal, halfDirection)), exp2(10 * _Smoothness + 1));
-        half hardSpec = step(0.5, smoothstep(0.005, 0.01, softSpec));
-        half spec = lerp(softSpec, hardSpec, _Hardness);
+        half spec = softSpec;
+        if (_Hardness > 0) spec = lerp(softSpec, step(0.5, smoothstep(0.005, 0.01, softSpec)), _Hardness);
         color += spec * _SpecularColor.rgb * mainLight.color * shadow;
         alpha = max(alpha, spec * shadow);
     }
