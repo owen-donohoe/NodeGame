@@ -277,7 +277,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     color = lerp(color, deepTarget, deepBlend);
     alpha = lerp(alpha, 1, deepBlend);
 #if !defined(_WATER_LITE)
-    if (_WATER_CREST_COLOUR)
+    if (_WATER_CREST_COLOUR && deepBlend < 1 && outsideDistance < max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize)
     {
         // Only the top of the tallest crests tint; glints carry the rest of the wave read.
         half crestHighlight = pow(saturate((input.crest - _CrestThreshold) / max(1 - _CrestThreshold, 0.01)), max(_CrestSharpness, 0.001));
