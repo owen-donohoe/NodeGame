@@ -229,6 +229,7 @@ namespace NodeWar.View
             MaterialSlider(material, "_ShoreFoamWidth", "Shore foam width", 0f, 1f);
             MaterialSlider(material, "_ShoreFoamMin", "Shore foam minimum", 0f, 0.3f);
             MaterialSlider(material, "_ShoreFoamColor", "Shore foam strength", 0f, 1f, false, true);
+            MaterialSlider(material, "_SurfaceFoamColor", "Surface foam opacity", 0f, 1f, false, true);
             MaterialSlider(material, "_SwashOpacity", "Swash opacity", 0f, 1f);
             MaterialSlider(material, "_SwashWidth", "Swash width", 0f, 0.3f);
             MaterialSlider(material, "_SwashRange", "Swash range (cells)", 0.01f, 3f);

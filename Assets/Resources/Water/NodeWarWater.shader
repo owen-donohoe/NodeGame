@@ -4,20 +4,20 @@ Shader "NodeWar/Water"
     {
         _OceanShallowColor("Ocean shallow", Color) = (0.352941,0.419608,0.768627,1)
         _OceanDeepColor("Ocean deep", Color) = (0.180392,0.164706,0.419608,1)
-        _LakeShallowColor("Lake shallow", Color) = (0.603922,0.839216,0.949020,1)
+        _LakeShallowColor("Lake shallow", Color) = (0.603922,0.839216,0.94902,1)
         _LakeDeepColor("Lake deep", Color) = (0.243137,0.560784,0.819608,1)
-        _DeepLakeShallowColor("Deep lake rim (tween)", Color) = (0.401961,0.648693,0.690196,1)
-        _DeepLakeDeepColor("Deep lake", Color) = (0.560784,0.737255,0.560784,1)
+        _DeepLakeShallowColor("Deep lake rim (tween)", Color) = (0.24421,0.213948,0.750943,1)
+        _DeepLakeDeepColor("Deep lake", Color) = (0.176471,0.211765,0.737255,1)
         _DepthRange("Depth range (cells)", Float) = 2
         _ColorSteps("Colour steps (0 = smooth)", Range(0,16)) = 6
         _BorderStepWidth("Border step width (cells)", Range(0,1)) = 0.2
-        _BorderOceanStep("Border ocean step", Range(0,1)) = 0.30
-        _BorderLakeStep("Border lake step", Range(0,1)) = 0.70
+        _BorderOceanStep("Border ocean step", Range(0,1)) = 0.3
+        _BorderLakeStep("Border lake step", Range(0,1)) = 0.7
         _BorderNoise("Border noise (cells)", Range(0,1)) = 0.1
-        _BodyStepA("Body blend step A", Range(0,1)) = 0.30
+        _BodyStepA("Body blend step A", Range(0,1)) = 0.3
         _BodyStepB("Body blend step B", Range(0,1)) = 0.65
         _DeepLakeEdge("Deep lake rim width (cells)", Range(0.01,1)) = 0.2
-        _HorizonColor("Horizon", Color) = (0.549020,0.560784,0.850980,1)
+        _HorizonColor("Horizon", Color) = (0.54902,0.560784,0.85098,1)
         _HorizonDistance("Horizon exponent", Float) = 4
         _FoamTex("Surface foam", 2D) = "black" {}
         _SurfaceFoamTiling("Surface foam tiling", Float) = 0.05
@@ -26,7 +26,7 @@ Shader "NodeWar/Water"
         _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.08
         [HideInInspector] _FoamDistortionQuality("Distortion sine count", Float) = 9
         _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
-        _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.6)
+        _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.3)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
         _SwellTex("Swell height and derivatives", 2D) = "black" {}
         _NormalsScale("Normals scale", Float) = 0.4
