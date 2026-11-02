@@ -69,7 +69,7 @@ half4 Shore(float2 uv)
 void Gerstner(float4 wave, float spreadOffset, float phaseOffset, float2 xz, float damping, inout float3 position,
     inout float3 tangent, inout float3 binormal)
 {
-    // Authored xy is retired: all crests follow one wind with asymmetric spread.
+    // Wave zw supplies steepness/wavelength; crests follow one wind with asymmetric spread.
     float angle = _WindDirection * 6.2831853 + radians(_WindSpread * spreadOffset);
     float2 direction = float2(cos(angle), sin(angle));
     float k = 6.2831853 / max(wave.w * _WaveScale, 0.01);
@@ -277,7 +277,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     half depth = saturate(distance / max(_DepthRange, 0.001));
     if (_ColorSteps >= 2) depth = floor(depth * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
     half3 color = lerp(shallow, deep, depth);
-    // Deep lake ignores shoreline shading: the rim steps through the tween colour, the cell is solid green.
+    // Deep lake ignores shoreline shading: the rim steps through the tween colour, the cell uses its solid deep-lake colour.
     half deepBlend = deepLake * bodyMix;
     half3 deepTarget = bodyMix >= 0.999 ? _DeepLakeDeepColor.rgb : _DeepLakeShallowColor.rgb;
     color = lerp(color, deepTarget, deepBlend);

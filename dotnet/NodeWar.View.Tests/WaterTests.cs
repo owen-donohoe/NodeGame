@@ -281,7 +281,7 @@ namespace NodeWar.View.Tests
             var m = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Land }, n, 0, 0);
             Assert.AreEqual((2 * n + 1) * (n + 1) * 3, m.positions.Length);
             Assert.AreEqual(2 * n * n * 6, m.indices.Length);
-                        var open = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Ocean }, n, 0, 0);
+            var open = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Ocean }, n, 0, 0);
             CollectionAssert.AreEqual(open.positions, m.positions);
             CollectionAssert.AreEqual(open.indices, m.indices);
         }
@@ -314,5 +314,3 @@ namespace NodeWar.View.Tests
         }
     }
 }
-
-

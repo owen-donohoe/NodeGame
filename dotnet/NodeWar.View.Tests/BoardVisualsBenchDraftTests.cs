@@ -82,6 +82,3 @@ namespace NodeWar.View.Tests
         }
     }
 }
-
-
-

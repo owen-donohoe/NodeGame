@@ -652,5 +652,3 @@ namespace NodeWar.Lobby.Tests
         }
     }
 }
-
-

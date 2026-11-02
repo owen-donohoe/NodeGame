@@ -22,7 +22,7 @@ namespace NodeWar.View
     /// <summary>Single source of truth for view-only water presets; usable without Unity.</summary>
     public static class WaterFeatures
     {
-        public const int All = 32767 & ~(4096 | 512 | 1024); // Retired caustics bit stays reserved.
+        public const int All = 32767 & ~(4096 | 512 | 1024); // Retired feature bits stay reserved.
         private const GraphicsFeature Medium = GraphicsFeature.Transparency | GraphicsFeature.SurfaceFoamDistortion
             | GraphicsFeature.Specular | GraphicsFeature.CrestColour
             | GraphicsFeature.Dither | GraphicsFeature.MacroNormals | GraphicsFeature.LappingLines;
