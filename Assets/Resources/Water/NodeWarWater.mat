@@ -44,11 +44,17 @@ Material:
     - _BodyNoiseAmount: 0.25
     - _BodyStepA: 0.3
     - _BodyStepB: 0.65
+    - _BorderLakeStep: 0.7
+    - _BorderNoise: 0.1
+    - _BorderOceanStep: 0.3
+    - _BorderStepWidth: 0.2
     - _CellSize: 6
     - _ClearDepth: 0.8
     - _ColorSteps: 6
     - _CrestSharpness: 2.5
-    - _CrestStrength: 0.45
+    - _CrestStrength: 0.2
+    - _CrestThreshold: 0.6
+    - _DeepLakeEdge: 0.2
     - _DepthRange: 2
     - _DetailFadeEnd: 16
     - _DetailNormalSamples: 1
@@ -71,6 +77,7 @@ Material:
     - _ShallowAlpha: 0.35
     - _ShoreBlend: 1
     - _ShoreCalmDistance: 1.5
+    - _ShoreFoamMin: 0.05
     - _ShoreFoamWidth: 0.12
     - _ShoreMaxAmplitude: 0.35
     - _ShoreNoiseAmount: 0.25
@@ -88,12 +95,14 @@ Material:
     - _SwashSpeed: 0.07
     - _SwashWetStrength: 0.15
     - _SwashWidth: 0.05
+    - _WaveCalmHigh: 0.65
+    - _WaveCalmLow: 0.35
     - _WaveFadeEnd: 10
     - _WaveFadeStart: 2
     - _WaveGroupScale: 0.012
     - _WaveGroupSpeed: 0.01
-    - _WaveGroupStrength: 0.5
-    - _WaveScale: 1
+    - _WaveGroupStrength: 1
+    - _WaveScale: 0.6
     - _WaveSpeed: 1
     - _WaveSteepnessScale: 1
     - _WindDirection: 0.1
@@ -102,8 +111,8 @@ Material:
     m_Colors:
     - _BoardRect: {r: -3, g: -3, b: 3, a: 3}
     - _CrestColor: {r: 1.15, g: 1.15, b: 1.15, a: 1}
-    - _DeepLakeDeepColor: {r: 0.560784, g: 0.737255, b: 0.560784, a: 1}
-    - _DeepLakeShallowColor: {r: 0.40196097, g: 0.648693, b: 0.690196, a: 1}
+    - _DeepLakeDeepColor: {r: 0.1764706, g: 0.21176472, b: 0.7372549, a: 1}
+    - _DeepLakeShallowColor: {r: 0.24421024, g: 0.21394801, b: 0.7509433, a: 1}
     - _HorizonColor: {r: 0.5490199, g: 0.560784, b: 0.85098, a: 1}
     - _LakeDeepColor: {r: 0.24313697, g: 0.560784, b: 0.819608, a: 1}
     - _LakeShallowColor: {r: 0.603922, g: 0.839216, b: 0.94901997, a: 1}
@@ -112,7 +121,7 @@ Material:
     - _ShoreFoamColor: {r: 1, g: 1, b: 1, a: 1}
     - _ShoreST: {r: 0, g: 0, b: 1, a: 1}
     - _SpecularColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
-    - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.6}
+    - _SurfaceFoamColor: {r: 0.909804, g: 0.956863, b: 1, a: 0.3}
     - _SwashColor: {r: 0.909804, g: 0.956863, b: 1, a: 1}
     - _WaveA: {r: 1, g: 0, b: 0.28, a: 18}
     - _WaveB: {r: 0.422618, g: 0.906308, b: 0.2, a: 6.876}
