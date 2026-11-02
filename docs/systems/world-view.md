@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: c7189205
+verified: a65080fa
 ---
 
 # World view
@@ -63,10 +63,10 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water keeps full-grid geometry. `ShoreField.Workspace` reuses EDT buffers/minima. Lake removal refreshes ocean A; deep-body changes rebake. Stale results drop. Crossfade: 0.4 seconds; reduced motion snaps. R=land distance, G=swash phase; filtered ocean/lake A=signed border distance (one-cell range), with noise-bounded steps. Unfiltered deep A=inward ramp with compressed solid-colour rim. B=0 ocean, 255 lake, 128 deep-from-lake, 64 deep-from-ocean. Floor depth includes waves.
+Water uses full-grid geometry and reusable EDT buffers. R=land distance, G=swash phase; B=0 ocean, 255 lake, 128 deep-from-lake, 64 deep-from-ocean. Filtered ocean/lake A encodes signed border distance; unfiltered deep A encodes its compressed rim. Rectangle distance/masks are analytic; bodies stay cell-owned. Lake removal refreshes ocean A; deep/rectangle changes rebake. Stale results drop. Shore publication waits for plinth emergence, then crossfades 0.4 seconds; reduced motion snaps. ShowMatch requests one full bake. World lookups, waves, floor clearance and subdivisions normalize to six-unit cells.
 
 `WaterFeatures`: Low Off, Medium Noise, High/Ultra Gerstner 4; Custom allows Gerstner 2. Low compiles optional paths out; Low/Medium disable sheen. `WaterQuality.Apply()` refreshes presentation and the URP clone; HDR stays authored. High/Ultra probes slice faces after 1.5 quiet seconds and settled plinths. Water sorts at -10; SSAO needs DepthNormals.
-Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Last-board teardown releases shared water resources and fences pending bakes.
+Board plinth tops are GroundY (-0.12); depth=0.6 cell, water=0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Last-water teardown fences bakes and releases shared resources.
 
 Editor/development `BoardVisualsBench` replays drafting/shoals without simulation. Deep lake preserves slots/shoals. F1/Console report bake/upload/mesh/probe-submission times and two-second worst frame.
 
@@ -84,4 +84,4 @@ Per-tick state diffs miss damage cancelled by healing. Multiple visual systems n
 - Add outlines: use driver intents and test priority, ID release/reuse and both renderer assets.
 
 ## Tests
-`NodeWar.View.Tests` covers presentation maths, EDT/brute-force equivalence, incremental placement, shore encoding/body blends, full-grid seams/counts, texture bakes, wave clearance/density, swell derivatives, swash phase and presets. `Assets/Tests/EditMode/Outline/` covers outline lifecycle/priority. Compile-check covers Unity components; Editor/device checks verify shaders, sorting, materials, paint coverage and wiring.
+`NodeWar.View.Tests` covers maths, EDT/incremental equivalence, rectangle shores, mesh seams, wave clearance/density, swell, swash and presets. Outline covers lifecycle/priority. Compile-check covers components; Editor/device checks verify rendering/wiring.

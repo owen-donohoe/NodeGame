@@ -126,7 +126,7 @@ sources:
   - Assets/UI/Scripts/UnlockState.cs
   - Assets/UI/Scripts/WorkshopInventorySession.cs
   - Assets/UI/Scripts/WorkshopPage.cs
-verified: 49b7865f
+verified: a65080fa
 ---
 
 # Lobby UI
@@ -178,7 +178,7 @@ Backend owns rank/inventory. Local changes never resize opponents' decks. Preser
 ## How it works
 LobbyManager selects Toolkit or legacy fallback; UIToolkitLobbySetup authors layouts/PanelSettings through Editor tools. Era locks constrain editable choices; missing ownership never trims choices. Launch refreshes/freezes state and rechecks completeness. Ranked requires returned rank; offline/private uses arena 1. Rendezvous supplies record/slot order. Only confirmed resizing persists.
 
-LobbyStage derives `LobbyWaterGrid` from stage-local home ground bounds and lazy market ground bounds. Its child `WaterSurfaceView` owns shore textures, mesh and factory material; the camera uses ocean deep. `PlayerProfile.SetSettings` refreshes water and the runtime URP tier clone live.
+LobbyStage uses `LobbyWaterGrid` for extent and analytic rectangles for exact shores, updating worker snapshots as plots move. All water is Ocean. Raised rectangular plinths share the board material; figures and top-only pickers rise together, with walls below the floor. The camera renders stage land and Water layers; probes render stage land only. `WaterSurfaceView` owns shore textures/mesh and retains shared materials. `PlayerProfile.SetSettings` refreshes water and the runtime URP scale/FSR live.
 
 ## Decisions
 - Share navigation, room views, sheet and menu components rather than duplicate presentation logic.

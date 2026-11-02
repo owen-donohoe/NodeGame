@@ -99,7 +99,7 @@ namespace NodeWar.View
                 ownsSharedResources = true;
             }
             // The board leaves water on Default, so it moves to Water (the probe skips that layer).
-            // An owner that chose a layer keeps it: the lobby stage camera renders only its stage layer.
+            // An owner that chose a layer keeps it, so camera and probe masks remain owner-controlled.
             int waterLayer = LayerMask.NameToLayer("Water");
             if (waterLayer >= 0 && gameObject.layer == 0) gameObject.layer = waterLayer;
             boardView = GetComponentInParent<BoardTerrainView>();
