@@ -41,16 +41,16 @@ Shader "NodeWar/Water"
         _ShallowAlpha("Shallow alpha", Range(0,1)) = 0.35
         _ClearDepth("Clear depth (cells)", Float) = 0.8
         _FloorDepth("Floor depth (world units)", Float) = 1.2
-        _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.12
-        _ShoreFoamWobble("Shore foam wobble (fraction of width)", Range(0,1)) = 0.6
-        _ShoreFoamWobbleScale("Shore foam wobble scale", Float) = 0.25
-        _ShoreFoamColor("Shore foam (alpha = strength)", Color) = (1,1,1,1)
+        _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.08
+        _ShoreFoamWobble("Shore foam wobble (fraction of width)", Range(0,1)) = 1
+        _ShoreFoamWobbleScale("Shore foam wobble scale", Float) = 0.04
+        _ShoreFoamColor("Shore foam (alpha = strength)", Color) = (1,1,1,0.8)
         _BodyNoiseAmount("Body noise amount", Float) = 0.25
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
         _SwashDesync("Swash desync", Float) = 1
         _SwashWetStrength("Swash wet strength", Range(0,1)) = 0.15
         _SwashSpeed("Swash speed", Float) = 0.07
-        _SwashRange("Swash range (cells)", Float) = 1.2
+        _SwashRange("Swash range (cells)", Float) = 0.35
         _SwashWidth("Swash width", Float) = 0.05
         _SwashOpacity("Swash opacity", Range(0,1)) = 0.5
         _SwashColor("Swash colour", Color) = (0.909804,0.956863,1,1)
