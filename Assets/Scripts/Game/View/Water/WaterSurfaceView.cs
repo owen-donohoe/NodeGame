@@ -277,6 +277,7 @@ namespace NodeWar.View
             Vector3 max = transform.TransformPoint(new Vector3((cols - 0.5f) * scale, surfaceY, (rows - 0.5f) * scale));
             properties.SetVector("_BoardRect", new Vector4(min.x, min.z, max.x, max.z));
             properties.SetFloat("_CellSize", scale);
+            properties.SetFloat("_WorldToBoard", WaterFeatures.WorldToBoard(scale));
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
             properties.SetFloat("_DetailFadeEnd", Padding);
             Material material = surfaceRenderer.sharedMaterial;
@@ -306,8 +307,8 @@ namespace NodeWar.View
                 Vector4 wave = material.GetVector(i == 0 ? "_WaveA" : i == 1 ? "_WaveB" : i == 2 ? "_WaveC" : "_WaveD");
                 amplitude += WaterWaveBounds.Amplitude(wave.z, wave.w, material.GetFloat("_WaveScale"));
             }
-            float next = surfaceY - material.GetFloat("_FloorDepth") - (float)WaterWaveBounds.MaxTrough(mode,
-                material.GetFloat("_NoiseWaveHeight"), amplitude, material.GetFloat("_WaveSteepnessScale"), material.GetFloat("_WaveGroupStrength"));
+            float next = surfaceY - (material.GetFloat("_FloorDepth") + (float)WaterWaveBounds.MaxTrough(mode,
+                material.GetFloat("_NoiseWaveHeight"), amplitude, material.GetFloat("_WaveSteepnessScale"), material.GetFloat("_WaveGroupStrength"))) / WaterFeatures.WorldToBoard(scale);
             if (next == floorY) return;
             floorY = next;
             floorRenderer.transform.localPosition = new Vector3(0, next, 0);

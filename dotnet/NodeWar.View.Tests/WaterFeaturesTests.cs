@@ -4,6 +4,16 @@ namespace NodeWar.View.Tests
 {
     public class WaterFeaturesTests
     {
+        [Test]
+        public void BoardScaleIsIdentityAndLobbyPreservesWaveDensity()
+        {
+            Assert.That(WaterFeatures.WorldToBoard(6f), Is.EqualTo(1f));
+            Assert.That(WaterFeatures.WorldToBoard(1f), Is.EqualTo(6f));
+            foreach (int waves in new[] { 2, 4 })
+                Assert.That(WaterFeatures.Subdivisions(waves, 0.6f, 1f),
+                    Is.EqualTo(WaterFeatures.Subdivisions(waves, 0.6f, 6f)));
+        }
+
         // Exact masks guard every cell in the preset table, including disabled features.
         [TestCase(0, 2048, 0, 1)]
         [TestCase(1, 18763, 1, 3)]

@@ -54,6 +54,7 @@ Shader "NodeWar/Water"
         _SwashWidth("Swash width", Float) = 0.05
         _SwashOpacity("Swash opacity", Range(0,1)) = 0.5
         _SwashColor("Swash colour", Color) = (0.909804,0.956863,1,1)
+        _WorldToBoard("World to board", Float) = 1
         _CellSize("Cell size", Float) = 6
         _BoardRect("Board bounds", Vector) = (-3,-3,3,3)
         _WaveFadeStart("Wave fade start (cells)", Float) = 2

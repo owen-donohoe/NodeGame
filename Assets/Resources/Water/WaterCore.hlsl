@@ -26,6 +26,7 @@ float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrengt
 float _ShallowAlpha, _ClearDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
 float _DetailNormalSamples, _FoamDistortionQuality;
 float _SwashDesync, _SwashWetStrength, _SwashSpeed, _SwashRange, _SwashWidth, _SwashOpacity;
+float _WorldToBoard; // Exactly 1 for six-unit board cells.
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
 float _BodyStepA, _BodyStepB, _DeepLakeEdge;
 float _BorderStepWidth, _BorderOceanStep, _BorderLakeStep, _BorderNoise;
@@ -73,9 +74,9 @@ void Gerstner(float4 wave, float spreadOffset, float phaseOffset, float2 xz, flo
     float angle = _WindDirection * 6.2831853 + radians(_WindSpread * spreadOffset);
     float2 direction = float2(cos(angle), sin(angle));
     float k = 6.2831853 / max(wave.w * _WaveScale, 0.01);
-    float phase = k * (dot(direction, xz) - sqrt(9.8 / k) * _WaveSpeed * _Time.y) + phaseOffset;
+    float phase = k * (dot(direction, xz * _WorldToBoard) - sqrt(9.8 / k) * _WaveSpeed * _Time.y) + phaseOffset;
     float steepness = wave.z * damping;
-    float amplitude = steepness / k;
+    float amplitude = steepness / k / _WorldToBoard;
     float s = sin(phase), c = cos(phase);
     position += float3(direction.x * amplitude * c, amplitude * s, direction.y * amplitude * c);
     tangent += float3(-direction.x * direction.x * steepness * s, direction.x * steepness * c,
@@ -112,12 +113,12 @@ Varyings WaterVertex(Attributes input)
     damping *= WaveFade(OutsideBoard(xz));
     float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
 #if defined(_WATER_WAVES_NOISE)
-    float2 waveUV = xz * _NoiseWaveScale;
+    float2 waveUV = xz * _WorldToBoard * _NoiseWaveScale;
     float4 swellA = SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (waveUV + Scroll(_NoiseWaveSpeed, float2(0.6, 0.8))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0);
     float4 swellB = SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (RotateNoise(waveUV) * 1.618034 + Scroll(_NoiseWaveSpeed, float2(-0.8, 0.6))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0);
     float heightScale = min(max(_NoiseWaveHeight, 0) * damping, max(shoreLimit, 0));
     float height = swellA.r + swellB.r - 1;
-    position.y += height * heightScale;
+    position.y += height * heightScale / _WorldToBoard;
     float2 gradient = ((swellA.gb - 0.5) * _SwellTex_ST.xy + UnrotateNoise((swellB.gb - 0.5) * _SwellTex_ST.xy) * 1.618034) * 32 * _NoiseWaveScale * heightScale;
     tangent.y = gradient.x;
     binormal.y = gradient.y;
@@ -129,7 +130,7 @@ Varyings WaterVertex(Attributes input)
     amplitudeSum += (_WaveC.z * _WaveC.w + _WaveD.z * _WaveD.w) * _WaveScale / 6.2831853;
     steepnessSum += _WaveC.z + _WaveD.z;
 #endif
-    float2 groupUV = xz * _WaveGroupScale;
+    float2 groupUV = xz * _WorldToBoard * _WaveGroupScale;
     float groupNoise = (SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (groupUV + Scroll(_WaveGroupSpeed, float2(0.6, 0.8))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r
         + SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (RotateNoise(groupUV) * 1.618034 + Scroll(_WaveGroupSpeed, float2(-0.8, 0.6))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r) * 0.5;
     // Calm patches: dark noise flattens the waves, light noise leaves them at full height.
@@ -143,7 +144,7 @@ Varyings WaterVertex(Attributes input)
     Gerstner(_WaveC, 0.62, 3.1, xz, damping, position, tangent, binormal);
     Gerstner(_WaveD, 0.85, 4.6, xz, damping, position, tangent, binormal);
 #endif
-    output.crest = (position.y - TransformObjectToWorld(input.positionOS.xyz).y) / max(amplitudeSum * damping, 0.0001);
+    output.crest = ((position.y - TransformObjectToWorld(input.positionOS.xyz).y) * _WorldToBoard) / max(amplitudeSum * damping, 0.0001);
 #endif
 #endif
     // Same seam formula as WaterFar: geometric-normal vertex fresnel, then palette lerp.
@@ -170,13 +171,13 @@ half3 WaterNormal(Varyings input, float fade)
     half3 normal = normalize(input.normalWS);
     if (_WATER_MACRO_NORMALS)
     {
-        float2 uv = RotateNoise(input.positionWS.xz * _MacroNormalsScale) + Scroll(_NormalsSpeed * 0.2, float2(0.6, -0.4));
+        float2 uv = RotateNoise(input.positionWS.xz * _WorldToBoard * _MacroNormalsScale) + Scroll(_NormalsSpeed * 0.2, float2(0.6, -0.4));
         half3 macro = float3((SAMPLE_TEXTURE2D(_SwellTex, sampler_SwellTex, uv * _SwellTex_ST.xy + _SwellTex_ST.zw).gb - 0.5) * -4.8, 1);
         normal = normalize(normal + float3(UnrotateNoise(macro.xy).x, 0, UnrotateNoise(macro.xy).y) * _MacroNormalsStrength * fade);
     }
     if (_WATER_DETAIL_NORMALS)
     {
-        float2 uv = RotateNoise(input.positionWS.xz * _NormalsScale);
+        float2 uv = RotateNoise(input.positionWS.xz * _WorldToBoard * _NormalsScale);
         half3 detail = float3((SAMPLE_TEXTURE2D(_SwellTex, sampler_SwellTex,
             (uv + Scroll(_NormalsSpeed, float2(1, 0.63))) * _SwellTex_ST.xy + _SwellTex_ST.zw).gb - 0.5) * -4.8, 1);
         if (_DetailNormalSamples > 1)
@@ -233,7 +234,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     half4 shore = Shore(input.shoreUV);
     float outsideDistance = OutsideBoard(input.positionWS.xz);
     float angle = _SurfaceFoamDirection * 6.2831853;
-    float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
+    float2 foamUV = input.positionWS.xz * _WorldToBoard * _SurfaceFoamTiling
         + Scroll(_SurfaceFoamSpeed, float2(cos(angle), sin(angle)));
     half4 foam = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
         DistortFoam(foamUV) * _FoamTex_ST.xy + _FoamTex_ST.zw);
@@ -241,7 +242,7 @@ half4 WaterFragment(Varyings input) : SV_Target
 #if !defined(_WATER_LITE)
     if (_WATER_SECOND_FOAM_LAYER)
     {
-        float2 uv = RotateNoise(input.positionWS.xz * _SurfaceFoamTiling) * 1.618034 + Scroll(_SurfaceFoamSpeed * 0.6, float2(-0.71, 0.7));
+        float2 uv = RotateNoise(input.positionWS.xz * _WorldToBoard * _SurfaceFoamTiling) * 1.618034 + Scroll(_SurfaceFoamSpeed * 0.6, float2(-0.71, 0.7));
         half4 secondFoam = SAMPLE_TEXTURE2D(_FoamTex, sampler_FoamTex,
             DistortFoam(uv) * _FoamTex_ST.xy + _FoamTex_ST.zw);
         foam.g = (foam.g + secondFoam.g) * 0.5;
@@ -325,7 +326,7 @@ half4 WaterFragment(Varyings input) : SV_Target
     half shoreCoverage = 0;
     if (rawShore < _ShoreFoamWidth * (1 + _ShoreFoamWobble) + 0.05)
     {
-        float2 wobbleUV = input.positionWS.xz * _ShoreFoamWobbleScale + Scroll(_SurfaceFoamSpeed, float2(0.37, -0.93));
+        float2 wobbleUV = input.positionWS.xz * _WorldToBoard * _ShoreFoamWobbleScale + Scroll(_SurfaceFoamSpeed, float2(0.37, -0.93));
         half wobbleNoise = SAMPLE_TEXTURE2D_LOD(_FoamTex, sampler_FoamTex, wobbleUV * _FoamTex_ST.xy + _FoamTex_ST.zw, 0).b;
         half edge = _ShoreFoamWidth * (1 + (wobbleNoise - 0.5) * 2 * saturate(_ShoreFoamWobble));
         shoreCoverage = 1 - smoothstep(edge - rawAA, edge + rawAA, rawShore);
