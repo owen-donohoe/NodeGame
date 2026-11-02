@@ -23,7 +23,7 @@ float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
 float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength, _WaveCalmLow, _WaveCalmHigh;
 float _WindDirection, _WindSpread;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
-float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
+float _ShallowAlpha, _ClearDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
 float _DetailNormalSamples, _FoamDistortionQuality;
 float _SwashDesync, _SwashWetStrength, _SwashSpeed, _SwashRange, _SwashWidth, _SwashOpacity;
 float _CellSize, _WaveFadeStart, _WaveFadeEnd, _DetailFadeEnd;
