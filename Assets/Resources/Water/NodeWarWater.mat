@@ -61,6 +61,9 @@ Material:
     - _DstBlend: 0
     - _FloorDepth: 1.2
     - _FoamDistortionQuality: 9
+    - _GlintElevation: 12
+    - _GlintFollowCamera: 1
+    - _GlintStrength: 0.5
     - _Hardness: 0.5
     - _HorizonDistance: 4
     - _MacroNormalsScale: 0.04
@@ -109,6 +112,7 @@ Material:
     - _WaveSteepnessScale: 1
     - _WindDirection: 0.1
     - _WindSpread: 35
+    - _WorldToBoard: 1
     - _ZWrite: 1
     m_Colors:
     - _BoardRect: {r: -3, g: -3, b: 3, a: 3}

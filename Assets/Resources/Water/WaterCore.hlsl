@@ -33,6 +33,7 @@ float _BorderStepWidth, _BorderOceanStep, _BorderLakeStep, _BorderNoise;
 float _DepthRange, _ColorSteps, _HorizonDistance;
 float _SurfaceFoamTiling, _SurfaceFoamDirection, _SurfaceFoamSpeed, _SurfaceFoamWidth, _SurfaceFoamDistortion;
 float _NormalsScale, _NormalsSpeed, _NormalsStrength;
+float _GlintElevation, _GlintFollowCamera, _GlintStrength;
 float _Smoothness, _Hardness, _WaveSpeed, _WaveSteepnessScale, _ReflectionStrength, _ShoreBlend;
 CBUFFER_END
 struct Attributes { float4 positionOS : POSITION; };
@@ -355,15 +356,23 @@ half4 WaterFragment(Varyings input) : SV_Target
     if (_WATER_SPECULAR)
     {
         Light mainLight = GetMainLight();
-        half3 halfDirection = SafeNormalize(mainLight.direction + view);
+        // Glints use their own light, low and ahead of the camera, so the sparkle hotspot sits toward
+        // the horizon whichever way a player's camera faces. The scene sun still tints and shadows them.
+        float3 cameraForward = -UNITY_MATRIX_V[2].xyz;
+        cameraForward.y = 0;
+        cameraForward = normalize(cameraForward + float3(0, 0, 1e-4));
+        float elevation = radians(_GlintElevation);
+        half3 glintDirection = normalize(cameraForward * cos(elevation) + float3(0, sin(elevation), 0));
+        glintDirection = normalize(lerp(mainLight.direction, glintDirection, _GlintFollowCamera));
+        half3 halfDirection = SafeNormalize(glintDirection + view);
         half softSpec = pow(saturate(dot(normal, halfDirection)), exp2(10 * _Smoothness + 1));
         half spec = softSpec;
         if (_Hardness > 0) spec = lerp(softSpec, step(0.5, smoothstep(0.005, 0.01, softSpec)), _Hardness);
         // Glints are stylised: cap the light at intensity 1 so a brighter scene sun (the match uses 2)
         // and bloom do not turn them into blown-out patches. The hue still follows the light.
         half3 glintLight = mainLight.color / max(max(max(mainLight.color.r, mainLight.color.g), mainLight.color.b), 1.0h);
-        color = min(color + spec * _SpecularColor.rgb * glintLight * shadow, 1.0h);
-        alpha = max(alpha, spec * shadow);
+        color = min(color + spec * _GlintStrength * _SpecularColor.rgb * glintLight * shadow, 1.0h);
+        alpha = max(alpha, spec * _GlintStrength * shadow);
     }
     if (_WATER_DITHER)
     {

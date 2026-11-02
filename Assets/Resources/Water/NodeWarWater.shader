@@ -34,6 +34,9 @@ Shader "NodeWar/Water"
         _NormalsStrength("Normals strength", Range(0,2)) = 0.6
         _Smoothness("Smoothness", Range(0,1)) = 0.6
         _Hardness("Specular hardness", Range(0,1)) = 0.5
+        _GlintElevation("Glint elevation (degrees)", Range(0,90)) = 12
+        _GlintFollowCamera("Glint follows camera (0 = scene sun)", Range(0,1)) = 1
+        _GlintStrength("Glint strength", Range(0,1)) = 0.5
         _SpecularColor("Specular", Color) = (0.909804,0.956863,1,1)
         [HideInInspector] _SrcBlend("Source blend", Float) = 1
         [HideInInspector] _DstBlend("Destination blend", Float) = 0
