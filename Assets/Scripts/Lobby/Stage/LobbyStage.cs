@@ -748,7 +748,16 @@ namespace NodeWar.Lobby
             ocean.transform.SetParent(transform, false);
             ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
             water = ocean.AddComponent<WaterSurfaceView>();
-            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f, skirtCells: 80);
+            var rectangles = new ShoreRectangle[landFootprints.Count];
+            for (int i = 0; i < rectangles.Length; i++)
+            {
+                LobbyLandBounds b = landFootprints[i];
+                rectangles[i] = new ShoreRectangle((b.minX - grid.originX) / grid.cellSize, (b.minZ - grid.originZ) / grid.cellSize,
+                    (b.maxX - grid.originX) / grid.cellSize, (b.maxZ - grid.originZ) / grid.cellSize);
+            }
+            // The grid supplies extent only: the entire stage water body is Ocean.
+            for (int i = 0; i < grid.terrain.Length; i++) grid.terrain[i] = NodeWar.Simulation.TerrainType.Ocean;
+            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f, skirtCells: 80, landRectangles: rectangles);
             water.SetTerrain(grid.terrain);
         }
 

@@ -87,7 +87,7 @@ namespace NodeWar.View
             if (terrain != null) RebuildMesh(terrain);
         }
 
-        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40)
+        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40, ShoreRectangle[] landRectangles = null)
         {
             if (!ownsSharedResources)
             {
@@ -101,7 +101,7 @@ namespace NodeWar.View
             boardView = GetComponentInParent<BoardTerrainView>();
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
-            shoreWorkspace = new ShoreField.Workspace(cols, rows);
+            shoreWorkspace = new ShoreField.Workspace(cols, rows, rectangles: landRectangles);
             terrain = new TerrainType[cols * rows];
             bakingTerrain = new TerrainType[terrain.Length];
             currentBytes = new byte[shoreWorkspace.Field.rgba.Length];

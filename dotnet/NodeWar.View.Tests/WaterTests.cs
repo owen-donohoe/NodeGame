@@ -7,6 +7,37 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
+        [TestCase(3)] [TestCase(16)]
+        public void RectangleDistanceIsExactOffGridAndBodiesStayOcean(int resolution)
+        {
+            var rectangle = new ShoreRectangle(-0.27, 0.19, 1.31, 1.73);
+            var workspace = new ShoreField.Workspace(3, 3, resolution, rectangles: new[] { rectangle });
+            var terrain = new TerrainType[9];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
+            workspace.Bake(terrain);
+            var field = workspace.Field;
+            bool covered = false;
+            for (int z = 1; z < field.height - 1; z++)
+                for (int x = 1; x < field.width - 1; x++)
+                {
+                    double px = field.originX + (x + 0.5) / resolution, pz = field.originZ + (z + 0.5) / resolution;
+                    double dx = Math.Max(Math.Max(-0.27 - px, px - 1.31), 0);
+                    double dz = Math.Max(Math.Max(0.19 - pz, pz - 1.73), 0);
+                    double expected = Math.Min(1, Math.Sqrt(dx * dx + dz * dz) / 3) * 255;
+                    int at = (z * field.width + x) * 4;
+                    Assert.That(field.rgba[at], Is.EqualTo(expected).Within(1));
+                    Assert.That(field.rgba[at + 2], Is.Zero);
+                    Assert.That(field.rgba[at + 3], Is.Zero);
+                    if (dx == 0 && dz == 0) { covered = true; Assert.That(field.rgba[at], Is.Zero); }
+                }
+            Assert.That(covered, Is.True);
+            terrain[8] = TerrainType.Land;
+            Assert.That(workspace.TryAddLand(terrain), Is.True);
+            var full = new ShoreField.Workspace(3, 3, resolution, rectangles: new[] { rectangle });
+            full.Bake(terrain);
+            CollectionAssert.AreEqual(full.Field.rgba, field.rgba);
+        }
+
         [TestCase(1, 0)] [TestCase(3, 1)] [TestCase(8, 4)] [TestCase(16, 4)]
         public void ExactEdtMatchesBruteForceOnVariedBoards(int resolution, int padding)
         {

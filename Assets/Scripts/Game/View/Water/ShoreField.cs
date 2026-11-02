@@ -4,6 +4,26 @@ using NodeWar.Simulation;
 
 namespace NodeWar.View
 {
+    /// <summary>Closed, axis-aligned land in cell units; independent of body IDs.</summary>
+    public readonly struct ShoreRectangle
+    {
+        public readonly double minX, minZ, maxX, maxZ;
+        public ShoreRectangle(double minX, double minZ, double maxX, double maxZ)
+        {
+            if (double.IsNaN(minX) || double.IsInfinity(minX) || double.IsNaN(minZ) || double.IsInfinity(minZ)
+                || double.IsNaN(maxX) || double.IsInfinity(maxX) || double.IsNaN(maxZ) || double.IsInfinity(maxZ)
+                || minX >= maxX || minZ >= maxZ) throw new ArgumentException("Invalid land rectangle.");
+            this.minX = minX; this.minZ = minZ; this.maxX = maxX; this.maxZ = maxZ;
+        }
+
+        internal double DistanceSquared(double x, double z)
+        {
+            double dx = Math.Max(Math.Max(minX - x, x - maxX), 0);
+            double dz = Math.Max(Math.Max(minZ - z, z - maxZ), 0);
+            return dx * dx + dz * dz;
+        }
+    }
+
     public sealed class ShoreFieldData
     {
         public int width, height;
@@ -134,10 +154,12 @@ namespace NodeWar.View
             private readonly int[] sites;
             private readonly TerrainType[] terrain;
             private bool initialized;
+            private readonly ShoreRectangle[] rectangles;
             private const double Infinity = 1e20;
 
-            public Workspace(int cols, int rows, int resolution = 16, int pad = 4, double blendCells = 1)
+            public Workspace(int cols, int rows, int resolution = 16, int pad = 4, double blendCells = 1, ShoreRectangle[] rectangles = null)
             {
+                this.rectangles = rectangles == null ? Array.Empty<ShoreRectangle>() : (ShoreRectangle[])rectangles.Clone();
                 Validate(cols, rows, new TerrainType[checked(cols * rows)], resolution, pad);
                 if (blendCells <= 0) throw new ArgumentOutOfRangeException(nameof(blendCells));
                 this.cols = cols; this.rows = rows; this.resolution = resolution; this.pad = pad; this.blendCells = blendCells;
@@ -164,7 +186,15 @@ namespace NodeWar.View
                 Transform(resolved, TerrainType.Land, null);
                 for (int z = 0; z < Field.height; z++)
                     for (int x = 0; x < Field.width; x++)
-                        Field.rgba[(z * Field.width + x) * 4] = Border(x, z) ? (byte)255 : Encode(Math.Sqrt(grid[(z * 2 + 1) * gw + x * 2 + 1]) / (2 * resolution * 3));
+                    {
+                        double distance = Math.Sqrt(grid[(z * 2 + 1) * gw + x * 2 + 1]) / (2 * resolution);
+                        // A few lobby rectangles: analytic distance is exact even between lattice sites.
+                        // R=0 is also the land mask. B/A remain cell-owned water-body data.
+                        double px = Field.originX + (x + 0.5) / resolution, pz = Field.originZ + (z + 0.5) / resolution;
+                        for (int i = 0; i < rectangles.Length; i++)
+                            distance = Math.Min(distance, Math.Sqrt(rectangles[i].DistanceSquared(px, pz)));
+                        Field.rgba[(z * Field.width + x) * 4] = Border(x, z) ? (byte)255 : Encode(distance / 3);
+                    }
                 BakeBodies(resolved);
                 Array.Copy(resolved, terrain, terrain.Length);
                 initialized = true;
