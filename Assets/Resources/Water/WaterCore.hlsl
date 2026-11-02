@@ -88,13 +88,13 @@ float OutsideBoard(float2 xz)
 {
     return length(max(max(_BoardRect.xy - xz, xz - _BoardRect.zw), 0));
 }
-float WaveFade(float2 xz)
+float WaveFade(float outsideDistance)
 {
-    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
+    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_WaveFadeEnd, _WaveFadeStart + 0.01) * _CellSize, outsideDistance);
 }
-float DetailFade(float2 xz)
+float DetailFade(float outsideDistance)
 {
-    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_DetailFadeEnd, _WaveFadeStart + 0.01) * _CellSize, OutsideBoard(xz));
+    return 1 - smoothstep(_WaveFadeStart * _CellSize, max(_DetailFadeEnd, _WaveFadeStart + 0.01) * _CellSize, outsideDistance);
 }
 
 Varyings WaterVertex(Attributes input)
@@ -109,7 +109,7 @@ Varyings WaterVertex(Attributes input)
     float4 shoreVertex = SAMPLE_TEXTURE2D_LOD(_ShoreTex, sampler_ShoreTex, output.shoreUV, 0);
     if (_ShoreBlend < 1) shoreVertex = lerp(SAMPLE_TEXTURE2D_LOD(_ShorePrevTex, sampler_ShorePrevTex, output.shoreUV, 0), shoreVertex, _ShoreBlend);
     float damping = _ShoreWaveDamping <= 0 ? 1 : pow(saturate(shoreVertex.r * 2), _ShoreWaveDamping);
-    damping *= WaveFade(xz);
+    damping *= WaveFade(OutsideBoard(xz));
     float shoreLimit = lerp(_ShoreMaxAmplitude, 1e4, smoothstep(0, max(_ShoreCalmDistance, 0.001), shoreVertex.r * 3));
 #if defined(_WATER_WAVES_NOISE)
     float2 waveUV = xz * _NoiseWaveScale;
@@ -159,10 +159,9 @@ Varyings WaterVertex(Attributes input)
 }
 
 #if !defined(_WATER_LITE)
-half3 WaterNormal(Varyings input)
+half3 WaterNormal(Varyings input, float fade)
 {
     half3 normal = normalize(input.normalWS);
-    float fade = DetailFade(input.positionWS.xz);
     if (_WATER_MACRO_NORMALS)
     {
         float2 uv = RotateNoise(input.positionWS.xz * _MacroNormalsScale) + Scroll(_NormalsSpeed * 0.2, float2(0.6, -0.4));
@@ -226,6 +225,7 @@ half FoamLine(half edge, half width)
 half4 WaterFragment(Varyings input) : SV_Target
 {
     half4 shore = Shore(input.shoreUV);
+    float outsideDistance = OutsideBoard(input.positionWS.xz);
     float angle = _SurfaceFoamDirection * 6.2831853;
     float2 foamUV = input.positionWS.xz * _SurfaceFoamTiling
         + Scroll(_SurfaceFoamSpeed, float2(cos(angle), sin(angle)));
@@ -262,7 +262,8 @@ half4 WaterFragment(Varyings input) : SV_Target
     half3 shallow = lerp(fromShallow, _LakeShallowColor.rgb, bodyMix * (1 - deepLake));
     half3 deep = lerp(fromDeep, _LakeDeepColor.rgb, bodyMix * (1 - deepLake));
     half distance = max(0, shore.r * 3 + (noise - 0.5) * 2 * _ShoreNoiseAmount);
-    half detailFade = DetailFade(input.positionWS.xz);
+    float normalFade = DetailFade(outsideDistance);
+    half detailFade = normalFade;
     half alpha = 1;
 #if !defined(_WATER_LITE)
     if (_WATER_TRANSPARENCY) alpha = lerp(_ShallowAlpha, 1, smoothstep(0, max(_ClearDepth, 0.001), distance));
@@ -281,9 +282,9 @@ half4 WaterFragment(Varyings input) : SV_Target
         // Only the top of the tallest crests tint; glints carry the rest of the wave read.
         half crestHighlight = pow(saturate((input.crest - _CrestThreshold) / max(1 - _CrestThreshold, 0.01)), max(_CrestSharpness, 0.001));
         if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
-        color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz) * (1 - deepBlend)); // Deep lake stays one solid colour.
+        color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(outsideDistance) * (1 - deepBlend)); // Deep lake stays one solid colour.
     }
-    half3 normal = WaterNormal(input);
+    half3 normal = WaterNormal(input, normalFade);
     half3 view = GetWorldSpaceNormalizeViewDir(input.positionWS);
     if (_WATER_HORIZON_FRESNEL || _WATER_REFLECTIONS)
     {
