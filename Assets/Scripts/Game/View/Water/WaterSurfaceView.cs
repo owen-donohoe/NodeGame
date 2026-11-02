@@ -170,7 +170,7 @@ namespace NodeWar.View
                 LastBakePath = workerIncremental ? "incremental worker" : "full EDT worker";
                 UploadField(shoreWorkspace.Field);
                 appliedVersion = bakingVersion;
-                UnityEngine.Debug.Log(PlacementTimings, this);
+                LogPlacementTimings();
             }
             StartBake(); // Newer terrain replaces stale results; at most one worker owns the buffers.
         }
@@ -370,12 +370,15 @@ namespace NodeWar.View
             surfaceRenderer.reflectionProbeUsage = ReflectionProbeUsage.Simple;
         }
 
+        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+        private void LogPlacementTimings() => UnityEngine.Debug.Log(PlacementTimings, this);
+
         private void SubmitProbe()
         {
             long started = Stopwatch.GetTimestamp();
             using (ProbeMarker.Auto()) probeRenderId = reflectionProbe.RenderProbe();
             LastProbeMs = Milliseconds(started);
-            UnityEngine.Debug.Log(PlacementTimings, this);
+            LogPlacementTimings();
         }
 
         private void LateUpdate()

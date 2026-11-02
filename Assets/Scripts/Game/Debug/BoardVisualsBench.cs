@@ -8,6 +8,7 @@ namespace NodeWar.View
     /// <summary>GFX Testing scene harness; never constructs or mutates simulation state.</summary>
     public sealed class BoardVisualsBench : MonoBehaviour
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
         [SerializeField] private BoardConfig boardConfig;
         [Tooltip("Multiplier on BoardConfig node spacing; 1 matches the game.")]
         [SerializeField] private float nodeScale = 1f;
@@ -373,5 +374,6 @@ namespace NodeWar.View
         }
 
         private void OnDestroy() => ReleaseBoard();
+#endif
     }
 }
