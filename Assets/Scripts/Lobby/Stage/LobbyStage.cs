@@ -776,10 +776,36 @@ namespace NodeWar.Lobby
             return ground;
         }
 
+        private const float ShotWaterReach = 45f;
+
+        /// <summary>Water each camera shot can see, so the Social/Guild ocean view gets detailed water.</summary>
+        private LobbyLandBounds[] ShotWaterViews()
+        {
+            var views = new List<LobbyLandBounds>();
+            float tanHalf = Mathf.Tan(stageCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            foreach (StageShot shot in (StageShot[])Enum.GetValues(typeof(StageShot)))
+            {
+                if (shot == StageShot.Market && !marketBuilt) continue; // Rebuilt once the market exists.
+                GetShot(shot, out Vector3 position, out Quaternion rotation);
+                float minX = position.x, maxX = position.x, minZ = position.z, maxZ = position.z;
+                for (int corner = 0; corner < 4; corner++)
+                {
+                    Vector3 ray = rotation * new Vector3(((corner & 1) == 0 ? -1f : 1f) * tanHalf * stageCamera.aspect,
+                        ((corner & 2) == 0 ? -1f : 1f) * tanHalf, 1f).normalized;
+                    float reach = ray.y < -0.01f ? Mathf.Min((WaterY - position.y) / ray.y, ShotWaterReach) : ShotWaterReach;
+                    Vector3 hit = position + ray * reach;
+                    minX = Mathf.Min(minX, hit.x); maxX = Mathf.Max(maxX, hit.x);
+                    minZ = Mathf.Min(minZ, hit.z); maxZ = Mathf.Max(maxZ, hit.z);
+                }
+                views.Add(new LobbyLandBounds(minX, minZ, maxX, maxZ));
+            }
+            return views.ToArray();
+        }
+
         private void RebuildWater()
         {
             // One-unit cells keep the combined home/market field small; the shader still bakes 16 texels per cell.
-            LobbyWaterGridData grid = LobbyWaterGrid.Build(landFootprints.ToArray());
+            LobbyWaterGridData grid = LobbyWaterGrid.Build(landFootprints.ToArray(), 1f, ShotWaterViews());
             if (water != null)
             {
                 water.gameObject.SetActive(false);

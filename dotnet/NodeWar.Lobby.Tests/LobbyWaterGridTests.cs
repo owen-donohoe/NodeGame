@@ -26,6 +26,15 @@ namespace NodeWar.Lobby.Tests
         }
 
         [Test]
+        public void OpenWaterWidensTheGridAsOceanOnly()
+        {
+            var grid = LobbyWaterGrid.Build(new[] { new LobbyLandBounds(0, 0, 1, 1) }, 1f, new[] { new LobbyLandBounds(0, 0, 4, 2) });
+            Assert.AreEqual(4, grid.cols); Assert.AreEqual(2, grid.rows);
+            Assert.AreEqual(TerrainType.Land, grid.terrain[0]);
+            for (int i = 1; i < grid.terrain.Length; i++) Assert.AreEqual(TerrainType.Ocean, grid.terrain[i]);
+        }
+
+        [Test]
         public void BoundaryCellsNeverOmitWaterBeyondActualLand()
         {
             var land = new[] { new LobbyLandBounds(-1.2f, -0.2f, 2.2f, 1.2f) };
