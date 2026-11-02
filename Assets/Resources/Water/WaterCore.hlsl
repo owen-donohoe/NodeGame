@@ -11,7 +11,7 @@ CBUFFER_START(UnityPerMaterial)
 half4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 half4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 half4 _HorizonColor, _SurfaceFoamColor, _SpecularColor, _ShoreFoamColor;
-float _ShoreFoamWidth, _ShoreFoamMin;
+float _ShoreFoamWidth, _ShoreFoamWobble, _ShoreFoamWobbleScale;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _FoamTex_ST, _SwellTex_ST;
 float4 _ShoreTex_TexelSize;
@@ -310,12 +310,20 @@ half4 WaterFragment(Varyings input) : SV_Target
     surfaceCoverage *= detailFade;
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
-    half shoreAA = max(fwidth(distance), 0.0001h);
-    half shoreCoverage = 1 - smoothstep(_ShoreFoamWidth - shoreAA, _ShoreFoamWidth + shoreAA, distance);
-    // A thin unbroken line on the raw shore distance, so noise never opens a gap at the land edge.
+    // The band's own wobble: fine, proportional to its width, measured from the true shore.
+    // Its edge stays between (1 - wobble) and (1 + wobble) x width, so it never vanishes and
+    // never balloons; the large colour-band noise is deliberately not used here.
     half rawShore = shore.r * 3;
-    half rawAA = max(fwidth(rawShore), 0.0001h);
-    shoreCoverage = max(shoreCoverage, 1 - smoothstep(_ShoreFoamMin - rawAA, _ShoreFoamMin + rawAA, rawShore)) * detailFade;
+    half rawAA = max(fwidth(rawShore), 0.0001h); // Derivatives outside the branch.
+    half shoreCoverage = 0;
+    if (rawShore < _ShoreFoamWidth * (1 + _ShoreFoamWobble) + 0.05)
+    {
+        float2 wobbleUV = input.positionWS.xz * _ShoreFoamWobbleScale + Scroll(_SurfaceFoamSpeed, float2(0.37, -0.93));
+        half wobbleNoise = SAMPLE_TEXTURE2D_LOD(_FoamTex, sampler_FoamTex, wobbleUV * _FoamTex_ST.xy + _FoamTex_ST.zw, 0).b;
+        half edge = _ShoreFoamWidth * (1 + (wobbleNoise - 0.5) * 2 * saturate(_ShoreFoamWobble));
+        shoreCoverage = 1 - smoothstep(edge - rawAA, edge + rawAA, rawShore);
+    }
+    shoreCoverage *= detailFade;
     color = lerp(color, _ShoreFoamColor.rgb, saturate(shoreCoverage * _ShoreFoamColor.a));
     alpha = max(alpha, shoreCoverage * _ShoreFoamColor.a);
     if (_WATER_LAPPING_LINES)

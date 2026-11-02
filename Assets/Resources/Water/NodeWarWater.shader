@@ -25,8 +25,8 @@ Shader "NodeWar/Water"
         _SurfaceFoamSpeed("Surface foam speed", Float) = 0.03
         _SurfaceFoamWidth("Surface foam width", Range(0,0.3)) = 0.08
         [HideInInspector] _FoamDistortionQuality("Distortion sine count", Float) = 9
-        _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 1
-        _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.3)
+        _SurfaceFoamDistortion("Surface foam distortion", Range(0,10)) = 0.5
+        _SurfaceFoamColor("Surface foam (alpha = amount)", Color) = (0.909804,0.956863,1,0.2)
         [HideInInspector] _DetailNormalSamples("Normal samples", Float) = 1
         _SwellTex("Swell height and derivatives", 2D) = "black" {}
         _NormalsScale("Normals scale", Float) = 0.4
@@ -42,7 +42,8 @@ Shader "NodeWar/Water"
         _ClearDepth("Clear depth (cells)", Float) = 0.8
         _FloorDepth("Floor depth (world units)", Float) = 1.2
         _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.12
-        _ShoreFoamMin("Shore foam minimum (cells)", Range(0,0.3)) = 0.05
+        _ShoreFoamWobble("Shore foam wobble (fraction of width)", Range(0,1)) = 0.6
+        _ShoreFoamWobbleScale("Shore foam wobble scale", Float) = 0.25
         _ShoreFoamColor("Shore foam (alpha = strength)", Color) = (1,1,1,1)
         _BodyNoiseAmount("Body noise amount", Float) = 0.25
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
