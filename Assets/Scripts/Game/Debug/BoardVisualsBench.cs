@@ -17,6 +17,8 @@ namespace NodeWar.View
         [SerializeField] private bool frameCamera = true;
         [SerializeField] private bool includeDeepLake = true;
 
+        private static readonly string[] tiers = { "Low", "Medium", "High", "Ultra", "Custom" };
+        private static readonly int[] waveModes = { 0, 1, 2, 4 };
         private BoardConfig runtimeConfig;
         private BoardConfigData runtimeBoard;
         private BoardTerrainView view;
@@ -164,7 +166,7 @@ namespace NodeWar.View
             stepSeconds = GUILayout.HorizontalSlider(stepSeconds, 0.05f, 3f);
             GUILayout.Label("Waves: " + WaterFeatures.WaveName(WaterQuality.Waves));
             GUILayout.BeginHorizontal();
-            foreach (int mode in new[] { 0, 1, 2, 4 })
+            foreach (int mode in waveModes)
             {
                 string label = mode == 0 ? "Off" : mode == 1 ? "Noise" : mode == 2 ? "G2" : "G4";
                 if (!GUILayout.Button(label)) continue;

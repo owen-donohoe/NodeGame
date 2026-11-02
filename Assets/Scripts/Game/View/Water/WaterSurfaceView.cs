@@ -30,7 +30,6 @@ namespace NodeWar.View
         private TerrainType[] terrain;
         private MaterialPropertyBlock properties;
         private Vector4 shoreST;
-        private bool generatedSurfaceFoam, generatedSwell;
         private ReflectionProbe reflectionProbe;
         private BoardTerrainView boardView;
         private bool probeDirty;
@@ -253,18 +252,12 @@ namespace NodeWar.View
         {
             PollBake();
             if (surfaceRenderer == null) return;
-            Material material = surfaceRenderer.sharedMaterial;
-            if (WaterMaterialFactory.NeedsFoam(material, "_FoamTex") != generatedSurfaceFoam
-                || WaterMaterialFactory.NeedsSwell(material) != generatedSwell) ApplyProperties();
-            if (floorRenderer != null && floorRenderer.gameObject.activeSelf)
-                UpdateFloorPosition(material);
+
             if (blend >= 1f) return;
             blend = ReducedMotion ? 1f : Mathf.Min(1f, blend + Time.unscaledDeltaTime / 0.4f);
             ApplyProperties();
-            if (blend == 1f) FinishBlend();
         }
 
-        private void FinishBlend() => ApplyProperties(); // Keep both textures alive for the next edit.
         private void ApplyProperties()
         {
             properties.Clear();
@@ -279,8 +272,8 @@ namespace NodeWar.View
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
             properties.SetFloat("_DetailFadeEnd", Padding);
             Material material = surfaceRenderer.sharedMaterial;
-            generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
-            generatedSwell = WaterMaterialFactory.NeedsSwell(material);
+            bool generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
+            bool generatedSwell = WaterMaterialFactory.NeedsSwell(material);
             if (generatedSurfaceFoam) properties.SetTexture("_FoamTex", WaterMaterialFactory.SurfaceFoam());
             if (generatedSwell) properties.SetTexture("_SwellTex", WaterMaterialFactory.Swell());
             surfaceRenderer.SetPropertyBlock(properties);
