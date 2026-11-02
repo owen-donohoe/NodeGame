@@ -15,5 +15,17 @@ namespace NodeWar.View.Tests
             Assert.That(WaterFeatures.WavesFor(preset), Is.EqualTo(waves));
             Assert.That(WaterMeshBuilder.SubdivisionsForTier(preset), Is.EqualTo(subdivisions));
         }
+
+        // G2 runs waves A and B; B (6.876) is its shortest. At least 4 vertices per shortest wavelength.
+        [TestCase(2, 6.876f)]
+        [TestCase(4, 4.248f)]
+        public void GerstnerSubdivisionResolvesShortestWave(int waves, float shortest)
+        {
+            foreach (float scale in new[] { 0.25f, 0.6f, 1f, 4f })
+            {
+                int subdivisions = WaterFeatures.Subdivisions(waves, scale, 6f);
+                Assert.That(shortest * scale / (6f / subdivisions), Is.GreaterThanOrEqualTo(4f), $"scale {scale}");
+            }
+        }
     }
 }

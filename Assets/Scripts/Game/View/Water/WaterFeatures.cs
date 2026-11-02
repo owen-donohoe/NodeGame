@@ -35,7 +35,7 @@ namespace NodeWar.View
         public static int SubdivisionsFor(int tier, int waves, float waveScale = 1f, float cellSize = 6f)
             => waves == 0 ? 1 : Math.Max(tier == 1 ? 3 : tier == 3 ? 8 : 6, Subdivisions(waves, waveScale, cellSize));
         public static int Subdivisions(int waves, float waveScale = 1f, float cellSize = 6f)
-            => waves == 0 ? 1 : waves == 1 ? 3 : (int)Math.Ceiling(4 * cellSize / ((waves == 2 ? 11.124f : 4.248f) * Math.Max(0.25f, waveScale)));
+            => waves == 0 ? 1 : waves == 1 ? 3 : (int)Math.Ceiling(4 * cellSize / ((waves == 2 ? 6.876f : 4.248f) * Math.Max(0.25f, waveScale)));
         public static string WaveName(int waves) => waves == 0 ? "Off" : waves == 1 ? "Noise" : waves == 2 ? "Gerstner 2" : "Gerstner 4";
         public static int NormalizeWaves(int waves) => waves <= 0 ? 0 : waves == 1 ? 1 : waves < 4 ? 2 : 4;
         public static int NextWaves(int waves) => waves == 0 ? 1 : waves == 1 ? 2 : waves == 2 ? 4 : 0;
