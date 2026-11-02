@@ -194,7 +194,9 @@ namespace NodeWar.View
             MaterialSlider(material, "_WindDirection", "Wind direction", 0f, 1f);
             MaterialSlider(material, "_WindSpread", "Wind spread", 0f, 90f);
             MaterialSlider(material, "_WaveSteepnessScale", "Wave steepness scale", 0f, 1.5f);
-            MaterialSlider(material, "_WaveGroupStrength", "Wave group strength", 0f, 1f);
+            MaterialSlider(material, "_WaveGroupStrength", "Calm patch strength", 0f, 1f);
+            MaterialSlider(material, "_WaveCalmLow", "Calm patch low", 0f, 1f);
+            MaterialSlider(material, "_WaveCalmHigh", "Calm patch high", 0f, 1f);
             MaterialSlider(material, "_WaveFadeStart", "Wave fade start (cells)", 0f, 4f);
             MaterialSlider(material, "_WaveFadeEnd", "Wave fade end (cells)", 0.1f, 10f);
             MaterialSlider(material, "_MacroNormalsStrength", "Macro normal strength", 0f, 2f);
@@ -202,6 +204,7 @@ namespace NodeWar.View
             GUILayout.Label("Crests");
             MaterialSlider(material, "_CrestSharpness", "Crest sharpness", 0.1f, 8f);
             MaterialSlider(material, "_CrestStrength", "Crest strength", 0f, 1f);
+            MaterialSlider(material, "_CrestThreshold", "Crest threshold", 0f, 0.99f);
             GUILayout.Label("Shore");
             MaterialSlider(material, "_ShoreWaveDamping", "Shore wave damping", 0f, 3f);
             MaterialSlider(material, "_ShoreMaxAmplitude", "Shore max amplitude", 0f, 0.4f);
@@ -224,6 +227,7 @@ namespace NodeWar.View
             MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
             GUILayout.Label("Foam");
             MaterialSlider(material, "_ShoreFoamWidth", "Shore foam width", 0f, 1f);
+            MaterialSlider(material, "_ShoreFoamMin", "Shore foam minimum", 0f, 0.3f);
             MaterialSlider(material, "_ShoreFoamColor", "Shore foam strength", 0f, 1f, false, true);
             MaterialSlider(material, "_SwashOpacity", "Swash opacity", 0f, 1f);
             MaterialSlider(material, "_SwashWidth", "Swash width", 0f, 0.3f);

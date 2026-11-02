@@ -11,16 +11,16 @@ CBUFFER_START(UnityPerMaterial)
 half4 _OceanShallowColor, _OceanDeepColor, _LakeShallowColor, _LakeDeepColor;
 half4 _DeepLakeShallowColor, _DeepLakeDeepColor;
 half4 _HorizonColor, _SurfaceFoamColor, _SpecularColor, _ShoreFoamColor;
-float _ShoreFoamWidth;
+float _ShoreFoamWidth, _ShoreFoamMin;
 float4 _WaveA, _WaveB, _WaveC, _WaveD, _ShoreST;
 float4 _FoamTex_ST, _SwellTex_ST;
 float4 _ShoreTex_TexelSize;
 float4 _BoardRect, _CrestColor, _SwashColor;
-float _CrestSharpness;
+float _CrestSharpness, _CrestThreshold;
 float _CrestStrength, _WaveScale;
 float _NoiseWaveHeight, _NoiseWaveScale, _NoiseWaveSpeed;
 float _ShoreWaveDamping, _ShoreMaxAmplitude, _ShoreCalmDistance;
-float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength;
+float _WaveGroupScale, _WaveGroupSpeed, _WaveGroupStrength, _WaveCalmLow, _WaveCalmHigh;
 float _WindDirection, _WindSpread;
 float _ReflectionMin, _ReflectionSteps, _MacroNormalsScale, _MacroNormalsStrength;
 float _ShallowAlpha, _ClearDepth, _FloorDepth, _ShoreNoiseAmount, _BodyNoiseAmount;
@@ -132,7 +132,8 @@ Varyings WaterVertex(Attributes input)
     float2 groupUV = xz * _WaveGroupScale;
     float groupNoise = (SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (groupUV + Scroll(_WaveGroupSpeed, float2(0.6, 0.8))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r
         + SAMPLE_TEXTURE2D_LOD(_SwellTex, sampler_SwellTex, (RotateNoise(groupUV) * 1.618034 + Scroll(_WaveGroupSpeed, float2(-0.8, 0.6))) * _SwellTex_ST.xy + _SwellTex_ST.zw, 0).r) * 0.5;
-    float groupAmount = lerp(1 - _WaveGroupStrength, 1 + _WaveGroupStrength, groupNoise);
+    // Calm patches: dark noise flattens the waves, light noise leaves them at full height.
+    float groupAmount = lerp(1, smoothstep(_WaveCalmLow, max(_WaveCalmHigh, _WaveCalmLow + 0.01), groupNoise), _WaveGroupStrength);
     float waveScale = min(_WaveSteepnessScale * groupAmount, 0.95 / max(steepnessSum, 0.0001));
     waveScale *= min(1, max(shoreLimit, 0) / max(amplitudeSum * waveScale * damping, 0.0001));
     damping *= waveScale;
@@ -277,7 +278,8 @@ half4 WaterFragment(Varyings input) : SV_Target
 #if !defined(_WATER_LITE)
     if (_WATER_CREST_COLOUR)
     {
-        half crestHighlight = pow(saturate(input.crest), max(_CrestSharpness, 0.001));
+        // Only the top of the tallest crests tint; glints carry the rest of the wave read.
+        half crestHighlight = pow(saturate((input.crest - _CrestThreshold) / max(1 - _CrestThreshold, 0.01)), max(_CrestSharpness, 0.001));
         if (_ColorSteps >= 2) crestHighlight = floor(crestHighlight * (_ColorSteps - 1) + 0.5) / (_ColorSteps - 1);
         color = lerp(color, max(color, saturate(shallow * _CrestColor.rgb)), crestHighlight * _CrestStrength * WaveFade(input.positionWS.xz) * (1 - deepBlend)); // Deep lake stays one solid colour.
     }
@@ -309,7 +311,11 @@ half4 WaterFragment(Varyings input) : SV_Target
     color = FoamOverlay(color, _SurfaceFoamColor, surfaceCoverage);
     alpha = max(alpha, surfaceCoverage * _SurfaceFoamColor.a);
     half shoreAA = max(fwidth(distance), 0.0001h);
-    half shoreCoverage = (1 - smoothstep(_ShoreFoamWidth - shoreAA, _ShoreFoamWidth + shoreAA, distance)) * detailFade;
+    half shoreCoverage = 1 - smoothstep(_ShoreFoamWidth - shoreAA, _ShoreFoamWidth + shoreAA, distance);
+    // A thin unbroken line on the raw shore distance, so noise never opens a gap at the land edge.
+    half rawShore = shore.r * 3;
+    half rawAA = max(fwidth(rawShore), 0.0001h);
+    shoreCoverage = max(shoreCoverage, 1 - smoothstep(_ShoreFoamMin - rawAA, _ShoreFoamMin + rawAA, rawShore)) * detailFade;
     color = lerp(color, _ShoreFoamColor.rgb, saturate(shoreCoverage * _ShoreFoamColor.a));
     alpha = max(alpha, shoreCoverage * _ShoreFoamColor.a);
     if (_WATER_LAPPING_LINES)

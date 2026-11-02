@@ -42,6 +42,7 @@ Shader "NodeWar/Water"
         _ClearDepth("Clear depth (cells)", Float) = 0.8
         _FloorDepth("Floor depth (world units)", Float) = 1.2
         _ShoreFoamWidth("Shore foam width (cells)", Float) = 0.12
+        _ShoreFoamMin("Shore foam minimum (cells)", Range(0,0.3)) = 0.05
         _ShoreFoamColor("Shore foam (alpha = strength)", Color) = (1,1,1,1)
         _BodyNoiseAmount("Body noise amount", Float) = 0.25
         _ShoreNoiseAmount("Shore noise amount (cells)", Float) = 0.25
@@ -68,15 +69,18 @@ Shader "NodeWar/Water"
         _WindDirection("Wind direction (turns)", Range(0,1)) = 0.1
         _WindSpread("Wind spread (degrees)", Range(0,90)) = 35
         _WaveSteepnessScale("Wave steepness scale", Range(0,1.5)) = 1
-        _WaveScale("Wave scale", Range(0.25,4)) = 1.0
+        _WaveScale("Wave scale", Range(0.25,4)) = 0.6
         _ShoreWaveDamping("Shore wave damping", Range(0,3)) = 0.6
         _ShoreMaxAmplitude("Shore maximum amplitude", Float) = 0.35
         _ShoreCalmDistance("Shore calm distance (cells)", Float) = 1.5
         _WaveGroupScale("Wave group scale", Float) = 0.012
         _WaveGroupSpeed("Wave group speed", Float) = 0.01
-        _WaveGroupStrength("Wave group strength", Range(0,1)) = 0.5
+        _WaveGroupStrength("Calm patch strength", Range(0,1)) = 1
+        _WaveCalmLow("Calm patch low (noise)", Range(0,1)) = 0.35
+        _WaveCalmHigh("Calm patch high (noise)", Range(0,1)) = 0.65
         _CrestColor("Crest tint (shallow multiplier)", Color) = (1.15,1.15,1.15,1)
-        _CrestStrength("Crest strength", Range(0,1)) = 0.45
+        _CrestStrength("Crest strength", Range(0,1)) = 0.2
+        _CrestThreshold("Crest threshold", Range(0,0.99)) = 0.6
         _CrestSharpness("Crest sharpness", Float) = 2.5
         _ReflectionStrength("Reflection strength", Range(0,1)) = 0.6
         _ReflectionMin("Reflection floor", Range(0,1)) = 0.25
