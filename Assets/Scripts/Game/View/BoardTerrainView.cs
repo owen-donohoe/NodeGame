@@ -46,7 +46,7 @@ namespace NodeWar.View
         private float[] riseByCell;
         private PlinthFactory plinthFactory;
         private bool hasShown;
-        private float WaterY => GroundY - 0.25f;
+        private float WaterY => GroundY - 0.45f;
         private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
         private bool[] targetByCell;
         private bool[] bridgeByCell;
@@ -104,7 +104,9 @@ namespace NodeWar.View
         {
             board = data;
             nodeScale = scale;
-            material = new Material(Shader.Find("Sprites/Default"));
+            // Runtime cue material must draw after transparent water regardless of queue sorting.
+            material = new Material(Shader.Find("Sprites/Default"))
+            { renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent + 1 };
             tiles = NewChild("Tiles");
             bridges = NewChild("Bridges");
             water = NewChild("Water").gameObject.AddComponent<WaterSurfaceView>();
@@ -175,6 +177,17 @@ namespace NodeWar.View
             }
             landByCell[i] = land;
             if (plinthByCell[i] != null) plinthByCell[i].SetActive(land);
+        }
+
+        public bool PlinthsSettled
+        {
+            get
+            {
+                if (landByCell == null) return true;
+                for (int i = 0; i < landByCell.Length; i++)
+                    if (landByCell[i] && riseByCell[i] < 1f) return false;
+                return true;
+            }
         }
 
         private void Update()

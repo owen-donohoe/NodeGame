@@ -6,8 +6,26 @@ namespace NodeWar.View
     /// <summary>Board-owned shared resources, with a prefab-independent mesh fallback.</summary>
     public sealed class PlinthFactory : System.IDisposable
     {
+        private static readonly System.Collections.Generic.List<PlinthFactory> active = new System.Collections.Generic.List<PlinthFactory>();
         private static Material fallbackMaterial;
+        public static void ApplyTransparency(bool enabled)
+        {
+            foreach (PlinthFactory factory in active)
+                factory.SetUnderwaterFade(enabled);
+        }
         private static int fallbackUsers;
+        private readonly System.Collections.Generic.List<Renderer> renderers = new System.Collections.Generic.List<Renderer>();
+        private readonly MaterialPropertyBlock fadeProperties = new MaterialPropertyBlock();
+        private void SetUnderwaterFade(bool enabled)
+        {
+            foreach (Renderer renderer in renderers)
+            {
+                if (renderer == null) continue;
+                renderer.GetPropertyBlock(fadeProperties);
+                fadeProperties.SetFloat("_UnderwaterFade", enabled ? 0.15f : 0.3f);
+                renderer.SetPropertyBlock(fadeProperties);
+            }
+        }
         private bool disposed;
         private readonly GameObject prefab;
         private readonly Material material;
@@ -28,6 +46,8 @@ namespace NodeWar.View
                 fallbackUsers++;
             }
             this.waterY = waterY;
+            active.Add(this);
+            ApplyTransparency(WaterQuality.Has(GraphicsFeature.Transparency));
         }
 
         public GameObject Create(Transform parent, string name, float cellScale)
@@ -54,6 +74,8 @@ namespace NodeWar.View
                 var properties = new MaterialPropertyBlock();
                 renderer.GetPropertyBlock(properties);
                 properties.SetFloat("_WaterY", waterY);
+                properties.SetFloat("_UnderwaterFade", WaterQuality.Has(GraphicsFeature.Transparency) ? 0.15f : 0.3f);
+                renderers.Add(renderer);
                 renderer.SetPropertyBlock(properties);
                 renderer.shadowCastingMode = ShadowCastingMode.On;
                 renderer.receiveShadows = false;
@@ -100,6 +122,7 @@ namespace NodeWar.View
         {
             if (disposed) return;
             disposed = true;
+            active.Remove(this);
             Release(fallback);
             if (ownsMaterial && --fallbackUsers == 0)
             {

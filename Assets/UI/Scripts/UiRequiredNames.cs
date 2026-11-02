@@ -134,6 +134,35 @@ namespace NodeWar.UI
             public const string SettingsRowConfirm = "settings-row-confirm";
             public const string SettingsRowHaptics = "settings-row-haptics";
             public const string SettingsRowBattery = "settings-row-battery";
+            public const string GraphicsDetails = "graphics-details";
+            public const string SettingsWaves = "settings-waves";
+            public const string SettingsRowWaves = "settings-row-waves";
+            public const string GraphicsTransparency = "settings-transparency";
+            public const string GraphicsRowTransparency = "settings-row-transparency";
+            public const string GraphicsSurfaceFoamDistortion = "settings-surface-foam-distortion";
+            public const string GraphicsRowSurfaceFoamDistortion = "settings-row-surface-foam-distortion";
+            public const string GraphicsHorizonFresnel = "settings-horizon-fresnel";
+            public const string GraphicsRowHorizonFresnel = "settings-row-horizon-fresnel";
+            public const string GraphicsSpecular = "settings-specular";
+            public const string GraphicsRowSpecular = "settings-row-specular";
+            public const string GraphicsCrestColour = "settings-crest-colour";
+            public const string GraphicsRowCrestColour = "settings-row-crest-colour";
+            public const string GraphicsDither = "settings-dither";
+            public const string GraphicsRowDither = "settings-row-dither";
+            public const string GraphicsShadows = "settings-shadows";
+            public const string GraphicsRowShadows = "settings-row-shadows";
+            public const string GraphicsDetailNormals = "settings-detail-normals";
+            public const string GraphicsRowDetailNormals = "settings-row-detail-normals";
+            public const string GraphicsMacroNormals = "settings-macro-normals";
+            public const string GraphicsRowMacroNormals = "settings-row-macro-normals";
+            public const string GraphicsReflections = "settings-reflections";
+            public const string GraphicsRowReflections = "settings-row-reflections";
+            public const string GraphicsLappingLines = "settings-lapping-lines";
+            public const string GraphicsRowLappingLines = "settings-row-lapping-lines";
+            public const string GraphicsSecondFoamLayer = "settings-second-foam-layer";
+            public const string GraphicsRowSecondFoamLayer = "settings-row-second-foam-layer";
+            public static readonly string[] GraphicsToggles = { GraphicsTransparency, GraphicsSurfaceFoamDistortion, GraphicsHorizonFresnel, GraphicsSpecular, GraphicsCrestColour, GraphicsDither, GraphicsShadows, GraphicsDetailNormals, GraphicsMacroNormals, GraphicsReflections, GraphicsLappingLines, GraphicsSecondFoamLayer };
+            public static readonly string[] GraphicsRows = { GraphicsRowTransparency, GraphicsRowSurfaceFoamDistortion, GraphicsRowHorizonFresnel, GraphicsRowSpecular, GraphicsRowCrestColour, GraphicsRowDither, GraphicsRowShadows, GraphicsRowDetailNormals, GraphicsRowMacroNormals, GraphicsRowReflections, GraphicsRowLappingLines, GraphicsRowSecondFoamLayer };
             public static readonly string[] All =
             {
                 SettingsAccountStatus,
@@ -155,6 +184,19 @@ namespace NodeWar.UI
                 SettingsFramecap,
                 SettingsGraphics,
                 SettingsRowGraphics,
+                GraphicsDetails, SettingsWaves, SettingsRowWaves,
+                GraphicsTransparency, GraphicsRowTransparency,
+                GraphicsSurfaceFoamDistortion, GraphicsRowSurfaceFoamDistortion,
+                GraphicsHorizonFresnel, GraphicsRowHorizonFresnel,
+                GraphicsSpecular, GraphicsRowSpecular,
+                GraphicsCrestColour, GraphicsRowCrestColour,
+                GraphicsDither, GraphicsRowDither,
+                GraphicsShadows, GraphicsRowShadows,
+                GraphicsDetailNormals, GraphicsRowDetailNormals,
+                GraphicsMacroNormals, GraphicsRowMacroNormals,
+                GraphicsReflections, GraphicsRowReflections,
+                GraphicsLappingLines, GraphicsRowLappingLines,
+                GraphicsSecondFoamLayer, GraphicsRowSecondFoamLayer,
                 SettingsRowSize,
                 SettingsRowFramecap,
                 SettingsRowControls,

@@ -43,11 +43,12 @@ namespace NodeWar.Lobby
         /// 5 - adds input bindings and the controls preferences.
         /// 6 - appends enabled node double/triple-tap bindings; existing entries are kept.
         /// 7 - adds graphicsQuality, defaulting to Medium on mobile and High elsewhere.
+        /// 8 - adds custom water features and wave count.
         /// </remarks>
-        public const int CurrentVersion = 7;
+        public const int CurrentVersion = 8;
 
-        public const int GraphicsQualityCount = 4;
-        private static readonly string[] GraphicsQualityNames = { "Low", "Medium", "High", "Ultra" };
+        public const int GraphicsQualityCount = 5;
+        private static readonly string[] GraphicsQualityNames = { "Low", "Medium", "High", "Ultra", "Custom" };
 #if UNITY_ANDROID || UNITY_IOS
         public const int DefaultGraphicsQuality = 1;
 #else
@@ -98,8 +99,12 @@ namespace NodeWar.Lobby
         // ---- Display.
         /// <summary>Index into <see cref="FrameCapRates"/>. Presentation only; added in version 4.</summary>
         public int frameCap;
-        /// <summary>Low, Medium, High, Ultra. Presentation only; added in version 7.</summary>
+        /// <summary>Low, Medium, High, Ultra, Custom. Presentation only; added in version 7.</summary>
         public int graphicsQuality;
+        /// <summary>Custom feature mask; retired bits are cleared by Normalized. Added in version 8.</summary>
+        public int graphicsFeatures;
+        /// <summary>Custom mode: 0 Off, 1 Noise, 2 Gerstner 2, 4 Gerstner 4. Version 8.</summary>
+        public int waterWaves;
 
         // ---- Gameplay.
         public float cameraSpeed;
@@ -155,6 +160,8 @@ namespace NodeWar.Lobby
                 interfaceSize = DefaultInterfaceSize,
                 frameCap = DefaultFrameCap,
                 graphicsQuality = DefaultGraphicsQuality,
+                graphicsFeatures = View.WaterFeatures.FeaturesFor(DefaultGraphicsQuality),
+                waterWaves = View.WaterFeatures.WavesFor(DefaultGraphicsQuality),
 
                 cameraSpeed = 0.52f,
                 confirmEachCommand = false,
@@ -203,6 +210,14 @@ namespace NodeWar.Lobby
             if (source.version < 3) source.opponentEmotes = true;
             if (source.version < 4) source.frameCap = DefaultFrameCap;
             if (source.version < 7) source.graphicsQuality = DefaultGraphicsQuality;
+            if (source.version < 8)
+            {
+                int preset = ClampGraphicsQuality(source.graphicsQuality);
+                if (preset == 4) preset = DefaultGraphicsQuality; // Custom did not exist before v8.
+                source.graphicsQuality = preset;
+                source.graphicsFeatures = View.WaterFeatures.FeaturesFor(preset);
+                source.waterWaves = View.WaterFeatures.WavesFor(preset);
+            }
             if (source.version < 5)
             {
                 source.inputBindings = null;
@@ -228,6 +243,8 @@ namespace NodeWar.Lobby
                 interfaceSize = ClampInterfaceSize(source.interfaceSize),
                 frameCap = ClampFrameCap(source.frameCap),
                 graphicsQuality = ClampGraphicsQuality(source.graphicsQuality),
+                graphicsFeatures = source.graphicsFeatures & View.WaterFeatures.All,
+                waterWaves = View.WaterFeatures.NormalizeWaves(source.waterWaves),
 
                 cameraSpeed = Clamp01(source.cameraSpeed),
                 confirmEachCommand = source.confirmEachCommand,
@@ -262,6 +279,8 @@ namespace NodeWar.Lobby
                 || a.interfaceSize != b.interfaceSize
                 || a.frameCap != b.frameCap
                 || a.graphicsQuality != b.graphicsQuality
+                || a.graphicsFeatures != b.graphicsFeatures
+                || a.waterWaves != b.waterWaves
                 || a.cameraSpeed != b.cameraSpeed
                 || a.confirmEachCommand != b.confirmEachCommand
                 || a.opponentRoutes != b.opponentRoutes
@@ -292,6 +311,19 @@ namespace NodeWar.Lobby
         public static int NextFrameCap(int current)
         {
             return (ClampFrameCap(current) + 1) % FrameCapCount;
+        }
+
+        public static GameSettingsData WithGraphicsQuality(GameSettingsData source, int quality)
+        {
+            source = Normalized(source);
+            quality = ClampGraphicsQuality(quality);
+            if (quality == 4 && source.graphicsQuality != 4)
+            {
+                source.graphicsFeatures = View.WaterFeatures.FeaturesFor(source.graphicsQuality);
+                source.waterWaves = View.WaterFeatures.WavesFor(source.graphicsQuality);
+            }
+            source.graphicsQuality = quality;
+            return source;
         }
 
         public static int NextGraphicsQuality(int current) => (ClampGraphicsQuality(current) + 1) % GraphicsQualityCount;

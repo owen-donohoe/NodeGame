@@ -322,7 +322,7 @@ namespace NodeWar.UI
 
         private void CycleGraphics()
         {
-            current.graphicsQuality = GameSettingsData.NextGraphicsQuality(current.graphicsQuality);
+            current = GameSettingsData.WithGraphicsQuality(current, GameSettingsData.NextGraphicsQuality(current.graphicsQuality));
             UpdateGraphicsLabel();
             OnValueChanged(commitNow: true);
         }

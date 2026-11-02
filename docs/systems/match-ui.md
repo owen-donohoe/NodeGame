@@ -45,7 +45,7 @@ sources:
   - Assets/UI/Styles/Draft.uss
   - Assets/UI/Styles/HUD.uss
   - Assets/UI/Styles/NodeSheet.uss
-verified: d47fe088
+verified: 5cb22bf7
 ---
 
 # Match UI
@@ -72,7 +72,7 @@ Content implementations:
 
 `ResourceRing.SetValue/SetCap/SetProduction/SetReducedMotion` and equivalent `ResourceBar` methods render resources. `ResourceRingMath`, `ResourceHudMath`, `ResourceCaps`, `ResourceProduction`, `ResourceVisibility`, `ResourceRingColors`, `SheetResourceMath` and `SheetResourceReadout` separate fill, caps, production markers, visibility, color and sheet expansion. `ProgressDial.Progress` drives circular progress.
 
-`IndicatorLayer.Bind`, `LateUpdate`, avoidance/sheet queries and `Suppress/Resume` project director output. `EmotePanel.Bind/Attach/Detach/ApplySettings/SetNodeSheetOpen` owns picker, bubbles and rate limits. `MatchSettingsPanel.Open/Close/Toggle/ForceClose`, `Changed(GameSettingsData)` and `SurrenderConfirmed` serve persisted controls and confirmed ranked surrender. Graphics cycles Low/Medium/High/Ultra beside frame cap and saves through PlayerProfile for live water refresh.
+`IndicatorLayer.Bind`, `LateUpdate`, avoidance/sheet queries and `Suppress/Resume` project director output. `EmotePanel.Bind/Attach/Detach/ApplySettings/SetNodeSheetOpen` owns picker, bubbles and rate limits. `MatchSettingsPanel.Open/Close/Toggle/ForceClose`, `Changed(GameSettingsData)` and `SurrenderConfirmed` serve persisted controls and confirmed ranked surrender. Graphics cycles Low/Medium/High/Ultra/Custom without detail rows beside frame cap and saves through PlayerProfile for live water refresh.
 
 `DraftScreenController` and uGUI `DraftUI` implement `IDraftPresenter`: `Initialize`, `ShowWaiting`, `ShowInitialReveal`, `SweepIn/Out`, `UpdateTimer`, `OnTurnChanged`, `OnPlacementConfirmed`, persistent-placement retrieval and pending-placement query. `DraftHandover.ProxyOpacity/GhostOpacity` crossfade the dragged UI proxy and world ghost; `DraftPieceInfo` supplies names/monograms/tints.
 

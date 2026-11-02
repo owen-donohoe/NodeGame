@@ -7,15 +7,205 @@ namespace NodeWar.View.Tests
 {
     public class WaterTests
     {
+        [TestCase(1, 0)] [TestCase(3, 1)] [TestCase(8, 4)] [TestCase(16, 4)]
+        public void ExactEdtMatchesBruteForceOnVariedBoards(int resolution, int padding)
+        {
+            var random = new Random(917);
+            for (int run = 0; run < 12; run++)
+            {
+                int cols = 1 + random.Next(7), rows = 1 + random.Next(6);
+                var terrain = new TerrainType[cols * rows];
+                var kinds = new[] { TerrainType.Ocean, TerrainType.Land, TerrainType.Lake, TerrainType.DeepLake };
+                for (int i = 0; i < terrain.Length; i++) terrain[i] = kinds[random.Next(4)];
+                var actual = ShoreField.Bake(cols, rows, terrain, resolution, padding);
+                var expected = ShoreField.BakeBruteForce(cols, rows, terrain, resolution, padding);
+                for (int i = 0; i < actual.rgba.Length; i++)
+                    Assert.That(Math.Abs(actual.rgba[i] - expected.rgba[i]), Is.LessThanOrEqualTo(i % 4 == 2 ? 0 : 1), $"run {run}, byte {i}");
+            }
+        }
+
+        [TestCase(1)] [TestCase(3)] [TestCase(16)]
+        public void IncrementalEqualsFullBakeAcrossRandomPlacementsAndBodyChanges(int resolution)
+        {
+            var random = new Random(532);
+            var terrain = new TerrainType[36];
+            var kinds = new[] { TerrainType.Ocean, TerrainType.Lake, TerrainType.DeepLake };
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = kinds[random.Next(3)];
+            var workspace = new ShoreField.Workspace(6, 6, resolution);
+            workspace.Bake(terrain);
+            byte[] buffer = workspace.Field.rgba;
+            for (int step = 0; step < 35; step++)
+            {
+                int cell = random.Next(terrain.Length);
+                terrain[cell] = step == 17 ? TerrainType.DeepLake : TerrainType.Land;
+                if (!workspace.TryAddLand(terrain)) workspace.Bake(terrain);
+                Assert.AreSame(buffer, workspace.Field.rgba);
+                CollectionAssert.AreEqual(ShoreField.Bake(6, 6, terrain, resolution).rgba, workspace.Field.rgba, $"step {step}");
+            }
+        }
+
+        [Test]
+        public void ReusedBakerHandlesNoSourcesAndRejectsLandRemoval()
+        {
+            var terrain = new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Ocean, TerrainType.Lake };
+            var workspace = new ShoreField.Workspace(2, 2);
+            workspace.Bake(terrain);
+            terrain[0] = TerrainType.Ocean;
+            Assert.IsFalse(workspace.TryAddLand(terrain));
+            workspace.Bake(terrain);
+            CollectionAssert.AreEqual(ShoreField.BakeBruteForce(2, 2, terrain).rgba, workspace.Field.rgba);
+        }
+        [TestCase(0, 441)] [TestCase(1, 4761)] [TestCase(2, 33489)] [TestCase(3, 59049)]
+        [TestCase(0, 441, 0.6f)] [TestCase(1, 4761, 0.6f)]
+        [TestCase(2, 91809, 0.6f)] [TestCase(3, 91809, 0.6f)]
+        public void TenByTenOpenBoardVertexBudgetIncludesPaddingAndSkirt(int tier, int count, float waveScale = 1f)
+        {
+            var terrain = new TerrainType[100];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
+            var mesh = WaterMeshBuilder.Build(10, 10, terrain, WaterMeshBuilder.SubdivisionsForTier(tier, waveScale), WaterFeatures.PaddingFor(tier), 40);
+            Assert.AreEqual(count, mesh.positions.Length / 3);
+        }
+        [Test]
+        public void FarSubmeshBeginsExactlyAtPaddingEdge()
+        {
+            var m = WaterMeshBuilder.Build(2, 2, new[] { TerrainType.Ocean, TerrainType.Lake, TerrainType.DeepLake, TerrainType.Land }, 3, 6, 40);
+            Assert.AreEqual(m.indices.Length, m.nearIndices.Length + m.farIndices.Length);
+            CollectionAssert.AreEqual(m.nearIndices, new ArraySegment<int>(m.indices, 0, m.nearIndices.Length));
+            CollectionAssert.AreEqual(m.farIndices, new ArraySegment<int>(m.indices, m.nearIndices.Length, m.farIndices.Length));
+            foreach (int id in m.farIndices)
+            {
+                float x = m.positions[id * 3], z = m.positions[id * 3 + 2];
+                Assert.IsTrue(x <= -6.5f || x >= 7.5f || z <= -6.5f || z >= 7.5f, "Far vertices must be on or beyond the fade boundary.");
+            }
+            foreach (int id in m.nearIndices)
+            {
+                Assert.That(m.positions[id * 3], Is.InRange(-6.5f, 7.5f));
+                Assert.That(m.positions[id * 3 + 2], Is.InRange(-6.5f, 7.5f));
+            }
+        }
+
+        [TestCase(TerrainType.DeepLake)]
+        public void BodyMixIsContainedMonotonicAndClamped(TerrainType lake)
+        {
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++) terrain[z * 10 + x] = x < 3 ? TerrainType.Ocean : lake;
+            var f = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int row = 64;
+            int Mix(int x) => f.rgba[(row * f.width + x) * 4 + 3];
+            // Boundary x=2.5 lies between texels 63 and 64.
+            for (int z = 0; z < f.height; z++)
+                for (int x = 0; x < f.width; x++)
+                {
+                    int at = (z * f.width + x) * 4;
+                    if (f.rgba[at + 2] == 0) Assert.AreEqual(0, f.rgba[at + 3]);
+                }
+            Assert.AreEqual(0, Mix(63));
+            Assert.That(Mix(64), Is.InRange(1, 254));
+            for (int x = 64; x < 88; x++)
+                Assert.That(Mix(x), Is.LessThanOrEqualTo(Mix(x + 1)));
+            Assert.AreEqual(255, Mix(80));
+        }
+        [Test]
+        public void SignedBorderIsMonotonicAndFilteredMidpointIsHalf()
+        {
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++) terrain[z * 10 + x] = x < 3 ? TerrainType.Ocean : TerrainType.Lake;
+            var field = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int A(int x) => field.rgba[(64 * field.width + x) * 4 + 3];
+            for (int x = 40; x < 88; x++) Assert.LessOrEqual(A(x), A(x + 1));
+            Assert.AreEqual(0, A(47));
+            Assert.AreEqual(255, A(80));
+            Assert.That(A(63), Is.InRange(1, 127));
+            Assert.That(A(64), Is.InRange(128, 254));
+            Assert.AreEqual(0.5, (A(63) + A(64)) / 510.0, 1.0 / 255);
+        }
+
+        [Test]
+        public void LandAdjacencyDoesNotMoveSignedLakeDistance()
+        {
+            var terrain = new TerrainType[49];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = i % 7 == 0 ? TerrainType.Ocean : TerrainType.Lake;
+            var before = ShoreField.Bake(7, 7, terrain);
+            terrain[24] = TerrainType.Land;
+            var after = ShoreField.Bake(7, 7, terrain);
+            for (int z = 0; z < before.height; z++)
+                for (int x = 0; x < before.width; x++)
+                {
+                    int at = (z * before.width + x) * 4;
+                    int cx = x / 16 - 4, cz = z / 16 - 4;
+                    if (cx > 0 && cx < 7 && cz >= 0 && cz < 7 && !(cx == 3 && cz == 3))
+                        Assert.AreEqual(before.rgba[at + 3], after.rgba[at + 3]);
+                }
+        }
+
+        [TestCase(1)] [TestCase(3)] [TestCase(16)]
+        public void RemovingLastLakeRefreshesOceanBorderIncrementally(int resolution)
+        {
+            var terrain = new TerrainType[25];
+            for (int i = 0; i < terrain.Length; i++) terrain[i] = TerrainType.Ocean;
+            terrain[12] = TerrainType.Lake;
+            var workspace = new ShoreField.Workspace(5, 5, resolution);
+            workspace.Bake(terrain);
+            terrain[12] = TerrainType.Land;
+            Assert.IsTrue(workspace.TryAddLand(terrain));
+            CollectionAssert.AreEqual(ShoreField.Bake(5, 5, terrain, resolution).rgba, workspace.Field.rgba);
+        }
+
+        [Test]
+        public void DeepLakeBlendsFromNearestShallowerBodyOnItsOwnSide()
+        {
+            var terrain = new TerrainType[60];
+            for (int z = 0; z < 6; z++)
+                for (int x = 0; x < 10; x++)
+                    terrain[z * 10 + x] = x < 2 ? TerrainType.Ocean : x < 4 ? TerrainType.Lake : TerrainType.DeepLake;
+            var f = ShoreField.Bake(10, 6, terrain, 16, 1);
+            int Channel(int x, int channel) => f.rgba[(64 * f.width + x) * 4 + channel];
+            Assert.AreEqual(255, Channel(79, 2), "Lake side keeps its palette.");
+            Assert.AreEqual(255, Channel(79, 3), "Deep lake does not fade the lake side.");
+            Assert.AreEqual(128, Channel(80, 2), "Deep lake transitions from lake here.");
+            Assert.That(Channel(80, 3), Is.InRange(1, 254));
+            for (int x = 80; x < 104; x++)
+                Assert.That(Channel(x, 3), Is.LessThanOrEqualTo(Channel(x + 1, 3)));
+            Assert.AreEqual(255, Channel(96, 3));
+            Assert.AreEqual(64, Channel(175, 2), "Deep lake at board edge transitions from exterior ocean.");
+            Assert.That(Channel(175, 3), Is.InRange(1, 254));
+            for (int z = 0; z < f.height; z++)
+                for (int x = 0; x < f.width; x++)
+                {
+                    int at = (z * f.width + x) * 4;
+                    if (f.rgba[at + 2] == 0 && x >= 176) Assert.AreEqual(0, f.rgba[at + 3]);
+                }
+        }
+
         [Test]
         public void FieldEncodesLandDistanceDampingAndBody()
         {
             var f = ShoreField.Bake(4, 1, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Ocean }, 1, 1);
             int at = (f.width + 1) * 4;
-            Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 1]); Assert.AreEqual(0, f.rgba[at + 3]);
-            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(85, f.rgba[at + 5]); Assert.AreEqual(255, f.rgba[at + 7]);
+            Assert.AreEqual(0, f.rgba[at]); Assert.AreEqual(0, f.rgba[at + 3]);
+            Assert.AreEqual(42, f.rgba[at + 4]); Assert.AreEqual(64, f.rgba[at + 7]);
             Assert.Less(f.rgba[at + 4], f.rgba[at + 8]); Assert.Less(f.rgba[at + 8], f.rgba[at + 12]);
             Assert.AreEqual(0, f.rgba[at + 6]); Assert.AreEqual(255, f.rgba[at + 10]);
+        }
+
+        [Test]
+        public void PhaseIsStaticPeriodicAndVariesAlongCoast()
+        {
+            var a = ShoreField.Bake(2, 2, new[] { TerrainType.Land, TerrainType.Ocean, TerrainType.Lake, TerrainType.Land });
+            var b = ShoreField.Bake(2, 2, new[] { TerrainType.Ocean, TerrainType.Land, TerrainType.Land, TerrainType.Lake });
+            byte min = 255, max = 0;
+            for (int z = 0; z < a.height; z++)
+                for (int x = 0; x < a.width; x++)
+                {
+                    int at = (z * a.width + x) * 4 + 1;
+                    Assert.AreEqual(a.rgba[at], b.rgba[at], "Terrain changes must preserve local phase.");
+                    min = Math.Min(min, a.rgba[at]); max = Math.Max(max, a.rgba[at]);
+                    if (x == 0) Assert.AreEqual(a.rgba[at], a.rgba[(z * a.width + a.width - 1) * 4 + 1]);
+                    if (z == 0) Assert.AreEqual(a.rgba[at], a.rgba[((a.height - 1) * a.width + x) * 4 + 1]);
+                }
+            Assert.Greater(max - min, 100);
         }
 
         [Test]
@@ -29,7 +219,6 @@ namespace NodeWar.View.Tests
             // Texel (4,4) is (1,1): half a cell from each edge of the land square.
             int at = (4 * f.width + 4) * 4;
             Assert.AreEqual(Math.Round(Math.Sqrt(0.5) / 3 * 255), f.rgba[at]);
-            Assert.AreEqual(Math.Round(Math.Sqrt(0.5) / 1.5 * 255), f.rgba[at + 1]);
         }
 
         [Test]
@@ -41,8 +230,8 @@ namespace NodeWar.View.Tests
             Assert.AreEqual(144, a.width); Assert.AreEqual(144, a.height);
             Assert.AreEqual(-4.5f, a.originX); Assert.AreEqual(-4.5f, a.originZ);
             Assert.AreEqual(1f / 16, a.worldPerTexel);
-            Assert.AreEqual(255, a.rgba[0]); Assert.AreEqual(255, a.rgba[1]);
-            Assert.AreEqual(0, a.rgba[2]); Assert.AreEqual(255, a.rgba[3]);
+            Assert.AreEqual(255, a.rgba[0]);
+            Assert.AreEqual(0, a.rgba[2]); Assert.AreEqual(0, a.rgba[3]);
             CollectionAssert.AreEqual(a.rgba, b.rgba);
         }
 
@@ -56,9 +245,8 @@ namespace NodeWar.View.Tests
                     if (x != 0 && z != 0 && x != f.width - 1 && z != f.height - 1) continue;
                     int at = (z * f.width + x) * 4;
                     Assert.AreEqual(255, f.rgba[at], "R: saturated distance");
-                    Assert.AreEqual(255, f.rgba[at + 1], "G: full wave amplitude");
                     Assert.AreEqual(0, f.rgba[at + 2], "B: ocean palette");
-                    Assert.AreEqual(255, f.rgba[at + 3], "A: water");
+                    Assert.AreEqual(0, f.rgba[at + 3], "A: ocean mix");
                 }
         }
 
@@ -86,14 +274,16 @@ namespace NodeWar.View.Tests
             CheckExtent(match.positions, 40); CheckExtent(lobby.positions, 80);
         }
 
-        [TestCase(0, 1)] [TestCase(1, 4)] [TestCase(2, 6)] [TestCase(3, 8)]
-        public void MeshCountsMatchTierAndOmitLand(int tier, int n)
+        [TestCase(0, 1)] [TestCase(1, 3)] [TestCase(2, 6)] [TestCase(3, 8)]
+        public void MeshCountsMatchTierAndIncludeCoveredLand(int tier, int n)
         {
             Assert.AreEqual(n, WaterMeshBuilder.SubdivisionsForTier(tier));
             var m = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Land }, n, 0, 0);
-            Assert.AreEqual((n + 1) * (n + 1) * 3, m.positions.Length);
-            Assert.AreEqual(n * n * 6, m.indices.Length);
-            for (int i = 0; i < m.positions.Length; i += 3) Assert.LessOrEqual(m.positions[i], 0.5f);
+            Assert.AreEqual((2 * n + 1) * (n + 1) * 3, m.positions.Length);
+            Assert.AreEqual(2 * n * n * 6, m.indices.Length);
+            var open = WaterMeshBuilder.Build(2, 1, new[] { TerrainType.Ocean, TerrainType.Ocean }, n, 0, 0);
+            CollectionAssert.AreEqual(open.positions, m.positions);
+            CollectionAssert.AreEqual(open.indices, m.indices);
         }
 
         [TestCase(1, 1)] [TestCase(4, 1)] [TestCase(6, 1)] [TestCase(8, 1)]
