@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 54aaa65c
+verified: c7189205
 ---
 
 # World view
