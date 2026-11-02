@@ -12,7 +12,7 @@ sources:
   - Assets/Resources/Board/NodeWarPlinth.shader
   - Assets/Art/Board/Plinth.fbx
   - tools/blender/make_plinth.py
-verified: 058b62ab
+verified: 54aaa65c
 ---
 
 # World view
@@ -63,12 +63,12 @@ Local routes merge and fade with age; interrupted/Pier-gated intent is amber/das
 
 Indicator events/conditions use debounce and grace. HUD placement uses central-view hysteresis, dock/sheet exclusion, edge clamping and merged counts. Screen shake reacts to breach/capture/game-over, with strongest-wins camera composition. Paint uses an opaque union mask composited once, preventing overlap darkening; its shader loads from Resources.
 
-Water keeps full-grid geometry. `ShoreField.Workspace` reuses square-distance EDT buffers and local land minima. Lake removal refreshes nearby ocean A; deep-body changes refresh EDTs. Stale results drop. Crossfade: 0.4 seconds; reduced motion snaps. R=land distance, G=swash phase; filtered ocean/lake A=signed border distance (one-cell range), with noise-bounded steps. Unfiltered deep A=inward ramp with compressed solid-colour rim. B=0 ocean, 255 lake, 128 deep-from-lake, 64 deep-from-ocean. Floor depth includes waves.
+Water keeps full-grid geometry. `ShoreField.Workspace` reuses EDT buffers/minima. Lake removal refreshes ocean A; deep-body changes rebake. Stale results drop. Crossfade: 0.4 seconds; reduced motion snaps. R=land distance, G=swash phase; filtered ocean/lake A=signed border distance (one-cell range), with noise-bounded steps. Unfiltered deep A=inward ramp with compressed solid-colour rim. B=0 ocean, 255 lake, 128 deep-from-lake, 64 deep-from-ocean. Floor depth includes waves.
 
-`WaterFeatures` budgets Off/Noise/Gerstner 2/4. Low compiles optional paths out; Low/Medium disable sheen. `WaterQuality.Apply()` refreshes presentation and the URP clone; HDR stays authored. Board creation warms shader variants. High/Ultra probes slice faces after 1.5 quiet seconds and settled plinths. Water sorts at -10; SSAO needs DepthNormals.
-Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Runtime resources are disposed.
+`WaterFeatures`: Low Off, Medium Noise, High/Ultra Gerstner 4; Custom allows Gerstner 2. Low compiles optional paths out; Low/Medium disable sheen. `WaterQuality.Apply()` refreshes presentation and the URP clone; HDR stays authored. High/Ultra probes slice faces after 1.5 quiet seconds and settled plinths. Water sorts at -10; SSAO needs DepthNormals.
+Plinth tops stay at GroundY (-0.12), extending down 0.6 cell; water sits 0.45 lower. Initial land snaps; later Land rises over 0.35 unscaled seconds; reduced motion snaps. Shared `Board/DistrictPlinth` owns colours; renderer blocks hold water height/fade. Last-board teardown releases shared water resources and fences pending bakes.
 
-`BoardVisualsBench` replays drafting/shoals without simulation. Runtime deep lake preserves slots/shoals. F1 and Console report bake/upload/mesh/probe-submission milliseconds and two-second worst frame.
+Editor/development `BoardVisualsBench` replays drafting/shoals without simulation. Deep lake preserves slots/shoals. F1/Console report bake/upload/mesh/probe-submission times and two-second worst frame.
 
 ## Decisions
 - Runtime-added feedback components avoid prefab edits for outlines, rings and touch targets.
