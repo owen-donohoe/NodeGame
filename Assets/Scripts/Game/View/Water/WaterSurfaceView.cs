@@ -36,6 +36,7 @@ namespace NodeWar.View
         private bool probeDirty;
         private float probeNotBefore, lastProbeAt = float.NegativeInfinity;
         private int probeRenderId = -1;
+        private int reflectionLayers = -1;
         private float floorY = float.NaN;
         private Mesh floorMesh;
         private Material floorMaterial;
@@ -87,7 +88,7 @@ namespace NodeWar.View
             if (terrain != null) RebuildMesh(terrain);
         }
 
-        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40, ShoreRectangle[] landRectangles = null)
+        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40, ShoreRectangle[] landRectangles = null, int reflectionLayers = -1)
         {
             if (!ownsSharedResources)
             {
@@ -99,6 +100,7 @@ namespace NodeWar.View
             int waterLayer = LayerMask.NameToLayer("Water");
             if (waterLayer >= 0 && gameObject.layer == 0) gameObject.layer = waterLayer;
             boardView = GetComponentInParent<BoardTerrainView>();
+            this.reflectionLayers = reflectionLayers;
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
             shoreWorkspace = new ShoreField.Workspace(cols, rows, rectangles: landRectangles);
@@ -365,7 +367,7 @@ namespace NodeWar.View
                 reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
                 reflectionProbe.boxProjection = true;
                 reflectionProbe.size = new Vector3((cols + Padding * 2) * scale, 4 * scale, (rows + Padding * 2) * scale);
-                reflectionProbe.cullingMask = ~(1 << gameObject.layer);
+                reflectionProbe.cullingMask = reflectionLayers & ~(1 << gameObject.layer);
                 reflectionProbe.nearClipPlane = 0.1f;
                 reflectionProbe.farClipPlane = Mathf.Max(cols, rows) * scale * 4;
                 reflectionProbe.importance = 10;

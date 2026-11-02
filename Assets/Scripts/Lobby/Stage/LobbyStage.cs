@@ -99,7 +99,7 @@ namespace NodeWar.Lobby
             stageCamera.depth = depth;
             stageCamera.clearFlags = CameraClearFlags.SolidColor;
             stageCamera.backgroundColor = Sea;
-            stageCamera.cullingMask = 1 << StageLayer;
+            stageCamera.cullingMask = (1 << StageLayer) | (1 << LayerMask.NameToLayer("Water"));
             stageCamera.nearClipPlane = 0.1f;
             stageCamera.farClipPlane = 120f;
             stageCamera.fieldOfView = ShopMarketFraming.FieldOfView;
@@ -762,7 +762,8 @@ namespace NodeWar.Lobby
                 Destroy(water.gameObject);
             }
             var ocean = new GameObject("Ocean (unplaceable edge)");
-            ocean.layer = StageLayer;
+            // Water gets its own layer so the probe can see stage land without reflecting itself.
+            ocean.layer = LayerMask.NameToLayer("Water");
             ocean.transform.SetParent(transform, false);
             ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
             water = ocean.AddComponent<WaterSurfaceView>();
@@ -775,7 +776,8 @@ namespace NodeWar.Lobby
             }
             // The grid supplies extent only: the entire stage water body is Ocean.
             for (int i = 0; i < grid.terrain.Length; i++) grid.terrain[i] = NodeWar.Simulation.TerrainType.Ocean;
-            water.Initialize(grid.cols, grid.rows, grid.cellSize, WaterY, skirtCells: 80, landRectangles: rectangles);
+            water.Initialize(grid.cols, grid.rows, grid.cellSize, WaterY, skirtCells: 80,
+                landRectangles: rectangles, reflectionLayers: 1 << StageLayer);
             water.SetTerrain(grid.terrain);
         }
 
