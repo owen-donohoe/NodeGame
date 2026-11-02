@@ -5,7 +5,7 @@ using NodeWar.Simulation;
 namespace NodeWar.View
 {
     /// <summary>Closed, axis-aligned land in cell units; independent of body IDs.</summary>
-    public readonly struct ShoreRectangle
+    public readonly struct ShoreRectangle : IEquatable<ShoreRectangle>
     {
         public readonly double minX, minZ, maxX, maxZ;
         public ShoreRectangle(double minX, double minZ, double maxX, double maxZ)
@@ -22,6 +22,8 @@ namespace NodeWar.View
             double dz = Math.Max(Math.Max(minZ - z, z - maxZ), 0);
             return dx * dx + dz * dz;
         }
+
+        public bool Equals(ShoreRectangle other) => minX == other.minX && minZ == other.minZ && maxX == other.maxX && maxZ == other.maxZ;
     }
 
     public sealed class ShoreFieldData
@@ -154,7 +156,7 @@ namespace NodeWar.View
             private readonly int[] sites;
             private readonly TerrainType[] terrain;
             private bool initialized;
-            private readonly ShoreRectangle[] rectangles;
+            private ShoreRectangle[] rectangles;
             private const double Infinity = 1e20;
 
             public Workspace(int cols, int rows, int resolution = 16, int pad = 4, double blendCells = 1, ShoreRectangle[] rectangles = null)
@@ -198,6 +200,17 @@ namespace NodeWar.View
                 BakeBodies(resolved);
                 Array.Copy(resolved, terrain, terrain.Length);
                 initialized = true;
+            }
+
+            /// <summary>Worker-owned update. Moving rectangle sources require a full distance refresh.</summary>
+            public void SetRectangles(ShoreRectangle[] next)
+            {
+                bool changed = rectangles.Length != next.Length;
+                for (int i = 0; !changed && i < next.Length; i++) changed = !rectangles[i].Equals(next[i]);
+                if (!changed) return;
+                if (rectangles.Length != next.Length) rectangles = new ShoreRectangle[next.Length];
+                Array.Copy(next, rectangles, next.Length);
+                initialized = false;
             }
 
             public bool TryAddLand(TerrainType[] resolved)

@@ -23,6 +23,9 @@ namespace NodeWar.Lobby
         private const float WaterY = 0.075f;
         private PlinthFactory plinths;
         private readonly List<LobbyLandBounds> landFootprints = new List<LobbyLandBounds>();
+        private readonly List<GameObject> landGrounds = new List<GameObject>();
+        private LobbyWaterGridData waterGrid;
+        private ShoreRectangle[] waterRectangles;
 
 
         private StagePaperArt paper;
@@ -114,8 +117,7 @@ namespace NodeWar.Lobby
                 StageSlot slot = slots[i];
                 slotPositions[i] = new Vector3((slot.Column - (slot.Row == 1 ? 1f : 0.5f)) * 2.8f,
                     LandLift, slot.Row == 0 ? 1.4f : -1.4f);
-                slotDirections[i] = slotPositions[i].normalized;
-                slotDirections[i].y = 0f;
+                slotDirections[i] = new Vector3(slotPositions[i].x, 0f, slotPositions[i].z).normalized;
                 var plot = new GameObject("Plot " + i);
                 plot.transform.SetParent(transform, false);
                 plot.transform.localPosition = slotPositions[i];
@@ -183,6 +185,11 @@ namespace NodeWar.Lobby
 
         private void LateUpdate()
         {
+            if (water != null)
+            {
+                UpdateWaterRectangles();
+                water.SetLandRectangles(waterRectangles);
+            }
             UpdateMarketVisibility();
             BillboardFigures(suits);
             BillboardFigures(marketmen);
@@ -722,6 +729,12 @@ namespace NodeWar.Lobby
 
         private void AddLandFootprint(GameObject ground)
         {
+            landGrounds.Add(ground);
+            landFootprints.Add(LandFootprint(ground));
+        }
+
+        private LobbyLandBounds LandFootprint(GameObject ground)
+        {
             Bounds meshBounds = ground.GetComponent<MeshFilter>().sharedMesh.bounds;
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             for (int i = 0; i < 8; i++)
@@ -732,7 +745,18 @@ namespace NodeWar.Lobby
                 Vector3 local = transform.InverseTransformPoint(ground.transform.TransformPoint(corner));
                 min = Vector3.Min(min, local); max = Vector3.Max(max, local);
             }
-            landFootprints.Add(new LobbyLandBounds(min.x, min.z, max.x, max.z));
+            return new LobbyLandBounds(min.x, min.z, max.x, max.z);
+        }
+
+        private void UpdateWaterRectangles()
+        {
+            for (int i = 0; i < landGrounds.Count; i++)
+            {
+                LobbyLandBounds b = LandFootprint(landGrounds[i]);
+                waterRectangles[i] = new ShoreRectangle((b.minX - waterGrid.originX) / waterGrid.cellSize,
+                    (b.minZ - waterGrid.originZ) / waterGrid.cellSize, (b.maxX - waterGrid.originX) / waterGrid.cellSize,
+                    (b.maxZ - waterGrid.originZ) / waterGrid.cellSize);
+            }
         }
 
         private GameObject LandBlock(string name, Transform parent, Vector3 top, float width, float depth, bool pickable)
@@ -767,17 +791,13 @@ namespace NodeWar.Lobby
             ocean.transform.SetParent(transform, false);
             ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
             water = ocean.AddComponent<WaterSurfaceView>();
-            var rectangles = new ShoreRectangle[landFootprints.Count];
-            for (int i = 0; i < rectangles.Length; i++)
-            {
-                LobbyLandBounds b = landFootprints[i];
-                rectangles[i] = new ShoreRectangle((b.minX - grid.originX) / grid.cellSize, (b.minZ - grid.originZ) / grid.cellSize,
-                    (b.maxX - grid.originX) / grid.cellSize, (b.maxZ - grid.originZ) / grid.cellSize);
-            }
+            waterGrid = grid;
+            waterRectangles = new ShoreRectangle[landFootprints.Count];
+            UpdateWaterRectangles();
             // The grid supplies extent only: the entire stage water body is Ocean.
             for (int i = 0; i < grid.terrain.Length; i++) grid.terrain[i] = NodeWar.Simulation.TerrainType.Ocean;
             water.Initialize(grid.cols, grid.rows, grid.cellSize, WaterY, skirtCells: 80,
-                landRectangles: rectangles, reflectionLayers: 1 << StageLayer);
+                landRectangles: waterRectangles, reflectionLayers: 1 << StageLayer);
             water.SetTerrain(grid.terrain);
         }
 

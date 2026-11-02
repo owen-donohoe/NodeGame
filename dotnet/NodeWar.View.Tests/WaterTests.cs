@@ -36,6 +36,12 @@ namespace NodeWar.View.Tests
             var full = new ShoreField.Workspace(3, 3, resolution, rectangles: new[] { rectangle });
             full.Bake(terrain);
             CollectionAssert.AreEqual(full.Field.rgba, field.rgba);
+            workspace.SetRectangles(new[] { new ShoreRectangle(0.11, -0.17, 1.69, 1.37) });
+            Assert.That(workspace.TryAddLand(terrain), Is.False, "Moving a source must allow distances to increase.");
+            workspace.Bake(terrain);
+            full.SetRectangles(new[] { new ShoreRectangle(0.11, -0.17, 1.69, 1.37) });
+            full.Bake(terrain);
+            CollectionAssert.AreEqual(full.Field.rgba, field.rgba);
         }
 
         [TestCase(1, 0)] [TestCase(3, 1)] [TestCase(8, 4)] [TestCase(16, 4)]
