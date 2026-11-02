@@ -7,6 +7,12 @@ namespace NodeWar.View
     public static class WaterMaterialFactory
     {
         private static Texture2D surfaceFoam, swell;
+        private static int resourceUsers;
+        internal static void RetainResources() => resourceUsers++;
+        internal static void ReleaseResources()
+        {
+            if (--resourceUsers == 0) ResetTextures();
+        }
         private static Material fallback, runtime, far;
         private static int runtimeFeatures = -1, runtimeWaves = -1, runtimeTier = -1;
 
@@ -173,11 +179,12 @@ namespace NodeWar.View
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetTextures()
         {
-            if (surfaceFoam != null) Object.Destroy(surfaceFoam);
-            if (swell != null) Object.Destroy(swell);
+            resourceUsers = 0;
+            if (surfaceFoam != null) Release(surfaceFoam);
+            if (swell != null) Release(swell);
             surfaceFoam = swell = null;
             warmedModes.Clear();
-            if (fallback != null) Object.Destroy(fallback);
+            if (fallback != null) Release(fallback);
             fallback = null;
             if (far != null) Release(far);
             far = null;

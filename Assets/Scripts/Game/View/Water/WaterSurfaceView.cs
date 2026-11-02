@@ -24,6 +24,7 @@ namespace NodeWar.View
         private static double Milliseconds(long start) => (Stopwatch.GetTimestamp() - start) * 1000.0 / Stopwatch.Frequency;
         private int Padding => WaterFeatures.PaddingFor(WaterQuality.Current);
         private int meshPadding;
+        private bool ownsSharedResources;
         private static readonly List<WaterSurfaceView> active = new List<WaterSurfaceView>();
         private int cols, rows, subdivisions, skirtCells;
         private float scale, surfaceY, blend = 1f;
@@ -88,6 +89,11 @@ namespace NodeWar.View
 
         public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40)
         {
+            if (!ownsSharedResources)
+            {
+                WaterMaterialFactory.RetainResources();
+                ownsSharedResources = true;
+            }
             int waterLayer = LayerMask.NameToLayer("Water");
             if (waterLayer >= 0) gameObject.layer = waterLayer;
             boardView = GetComponentInParent<BoardTerrainView>();
@@ -393,10 +399,16 @@ namespace NodeWar.View
         }
         private void OnDestroy()
         {
+            // Teardown is the only fence: a worker must finish before its buffers lose their owner.
             if (bakeTask != null)
-                bakeTask.ContinueWith(task => { var observed = task.Exception; }, TaskContinuationOptions.OnlyOnFaulted);
+            {
+                try { bakeTask.GetAwaiter().GetResult(); }
+                catch (System.Exception error) { UnityEngine.Debug.LogException(error, this); }
+                bakeTask = null;
+            }
             if (previous != current) Release(previous);
             Release(current); Release(mesh); Release(floorMesh); Release(floorMaterial);
+            if (ownsSharedResources) WaterMaterialFactory.ReleaseResources();
         }
 
         private static void Release(Object value)
