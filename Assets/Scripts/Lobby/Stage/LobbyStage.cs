@@ -777,6 +777,8 @@ namespace NodeWar.Lobby
         }
 
         private const float ShotWaterReach = 45f;
+        // The stage camera looks steeply down onto the glint hotspot; keep glints a faint sparkle.
+        private const float LobbyGlintStrength = 0.06f;
 
         /// <summary>Water each camera shot can see, so the Social/Guild ocean view gets detailed water.</summary>
         private LobbyLandBounds[] ShotWaterViews()
@@ -824,6 +826,7 @@ namespace NodeWar.Lobby
             for (int i = 0; i < grid.terrain.Length; i++) grid.terrain[i] = NodeWar.Simulation.TerrainType.Ocean;
             water.Initialize(grid.cols, grid.rows, grid.cellSize, WaterY, skirtCells: 80,
                 landRectangles: waterRectangles, reflectionLayers: 1 << StageLayer);
+            water.GlintStrengthOverride = LobbyGlintStrength;
             water.SetTerrain(grid.terrain);
         }
 

@@ -16,6 +16,10 @@ namespace NodeWar.View
         private static readonly ProfilerMarker UploadMarker = new ProfilerMarker("Water.ShoreUpload");
         private static readonly ProfilerMarker MeshMarker = new ProfilerMarker("Water.MeshRebuild");
         private static readonly ProfilerMarker ProbeMarker = new ProfilerMarker("Water.ProbeSubmit");
+        /// <summary>Per-view glint strength; negative uses the shared material. The lobby's steep camera
+        /// looks straight at the glint hotspot, so it runs much lower than the board.</summary>
+        public float GlintStrengthOverride = -1f;
+
         public static double LastBakeMs { get; private set; }
         public static double LastUploadMs { get; private set; }
         public static double LastMeshMs { get; private set; }
@@ -305,6 +309,7 @@ namespace NodeWar.View
             properties.SetFloat("_WorldToBoard", WaterFeatures.WorldToBoard(scale));
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
             properties.SetFloat("_DetailFadeEnd", Padding);
+            if (GlintStrengthOverride >= 0f) properties.SetFloat("_GlintStrength", GlintStrengthOverride);
             Material material = surfaceRenderer.sharedMaterial;
             bool generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
             bool generatedSwell = WaterMaterialFactory.NeedsSwell(material);
