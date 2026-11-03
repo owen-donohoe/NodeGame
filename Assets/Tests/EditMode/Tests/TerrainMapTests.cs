@@ -143,9 +143,14 @@ namespace NodeWar.Tests
             {
                 bool expected = boundedCorridor
                     ? i == Cell(board, 1, 3) || i == Cell(board, 2, 2)
-                    : i == Cell(board, 1, 1) || i == Cell(board, 2, 1)
-                        || i == Cell(board, 1, 5) || i == Cell(board, 2, 5);
+                    : i == Cell(board, 2, 2) || i == Cell(board, 1, 3);
                 Assert.AreEqual(expected, mask[i], "cell " + i);
+            }
+            if (!boundedCorridor)
+            {
+                var after = MatchFactory.ResolveTerrain(board, placed, true);
+                Assert.AreEqual(TerrainType.Lake, after[Cell(board, 1, 5)]);
+                Assert.AreEqual(TerrainType.Lake, after[Cell(board, 2, 5)]);
             }
             for (int run = 0; run < 10; run++)
                 CollectionAssert.AreEqual(mask, ShoalPath.Connect(board, resolved, placed));
@@ -153,7 +158,7 @@ namespace NodeWar.Tests
             Assert.AreEqual(TerrainType.Lake, board.terrain[Cell(board, 1, 3)]);
         }
 
-        // Two equal-length routes. The lower-index route has an extra existing
+        // Two equal-length routes. The lower-index route has an extra connected
         // land side, so the thin route must win before cell-order ties apply.
         [TestCase(false)]
         [TestCase(true)]
@@ -171,6 +176,29 @@ namespace NodeWar.Tests
             var mask = ShoalPath.Connect(board, board.terrain, null);
             for (int i = 0; i < mask.Length; i++)
                 Assert.AreEqual(i == 16 || i == 17 || i == 18, mask[i], "cell " + i);
+        }
+
+        [Test]
+        public void Connect_TwoAlreadyConnectedSidesStillPenalizeAPocket()
+        {
+            foreach (bool pocket in new[] { false, true })
+            {
+                var board = BoardFixtures.LandGrid(5, 5);
+                for (int i = 0; i < board.terrain.Length; i++) board.terrain[i] = TerrainType.Ocean;
+                board.initialPlacements[0].gridX = 0;
+                board.initialPlacements[0].gridZ = 4;
+                board.initialPlacements[1].gridX = 4;
+                board.initialPlacements[1].gridZ = 2;
+                foreach (int cell in new[] { 0, 5, 10, 15, 20, 9, 14, 19 }) board.terrain[cell] = TerrainType.Land;
+                foreach (int cell in new[] { 6, 7, 8, 16, 17, 18 }) board.terrain[cell] = TerrainType.Lake;
+                // Cell 1 joins the left/Core component via cell 0. It gives
+                // candidate 6 a second connected side; candidate 16 keeps one.
+                if (pocket) board.terrain[1] = TerrainType.Land;
+                var mask = ShoalPath.Connect(board, board.terrain, null);
+                for (int i = 0; i < mask.Length; i++)
+                    Assert.AreEqual(pocket ? i == 16 || i == 17 || i == 18 : i == 6 || i == 7 || i == 8,
+                        mask[i], "pocket " + pocket + ", cell " + i);
+            }
         }
 
         [Test]
@@ -835,9 +863,8 @@ namespace NodeWar.Tests
                 Assert.AreEqual(state.players[v < 3 ? 0 : 1].coreNodeID, state.villagers[v].currentNodeID);
         }
 
-        // The left pockets reach the rest of the board only through a Core, and an
-        // enemy Core is never transit: without a Pier, (1,4) cannot reach (1,2), so
-        // the order is refused and changes nothing (D48). With the Pier it routes.
+        // Draft-end filler joins the left pockets through (1,3). A Pier at
+        // that cell keeps a water node; either construction permits movement.
         private static int AcrossTheLake(bool pier)
         {
             BoardConfigData board = PremadeMaps.Hourglass01();
@@ -852,25 +879,18 @@ namespace NodeWar.Tests
             int from = cells[Cell(board, 1, 4)], to = cells[Cell(board, 1, 2)];
             state.villagers[0].currentNodeID = from;
             state.villagers[0].state = VillagerState.Idle;
-            int before = SimulationStateHasher.ComputeHash(state);
             CommandProcessor.ProcessCommand(state, new GameCommand
                 { type = CommandType.Move, playerID = 0, villagerID = 0, targetNodeID = to });
-            if (pier)
-            {
-                Assert.AreEqual(to, state.villagers[0].targetNodeID);
-                Assert.AreEqual(VillagerState.Moving, state.villagers[0].state);
-            }
-            else
-            {
-                CollectionAssert.IsEmpty(Pathfinding.FindPath(state, 0, from, to, state.villagers[0].moveSpeedTicks));
-                Assert.AreEqual(before, SimulationStateHasher.ComputeHash(state));
-                Assert.AreEqual(-1, state.villagers[0].targetNodeID);
-            }
+            Assert.AreEqual(to, state.villagers[0].targetNodeID);
+            Assert.AreEqual(VillagerState.Moving, state.villagers[0].state);
+            int middle = cells[Cell(board, 1, 3)];
+            CollectionAssert.AreEqual(new[] { from, middle, to },
+                Pathfinding.FindPath(state, 0, from, to, state.villagers[0].moveSpeedTicks));
             return SimulationStateHasher.ComputeHash(state);
         }
 
-        [Test] public void Hourglass_NoPier_MoveAcrossTheLakeIsRefused() => AcrossTheLake(false);
-        [Test] public void Hourglass_NoPier_MoveAcrossTheLakeIsRefused_Determinism() => Assert.AreEqual(AcrossTheLake(false), AcrossTheLake(false));
+        [Test] public void Hourglass_NoPier_MoveAcrossTheFillerRoutes() => AcrossTheLake(false);
+        [Test] public void Hourglass_NoPier_MoveAcrossTheFillerRoutes_Determinism() => Assert.AreEqual(AcrossTheLake(false), AcrossTheLake(false));
         [Test] public void Hourglass_WithPier_MoveAcrossTheLakeRoutes() => AcrossTheLake(true);
         [Test] public void Hourglass_WithPier_MoveAcrossTheLakeRoutes_Determinism() => Assert.AreEqual(AcrossTheLake(true), AcrossTheLake(true));
     }

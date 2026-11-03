@@ -177,7 +177,8 @@ namespace NodeWar.Simulation
                             for (int side = 0; side < 4; side++)
                             {
                                 int neighbour = Neighbour(next, side, cols, rows);
-                                if (neighbour >= 0 && (nodes[neighbour] || filled[neighbour])) sides++;
+                                // Only the region already joined to the Core penalizes a pocket.
+                                if (neighbour >= 0 && connected[neighbour]) sides++;
                             }
                         int weight = nodes[next] ? 0 : 10 + 20 * (sides > 1 ? sides - 1 : 0);
                         long candidate = cost[cell] + weight;

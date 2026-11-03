@@ -107,7 +107,7 @@ namespace NodeWar.MatchLog
 
             MatchFactory.Configure(Balance, read.board);
             SimulationState rebuilt = MatchFactory.Build(Balance, read.board, read.draft, Setups(read.loadouts));
-            Assert.AreEqual(11, rebuilt.nodes.Length);
+            Assert.AreEqual(10, rebuilt.nodes.Length);
             Assert.AreEqual(startHash, SimulationStateHasher.ComputeHash(rebuilt));
 
             ReplayOutcome replay = MatchReplay.Run(read, Balance);

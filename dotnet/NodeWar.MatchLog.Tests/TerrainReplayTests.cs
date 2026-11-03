@@ -61,7 +61,7 @@ namespace NodeWar.MatchLog
                 new PlayerSetup { suits = loadouts[0].suits, districts = loadouts[0].districts },
                 new PlayerSetup { suits = loadouts[1].suits, districts = loadouts[1].districts }
             });
-            Assert.AreEqual(14, state.nodes.Length, "five starting cells, three districts and six connecting cells");
+            Assert.AreEqual(12, state.nodes.Length, "five starting cells, three districts and four connecting cells");
             Assert.AreEqual(TerrainType.Lake, MatchFactory.ResolveTerrain(board, Draft, false)[16]);
             Assert.AreEqual(TerrainType.Land, MatchFactory.ResolveTerrain(board, Draft, true)[16],
                 "The recording exercises draft-end filler at (2,2).");
