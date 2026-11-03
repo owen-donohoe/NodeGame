@@ -13,7 +13,7 @@ sources:
   - Assets/Scripts/Game/Simulation/PlacementLegality.cs
   - Assets/Scripts/Game/Simulation/PremadeMaps.cs
   - Assets/Scripts/Game/Simulation/ShoalPath.cs
-verified: d0fa993c
+verified: dae22452
 ---
 
 # Board
@@ -56,7 +56,7 @@ Peers independently resolve map ID from the catalog, compare setup, then draft a
 
 After validation, the builder creates a sparse graph, applies fixed and drafted placements, and initialises players and villagers. Drafted districts are unowned, Fixed and use their placer's era; board fixed placements use era 0. Non-Fixed simulation slots can instead upgrade to the claimer's drafted category choice. Only Cores start player-owned. Era tables default to zero when absent.
 
-Filler repeatedly runs multi-source integer Dijkstra from the high-Core component to the first unconnected node. Entering undrafted Lake costs `10 + 20 * max(0, landSides - 1)`, counting existing nodes and prior filler. Equal costs use lower predecessor, then cell index. Piers are targets, never filler. Ocean/DeepLake barriers leave sealed components unchanged.
+Filler repeatedly runs multi-source integer Dijkstra from the high-Core component to the first unconnected node. Entering undrafted Lake costs `10 + 20 * max(0, landSides - 1)`, counting only neighbours already connected to the Core, including prior filler; unconnected nodes do not count. Equal costs use lower predecessor, then cell index. Piers are targets, never filler. Ocean/DeepLake barriers leave sealed components unchanged.
 
 Identity has separate purposes: board hash covers dimensions, terrain, symmetry, slots, fixed placements, both draft pools, starting numbers and path/link tuning; balance hash covers numeric tuning; simulation version covers rule behavior; protocol version covers wire layout. Node terrain and `state.boardHash` enter state hashing unconditionally. Balance does not enter the state hash and must agree before play.
 
