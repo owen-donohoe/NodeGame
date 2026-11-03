@@ -23,16 +23,18 @@ namespace NodeWar.Lobby
     public static class LobbyWaterGrid
     {
         /// <summary>Only squares entirely covered by a primitive are land, so water cannot leave holes outside it.</summary>
-        public static LobbyWaterGridData Build(LobbyLandBounds[] land, float cellSize = 1f)
+        /// <param name="openWater">Extra areas that only widen the grid, as open ocean; camera views use this
+        /// so every lobby shot sees detailed water rather than the flat far ocean.</param>
+        public static LobbyWaterGridData Build(LobbyLandBounds[] land, float cellSize = 1f, LobbyLandBounds[] openWater = null)
         {
             if (land == null || land.Length == 0) throw new ArgumentException("At least one land footprint is required.", nameof(land));
             if (float.IsNaN(cellSize) || float.IsInfinity(cellSize) || cellSize <= 0) throw new ArgumentOutOfRangeException(nameof(cellSize));
             float minX = float.PositiveInfinity, minZ = minX, maxX = float.NegativeInfinity, maxZ = maxX;
-            for (int i = 0; i < land.Length; i++)
+            for (int i = 0; i < land.Length + (openWater?.Length ?? 0); i++)
             {
-                LobbyLandBounds b = land[i];
+                LobbyLandBounds b = i < land.Length ? land[i] : openWater[i - land.Length];
                 if (!Finite(b.minX) || !Finite(b.minZ) || !Finite(b.maxX) || !Finite(b.maxZ) || b.minX >= b.maxX || b.minZ >= b.maxZ)
-                    throw new ArgumentException("Land footprints must have finite, positive extents.", nameof(land));
+                    throw new ArgumentException("Footprints must have finite, positive extents.", i < land.Length ? nameof(land) : nameof(openWater));
                 minX = Math.Min(minX, b.minX); minZ = Math.Min(minZ, b.minZ);
                 maxX = Math.Max(maxX, b.maxX); maxZ = Math.Max(maxZ, b.maxZ);
             }

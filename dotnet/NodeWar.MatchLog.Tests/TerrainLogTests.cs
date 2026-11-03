@@ -72,7 +72,7 @@ namespace NodeWar.MatchLog
             };
             var header = new MatchLogHeader
             {
-                sim = 5, matchId = "terrain", playerIds = new[] { "", "" }, kind = MatchKind.Bot
+                sim = (ushort)SimulationVersion.Current, matchId = "terrain", playerIds = new[] { "", "" }, kind = MatchKind.Bot
             };
 
             var recorder = new MatchRecorder(header, MatchSetup.ForShippedMap(PremadeMaps.Hourglass01Id, header.content), board, loadouts, draft);
@@ -107,7 +107,7 @@ namespace NodeWar.MatchLog
 
             MatchFactory.Configure(Balance, read.board);
             SimulationState rebuilt = MatchFactory.Build(Balance, read.board, read.draft, Setups(read.loadouts));
-            Assert.AreEqual(7, rebuilt.nodes.Length);
+            Assert.AreEqual(10, rebuilt.nodes.Length);
             Assert.AreEqual(startHash, SimulationStateHasher.ComputeHash(rebuilt));
 
             ReplayOutcome replay = MatchReplay.Run(read, Balance);

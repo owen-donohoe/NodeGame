@@ -228,6 +228,9 @@ namespace NodeWar.View
             MaterialSlider(material, "_ReflectionMin", "Reflection floor", 0f, 1f);
             MaterialSlider(material, "_ReflectionStrength", "Reflection strength", 0f, 1f);
             MaterialSlider(material, "_Smoothness", "Smoothness", 0f, 1f);
+            MaterialSlider(material, "_GlintStrength", "Glint strength", 0f, 1f);
+            MaterialSlider(material, "_GlintElevation", "Glint elevation", 0f, 90f);
+            MaterialSlider(material, "_GlintFollowCamera", "Glint follows camera", 0f, 1f);
             GUILayout.Label("Foam");
             MaterialSlider(material, "_ShoreFoamWidth", "Shore foam width", 0f, 1f);
             MaterialSlider(material, "_ShoreFoamWobble", "Shore foam wobble", 0f, 1f);

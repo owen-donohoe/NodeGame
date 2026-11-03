@@ -16,6 +16,10 @@ namespace NodeWar.View
         private static readonly ProfilerMarker UploadMarker = new ProfilerMarker("Water.ShoreUpload");
         private static readonly ProfilerMarker MeshMarker = new ProfilerMarker("Water.MeshRebuild");
         private static readonly ProfilerMarker ProbeMarker = new ProfilerMarker("Water.ProbeSubmit");
+        /// <summary>Per-view glint strength; negative uses the shared material. The lobby's steep camera
+        /// looks straight at the glint hotspot, so it runs much lower than the board.</summary>
+        public float GlintStrengthOverride = -1f;
+
         public static double LastBakeMs { get; private set; }
         public static double LastUploadMs { get; private set; }
         public static double LastMeshMs { get; private set; }
@@ -36,6 +40,7 @@ namespace NodeWar.View
         private bool probeDirty;
         private float probeNotBefore, lastProbeAt = float.NegativeInfinity;
         private int probeRenderId = -1;
+        private int reflectionLayers = -1;
         private float floorY = float.NaN;
         private Mesh floorMesh;
         private Material floorMaterial;
@@ -46,9 +51,12 @@ namespace NodeWar.View
         private Texture2D current, previous;
         private ShoreField.Workspace shoreWorkspace;
         private TerrainType[] bakingTerrain;
+        private ShoreRectangle[] rectangles, bakingRectangles;
         private byte[] currentBytes, previousBytes;
         private Task<double> bakeTask;
         private int requestVersion, bakingVersion, appliedVersion;
+        private int fullBakeVersion;
+        private bool bakingFull;
         public static string LastBakePath { get; private set; } = "pending";
 
         private static bool ReducedMotion => PlayerProfile.Instance != null && PlayerProfile.Instance.Settings.reducedMotion;
@@ -87,19 +95,24 @@ namespace NodeWar.View
             if (terrain != null) RebuildMesh(terrain);
         }
 
-        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40)
+        public void Initialize(int columns, int rowCount, float cellScale, float y, int skirtCells = 40, ShoreRectangle[] landRectangles = null, int reflectionLayers = -1)
         {
             if (!ownsSharedResources)
             {
                 WaterMaterialFactory.RetainResources();
                 ownsSharedResources = true;
             }
+            // The board leaves water on Default, so it moves to Water (the probe skips that layer).
+            // An owner that chose a layer keeps it, so camera and probe masks remain owner-controlled.
             int waterLayer = LayerMask.NameToLayer("Water");
-            if (waterLayer >= 0) gameObject.layer = waterLayer;
+            if (waterLayer >= 0 && gameObject.layer == 0) gameObject.layer = waterLayer;
             boardView = GetComponentInParent<BoardTerrainView>();
+            this.reflectionLayers = reflectionLayers;
             cols = columns; rows = rowCount; scale = cellScale; surfaceY = y;
             this.skirtCells = skirtCells;
-            shoreWorkspace = new ShoreField.Workspace(cols, rows);
+            shoreWorkspace = new ShoreField.Workspace(cols, rows, rectangles: landRectangles);
+            rectangles = landRectangles == null ? System.Array.Empty<ShoreRectangle>() : (ShoreRectangle[])landRectangles.Clone();
+            bakingRectangles = new ShoreRectangle[rectangles.Length];
             terrain = new TerrainType[cols * rows];
             bakingTerrain = new TerrainType[terrain.Length];
             currentBytes = new byte[shoreWorkspace.Field.rgba.Length];
@@ -119,7 +132,7 @@ namespace NodeWar.View
             RefreshFloor();
         }
 
-        public void SetTerrain(TerrainType[] resolved)
+        public void SetTerrain(TerrainType[] resolved, bool fullRebake = false)
         {
             if (requestVersion > 0 && SameTerrain(resolved)) return;
             ShoreField.Validate(cols, rows, resolved, 16, 4);
@@ -127,6 +140,7 @@ namespace NodeWar.View
             LastBakePath = "pending";
             System.Array.Copy(resolved, terrain, terrain.Length);
             requestVersion++;
+            if (fullRebake) fullBakeVersion = requestVersion;
             if (mesh == null)
             {
                 meshPadding = Padding;
@@ -141,7 +155,9 @@ namespace NodeWar.View
         {
             if (bakeTask != null || requestVersion == appliedVersion) return;
             System.Array.Copy(terrain, bakingTerrain, terrain.Length);
+            System.Array.Copy(rectangles, bakingRectangles, rectangles.Length);
             bakingVersion = requestVersion;
+            bakingFull = fullBakeVersion > appliedVersion;
             bakeTask = Task.Run(BakeRequestedTerrain);
         }
 
@@ -150,7 +166,8 @@ namespace NodeWar.View
             long started = Stopwatch.GetTimestamp();
             using (BakeMarker.Auto())
             {
-                bool incremental = shoreWorkspace.TryAddLand(bakingTerrain);
+                shoreWorkspace.SetRectangles(bakingRectangles);
+                bool incremental = !bakingFull && shoreWorkspace.TryAddLand(bakingTerrain);
                 if (!incremental) shoreWorkspace.Bake(bakingTerrain);
                 // Task completion publishes this result along with its byte buffer.
                 workerIncremental = incremental;
@@ -160,9 +177,23 @@ namespace NodeWar.View
 
         private bool workerIncremental;
 
+        public void SetLandRectangles(ShoreRectangle[] next)
+        {
+            if (next.Length != rectangles.Length) throw new System.ArgumentException("Reinitialize water when rectangle count changes.");
+            bool changed = false;
+            for (int i = 0; i < next.Length; i++) changed |= !rectangles[i].Equals(next[i]);
+            if (!changed) return;
+            System.Array.Copy(next, rectangles, next.Length);
+            requestVersion++;
+            probeDirty = true;
+            probeNotBefore = Time.unscaledTime + 1.5f;
+            StartBake();
+        }
+
         private void PollBake()
         {
             if (bakeTask == null || !bakeTask.IsCompleted) return; // Never wait on a frame.
+            if (!bakeTask.IsFaulted && bakingVersion == requestVersion && boardView != null && !boardView.ShoreReady) return;
             Task<double> finished = bakeTask;
             bakeTask = null;
             if (finished.IsFaulted)
@@ -275,8 +306,10 @@ namespace NodeWar.View
             Vector3 max = transform.TransformPoint(new Vector3((cols - 0.5f) * scale, surfaceY, (rows - 0.5f) * scale));
             properties.SetVector("_BoardRect", new Vector4(min.x, min.z, max.x, max.z));
             properties.SetFloat("_CellSize", scale);
+            properties.SetFloat("_WorldToBoard", WaterFeatures.WorldToBoard(scale));
             properties.SetFloat("_WaveFadeEnd", Mathf.Min(Padding, WaterMaterialFactory.Runtime.GetFloat("_WaveFadeEnd")));
             properties.SetFloat("_DetailFadeEnd", Padding);
+            if (GlintStrengthOverride >= 0f) properties.SetFloat("_GlintStrength", GlintStrengthOverride);
             Material material = surfaceRenderer.sharedMaterial;
             bool generatedSurfaceFoam = WaterMaterialFactory.NeedsFoam(material, "_FoamTex");
             bool generatedSwell = WaterMaterialFactory.NeedsSwell(material);
@@ -304,8 +337,9 @@ namespace NodeWar.View
                 Vector4 wave = material.GetVector(i == 0 ? "_WaveA" : i == 1 ? "_WaveB" : i == 2 ? "_WaveC" : "_WaveD");
                 amplitude += WaterWaveBounds.Amplitude(wave.z, wave.w, material.GetFloat("_WaveScale"));
             }
-            float next = surfaceY - material.GetFloat("_FloorDepth") - (float)WaterWaveBounds.MaxTrough(mode,
-                material.GetFloat("_NoiseWaveHeight"), amplitude, material.GetFloat("_WaveSteepnessScale"), material.GetFloat("_WaveGroupStrength"));
+            float factor = WaterFeatures.WorldToBoard(scale);
+            float next = surfaceY - material.GetFloat("_FloorDepth") / factor - (float)WaterWaveBounds.MaxTrough(mode,
+                material.GetFloat("_NoiseWaveHeight"), amplitude, material.GetFloat("_WaveSteepnessScale"), material.GetFloat("_WaveGroupStrength")) / factor;
             if (next == floorY) return;
             floorY = next;
             floorRenderer.transform.localPosition = new Vector3(0, next, 0);
@@ -362,7 +396,7 @@ namespace NodeWar.View
                 reflectionProbe.timeSlicingMode = ReflectionProbeTimeSlicingMode.IndividualFaces;
                 reflectionProbe.boxProjection = true;
                 reflectionProbe.size = new Vector3((cols + Padding * 2) * scale, 4 * scale, (rows + Padding * 2) * scale);
-                reflectionProbe.cullingMask = ~(1 << gameObject.layer);
+                reflectionProbe.cullingMask = reflectionLayers & ~(1 << gameObject.layer);
                 reflectionProbe.nearClipPlane = 0.1f;
                 reflectionProbe.farClipPlane = Mathf.Max(cols, rows) * scale * 4;
                 reflectionProbe.importance = 10;

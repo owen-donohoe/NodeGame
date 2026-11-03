@@ -19,7 +19,13 @@ namespace NodeWar.Lobby
         private const int StageLayer = 2; // Ignore Raycast; picking includes it explicitly.
         private static readonly Color Sea = new Color(46f / 255f, 42f / 255f, 107f / 255f);
         private WaterSurfaceView water;
+        private const float LandLift = 0.13f;
+        private const float WaterY = 0.075f;
+        private PlinthFactory plinths;
         private readonly List<LobbyLandBounds> landFootprints = new List<LobbyLandBounds>();
+        private readonly List<GameObject> landGrounds = new List<GameObject>();
+        private LobbyWaterGridData waterGrid;
+        private ShoreRectangle[] waterRectangles;
 
 
         private StagePaperArt paper;
@@ -80,6 +86,7 @@ namespace NodeWar.Lobby
 
         private void Build()
         {
+            plinths = new PlinthFactory(PlayerColors.Neutral, transform.position.y + WaterY);
             paper = new StagePaperArt(Mathf.Max(Screen.width, Screen.height));
             shader = Shader.Find("Universal Render Pipeline/Unlit");
             if (shader == null) shader = Shader.Find("Unlit/Color");
@@ -95,7 +102,7 @@ namespace NodeWar.Lobby
             stageCamera.depth = depth;
             stageCamera.clearFlags = CameraClearFlags.SolidColor;
             stageCamera.backgroundColor = Sea;
-            stageCamera.cullingMask = 1 << StageLayer;
+            stageCamera.cullingMask = (1 << StageLayer) | (1 << LayerMask.NameToLayer("Water"));
             stageCamera.nearClipPlane = 0.1f;
             stageCamera.farClipPlane = 120f;
             stageCamera.fieldOfView = ShopMarketFraming.FieldOfView;
@@ -109,15 +116,13 @@ namespace NodeWar.Lobby
             {
                 StageSlot slot = slots[i];
                 slotPositions[i] = new Vector3((slot.Column - (slot.Row == 1 ? 1f : 0.5f)) * 2.8f,
-                    0f, slot.Row == 0 ? 1.4f : -1.4f);
-                slotDirections[i] = slotPositions[i].normalized;
+                    LandLift, slot.Row == 0 ? 1.4f : -1.4f);
+                slotDirections[i] = new Vector3(slotPositions[i].x, 0f, slotPositions[i].z).normalized;
                 var plot = new GameObject("Plot " + i);
                 plot.transform.SetParent(transform, false);
                 plot.transform.localPosition = slotPositions[i];
                 plots[i] = plot.transform;
-                var ground = Primitive("Unclaimed ground", PrimitiveType.Quad, plots[i],
-                    new Vector3(0f, 0.02f, 0f), new Vector3(2.78f, 2.78f, 1f), PlayerColors.Neutral);
-                ground.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+                var ground = LandBlock("Unclaimed ground", plots[i], new Vector3(0f, 0.02f, 0f), 2.78f, 2.78f, true);
                 AddLandFootprint(ground);
                 outlines[i] = Cutout("Selection ink", plots[i], PaperKind.House,
                     new Vector3(0f, 0.03f, 0.38f), new Vector2(2.06f, 1.79f), Color.white, true);
@@ -157,10 +162,8 @@ namespace NodeWar.Lobby
             marketBuilt = true;
             var market = new GameObject("Market node");
             market.transform.SetParent(transform, false);
-            market.transform.localPosition = new Vector3(MarketX, 0f, MarketZ);
-            var ground = Primitive("Market ground", PrimitiveType.Plane, market.transform,
-                new Vector3(0f, -0.01f, -12f), new Vector3(0.36f, 1f, 3f),
-                new Color(0.77f, 0.70f, 0.55f));
+            market.transform.localPosition = new Vector3(MarketX, LandLift, MarketZ);
+            var ground = LandBlock("Market ground", market.transform, new Vector3(0f, 0.02f, -12f), 3.6f, 30f, false);
             AddLandFootprint(ground);
             RebuildWater();
             string[] names = { "Daily", "Crates", "Weekly skins", "Bundle", "Bank" };
@@ -182,6 +185,11 @@ namespace NodeWar.Lobby
 
         private void LateUpdate()
         {
+            if (water != null)
+            {
+                UpdateWaterRectangles();
+                water.SetLandRectangles(waterRectangles);
+            }
             UpdateMarketVisibility();
             BillboardFigures(suits);
             BillboardFigures(marketmen);
@@ -721,6 +729,12 @@ namespace NodeWar.Lobby
 
         private void AddLandFootprint(GameObject ground)
         {
+            landGrounds.Add(ground);
+            landFootprints.Add(LandFootprint(ground));
+        }
+
+        private LobbyLandBounds LandFootprint(GameObject ground)
+        {
             Bounds meshBounds = ground.GetComponent<MeshFilter>().sharedMesh.bounds;
             Vector3 min = Vector3.positiveInfinity, max = Vector3.negativeInfinity;
             for (int i = 0; i < 8; i++)
@@ -731,24 +745,88 @@ namespace NodeWar.Lobby
                 Vector3 local = transform.InverseTransformPoint(ground.transform.TransformPoint(corner));
                 min = Vector3.Min(min, local); max = Vector3.Max(max, local);
             }
-            landFootprints.Add(new LobbyLandBounds(min.x, min.z, max.x, max.z));
+            return new LobbyLandBounds(min.x, min.z, max.x, max.z);
+        }
+
+        private void UpdateWaterRectangles()
+        {
+            for (int i = 0; i < landGrounds.Count; i++)
+            {
+                LobbyLandBounds b = LandFootprint(landGrounds[i]);
+                waterRectangles[i] = new ShoreRectangle((b.minX - waterGrid.originX) / waterGrid.cellSize,
+                    (b.minZ - waterGrid.originZ) / waterGrid.cellSize, (b.maxX - waterGrid.originX) / waterGrid.cellSize,
+                    (b.maxZ - waterGrid.originZ) / waterGrid.cellSize);
+            }
+        }
+
+        private GameObject LandBlock(string name, Transform parent, Vector3 top, float width, float depth, bool pickable)
+        {
+            GameObject ground = plinths.CreateBlock(parent, name);
+            ground.layer = StageLayer;
+            ground.transform.localPosition = top;
+            // The 0.9-unit walls extend below the deepest floor at every lobby preset.
+            ground.transform.localScale = new Vector3(width, 0.9f / PlinthLayout.Height, depth);
+            if (pickable)
+            {
+                // Preserve the original top-only picking footprint; walls must not intercept figures.
+                var collider = ground.AddComponent<BoxCollider>();
+                collider.center = new Vector3(0f, -0.005f, 0f);
+                collider.size = new Vector3(1f, 0.01f, 1f);
+            }
+            return ground;
+        }
+
+        private const float ShotWaterReach = 45f;
+        // The stage camera looks steeply down onto the glint hotspot; keep glints a faint sparkle.
+        private const float LobbyGlintStrength = 0.06f;
+
+        /// <summary>Water each camera shot can see, so the Social/Guild ocean view gets detailed water.</summary>
+        private LobbyLandBounds[] ShotWaterViews()
+        {
+            var views = new List<LobbyLandBounds>();
+            float tanHalf = Mathf.Tan(stageCamera.fieldOfView * 0.5f * Mathf.Deg2Rad);
+            foreach (StageShot shot in (StageShot[])Enum.GetValues(typeof(StageShot)))
+            {
+                if (shot == StageShot.Market && !marketBuilt) continue; // Rebuilt once the market exists.
+                GetShot(shot, out Vector3 position, out Quaternion rotation);
+                float minX = position.x, maxX = position.x, minZ = position.z, maxZ = position.z;
+                for (int corner = 0; corner < 4; corner++)
+                {
+                    Vector3 ray = rotation * new Vector3(((corner & 1) == 0 ? -1f : 1f) * tanHalf * stageCamera.aspect,
+                        ((corner & 2) == 0 ? -1f : 1f) * tanHalf, 1f).normalized;
+                    float reach = ray.y < -0.01f ? Mathf.Min((WaterY - position.y) / ray.y, ShotWaterReach) : ShotWaterReach;
+                    Vector3 hit = position + ray * reach;
+                    minX = Mathf.Min(minX, hit.x); maxX = Mathf.Max(maxX, hit.x);
+                    minZ = Mathf.Min(minZ, hit.z); maxZ = Mathf.Max(maxZ, hit.z);
+                }
+                views.Add(new LobbyLandBounds(minX, minZ, maxX, maxZ));
+            }
+            return views.ToArray();
         }
 
         private void RebuildWater()
         {
             // One-unit cells keep the combined home/market field small; the shader still bakes 16 texels per cell.
-            LobbyWaterGridData grid = LobbyWaterGrid.Build(landFootprints.ToArray());
+            LobbyWaterGridData grid = LobbyWaterGrid.Build(landFootprints.ToArray(), 1f, ShotWaterViews());
             if (water != null)
             {
                 water.gameObject.SetActive(false);
                 Destroy(water.gameObject);
             }
             var ocean = new GameObject("Ocean (unplaceable edge)");
-            ocean.layer = StageLayer;
+            // Water gets its own layer so the probe can see stage land without reflecting itself.
+            ocean.layer = LayerMask.NameToLayer("Water");
             ocean.transform.SetParent(transform, false);
             ocean.transform.localPosition = new Vector3(grid.originX, 0f, grid.originZ);
             water = ocean.AddComponent<WaterSurfaceView>();
-            water.Initialize(grid.cols, grid.rows, grid.cellSize, -0.18f, skirtCells: 80);
+            waterGrid = grid;
+            waterRectangles = new ShoreRectangle[landFootprints.Count];
+            UpdateWaterRectangles();
+            // The grid supplies extent only: the entire stage water body is Ocean.
+            for (int i = 0; i < grid.terrain.Length; i++) grid.terrain[i] = NodeWar.Simulation.TerrainType.Ocean;
+            water.Initialize(grid.cols, grid.rows, grid.cellSize, WaterY, skirtCells: 80,
+                landRectangles: waterRectangles, reflectionLayers: 1 << StageLayer);
+            water.GlintStrengthOverride = LobbyGlintStrength;
             water.SetTerrain(grid.terrain);
         }
 
@@ -758,6 +836,7 @@ namespace NodeWar.Lobby
             if (water != null) Destroy(water.gameObject);
             for (int i = 0; i < materials.Count; i++) Destroy(materials[i]);
             paper?.Dispose();
+            plinths?.Dispose();
         }
     }
 }

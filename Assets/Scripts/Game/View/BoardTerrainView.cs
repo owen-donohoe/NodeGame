@@ -147,7 +147,7 @@ namespace NodeWar.View
             }
             hasShown = true;
             // The water reads resolved terrain itself: descriptors draw DeepLake as Lake.
-            water.SetTerrain(MatchFactory.ResolveTerrain(board, placed, draftComplete));
+            water.SetTerrain(MatchFactory.ResolveTerrain(board, placed, draftComplete), fullRebake: draftComplete);
             bool changed = false;
             for (int i = 0; i < cells.Length; i++)
             {
@@ -186,6 +186,19 @@ namespace NodeWar.View
                 if (landByCell == null) return true;
                 for (int i = 0; i < landByCell.Length; i++)
                     if (landByCell[i] && riseByCell[i] < 1f) return false;
+                return true;
+            }
+        }
+
+        /// <summary>Publish the shoreline when each rising top breaks the surface.</summary>
+        public bool ShoreReady
+        {
+            get
+            {
+                if (landByCell == null) return true;
+                for (int i = 0; i < landByCell.Length; i++)
+                    if (landByCell[i] && PlinthMotion.RiseY(riseByCell[i], WaterY - PlinthLayout.Height, GroundY) < WaterY)
+                        return false;
                 return true;
             }
         }

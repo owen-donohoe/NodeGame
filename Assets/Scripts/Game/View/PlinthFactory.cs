@@ -51,9 +51,15 @@ namespace NodeWar.View
         }
 
         public GameObject Create(Transform parent, string name, float cellScale)
+            => Create(parent, name, cellScale, false);
+
+        /// <summary>Exact rectangular top for stage footprints, using the shared plinth material.</summary>
+        public GameObject CreateBlock(Transform parent, string name) => Create(parent, name, 1f, true);
+
+        private GameObject Create(Transform parent, string name, float cellScale, bool rectangular)
         {
             GameObject root;
-            if (prefab != null) root = Object.Instantiate(prefab, parent, false);
+            if (prefab != null && !rectangular) root = Object.Instantiate(prefab, parent, false);
             else
             {
                 root = new GameObject(name);
