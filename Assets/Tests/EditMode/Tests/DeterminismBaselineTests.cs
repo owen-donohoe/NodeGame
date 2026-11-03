@@ -130,7 +130,7 @@ namespace NodeWar.Tests
         // (terrain board, B4), so both baselines moved. See docs/computations/determinism-baseline.md.
         // v4: shared structure kind/HP are hashed even on bare nodes (D1).
         // Lake-board v5 changes authored construction; these hand-built land fixtures retain both hashes.
-        private const int BaselinesPinnedAtSimVersion = 5;
+        private const int BaselinesPinnedAtSimVersion = 6;
 
         [Test]
         public void SimVersion_MatchesPinnedBaselines()
