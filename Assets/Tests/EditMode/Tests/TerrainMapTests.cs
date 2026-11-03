@@ -112,6 +112,112 @@ namespace NodeWar.Tests
 
         private delegate void MutateBoard(ref BoardConfigData board);
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Connect_ColumnTwoAndFourUsesExactCostsAndCellOrder(bool boundedCorridor)
+        {
+            var board = PremadeMaps.Hourglass01();
+            if (boundedCorridor)
+            {
+                // A water column with a single onward link at (2,2). Cells 1
+                // and 5 are dead ends, so only 3 and that onward link rise.
+                for (int i = 0; i < board.terrain.Length; i++) board.terrain[i] = TerrainType.Ocean;
+                for (int z = 1; z <= 5; z++)
+                {
+                    board.terrain[Cell(board, 1, z)] = TerrainType.Lake;
+                    board.terrain[Cell(board, 3, z)] = TerrainType.Land;
+                }
+                board.terrain[Cell(board, 2, 2)] = TerrainType.Lake;
+            }
+            var placed = new[]
+            {
+                new DraftPlacement { districtType = DistrictType.Farm, gridX = 1, gridZ = 2 },
+                new DraftPlacement { districtType = DistrictType.Mine, gridX = 1, gridZ = 4 }
+            };
+            var resolved = MatchFactory.ResolveTerrain(board, placed, false);
+            var shoals = ShoalPath.Derive(board);
+            for (int i = 0; i < resolved.Length; i++) if (shoals[i]) resolved[i] = TerrainType.Land;
+            var original = (TerrainType[])resolved.Clone();
+            var mask = ShoalPath.Connect(board, resolved, placed);
+            for (int i = 0; i < mask.Length; i++)
+            {
+                bool expected = boundedCorridor
+                    ? i == Cell(board, 1, 3) || i == Cell(board, 2, 2)
+                    : i == Cell(board, 1, 1) || i == Cell(board, 2, 1)
+                        || i == Cell(board, 1, 5) || i == Cell(board, 2, 5);
+                Assert.AreEqual(expected, mask[i], "cell " + i);
+            }
+            for (int run = 0; run < 10; run++)
+                CollectionAssert.AreEqual(mask, ShoalPath.Connect(board, resolved, placed));
+            CollectionAssert.AreEqual(original, resolved);
+            Assert.AreEqual(TerrainType.Lake, board.terrain[Cell(board, 1, 3)]);
+        }
+
+        // Two equal-length routes. The lower-index route has an extra existing
+        // land side, so the thin route must win before cell-order ties apply.
+        [TestCase(false)]
+        [TestCase(true)]
+        public void Connect_PrefersOneSideToTwoOrThreeSides(bool threeSides)
+        {
+            var board = BoardFixtures.LandGrid(5, 5);
+            for (int i = 0; i < board.terrain.Length; i++) board.terrain[i] = TerrainType.Ocean;
+            board.initialPlacements[0].gridX = 0;
+            board.initialPlacements[0].gridZ = 4;
+            board.initialPlacements[1].gridX = 4;
+            board.initialPlacements[1].gridZ = 2;
+            foreach (int cell in new[] { 0, 1, 5, 10, 15, 20, 9, 14, 19 }) board.terrain[cell] = TerrainType.Land;
+            foreach (int cell in new[] { 6, 7, 8, 16, 17, 18 }) board.terrain[cell] = TerrainType.Lake;
+            if (threeSides) board.terrain[11] = TerrainType.Land;
+            var mask = ShoalPath.Connect(board, board.terrain, null);
+            for (int i = 0; i < mask.Length; i++)
+                Assert.AreEqual(i == 16 || i == 17 || i == 18, mask[i], "cell " + i);
+        }
+
+        [Test]
+        public void Connect_SealedNodeRemainsWhileReachableNodesConnect()
+        {
+            var board = PremadeMaps.Hourglass01();
+            var resolved = MatchFactory.ResolveTerrain(board, null, true);
+            resolved[0] = TerrainType.Land; // Surrounded by Ocean.
+            resolved[Cell(board, 1, 3)] = TerrainType.Land;
+            var mask = ShoalPath.Connect(board, resolved, null);
+            Assert.IsTrue(Array.Exists(mask, filled => filled));
+            Assert.IsFalse(mask[0]);
+            for (int i = 0; i < mask.Length; i++)
+                if (mask[i]) Assert.AreEqual(TerrainType.Lake, resolved[i]);
+        }
+
+        [Test]
+        public void ResolvedTerrain_EveryLandAndPierNodeReachesCore()
+        {
+            var board = PremadeMaps.Hourglass01();
+            // Exercise every legal single placement, then all lake slots together.
+            var all = new System.Collections.Generic.List<DraftPlacement>();
+            for (int cell = 0; cell < board.terrain.Length; cell++)
+            {
+                if (!board.districtSlots[cell]) continue;
+                foreach (var type in new[] { DistrictType.Farm, DistrictType.Pier })
+                {
+                    if (!PlacementLegality.CanPlace(board, null, type, cell % 7, cell / 7)) continue;
+                    var placement = new DraftPlacement { districtType = type, gridX = cell % 7, gridZ = cell / 7 };
+                    AssertEveryNodeConnected(Build(board, placement));
+                    if (type == DistrictType.Pier) all.Add(placement);
+                }
+            }
+            AssertEveryNodeConnected(Build(board, all.ToArray()));
+        }
+
+        private static void AssertEveryNodeConnected(SimulationState state)
+        {
+            var seen = new bool[state.nodes.Length];
+            var queue = new System.Collections.Generic.List<int> { state.players[0].coreNodeID };
+            seen[queue[0]] = true;
+            for (int i = 0; i < queue.Count; i++)
+                foreach (var link in state.nodes[queue[i]].links)
+                    if (!seen[link.toNodeID]) { seen[link.toNodeID] = true; queue.Add(link.toNodeID); }
+            Assert.AreEqual(state.nodes.Length, queue.Count, "Every node has an orthogonal route to the high Core.");
+        }
+
         [Test]
         public void SimulationFive_BoardContentPin()
         {
@@ -195,7 +301,7 @@ namespace NodeWar.Tests
         // --- the sparse board ---
 
         [Test]
-        public void Hourglass_NoDraftHas5Nodes_WithPierHas6()
+        public void Hourglass_NoDraftHas5Nodes_WithPierAndFillerHas8()
         {
             BoardConfigData board = PremadeMaps.Hourglass01();
             Assert.AreEqual(49, board.gridCols * board.gridRows);
@@ -212,9 +318,9 @@ namespace NodeWar.Tests
 
             SimulationState withPier = Build(board, PierAt13());
             int[] pierMap = MatchFactory.CellToNode(board, new[] { PierAt13() });
-            Assert.AreEqual(6, withPier.nodes.Length);
+            Assert.AreEqual(8, withPier.nodes.Length);
             for (int i = 0; i < withPier.nodes.Length; i++) Assert.AreEqual(i, withPier.nodes[i].nodeID);
-            Assert.AreEqual(43, CountAbsent(pierMap));
+            Assert.AreEqual(41, CountAbsent(pierMap));
 
             int pier = pierMap[Cell(board, 1, 3)];
             Assert.GreaterOrEqual(pier, 0);
@@ -332,10 +438,15 @@ namespace NodeWar.Tests
             Assert.IsTrue(MapAuthoringRules.HasLandRoute(board));
 
             BoardConfigData cut = PremadeMaps.Hourglass01();
-            cut.terrain[Cell(cut, 3, 2)] = TerrainType.DeepLake;
-            cut.terrain[Cell(cut, 3, 4)] = TerrainType.DeepLake;
+            for (int x = 0; x < 7; x++) cut.terrain[Cell(cut, x, 2)] = TerrainType.DeepLake;
+            for (int x = 0; x < 7; x++) cut.terrain[Cell(cut, x, 4)] = TerrainType.DeepLake;
+            for (int x = 0; x < 7; x++)
+            {
+                cut.districtSlots[Cell(cut, x, 2)] = false;
+                cut.districtSlots[Cell(cut, x, 4)] = false;
+            }
             Assert.IsFalse(MapAuthoringRules.HasLandRoute(cut),
-                "The pier slot at (1,3) is lake and must not rescue the land route.");
+                "Sealed DeepLake barriers cannot be raised to rescue the land route.");
             Assert.IsFalse(MapAuthoringRules.ValidateAuthoredMap(cut, out string error));
             StringAssert.Contains("route", error);
         }

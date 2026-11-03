@@ -100,6 +100,102 @@ namespace NodeWar.Simulation
             return result;
         }
 
+        /// <summary>Connect resolved Land and drafted Piers by thin Lake paths, without mirroring.</summary>
+        public static bool[] Connect(BoardConfigData board, TerrainType[] resolvedAfterShoals, DraftPlacement[] placed)
+        {
+            int cols = board.gridCols, rows = board.gridRows;
+            long size = (long)cols * rows;
+            if (cols <= 0 || rows <= 0 || size > int.MaxValue || resolvedAfterShoals == null
+                || resolvedAfterShoals.Length != size) return null;
+            int n = (int)size;
+            var nodes = new bool[n];
+            var drafted = new bool[n];
+            var filled = new bool[n];
+            var connected = new bool[n];
+            var queue = new int[n];
+            for (int i = 0; i < n; i++) nodes[i] = resolvedAfterShoals[i] == TerrainType.Land;
+            if (placed != null)
+                for (int i = 0; i < placed.Length; i++)
+                {
+                    int cell = placed[i].gridZ * cols + placed[i].gridX;
+                    drafted[cell] = true;
+                    if (placed[i].districtType == DistrictType.Pier) nodes[cell] = true;
+                }
+            var core = MapAuthoringRules.HighCore(board);
+            int start = core.gridZ * cols + core.gridX;
+            if (start < 0 || start >= n || !nodes[start]) return filled;
+
+            while (true)
+            {
+                // Flood again after each path: it may touch several components along its sides.
+                int head = 0, tail = 0;
+                for (int i = 0; i < n; i++) connected[i] = false;
+                connected[start] = true;
+                queue[tail++] = start;
+                while (head < tail)
+                {
+                    int cell = queue[head++];
+                    for (int d = 0; d < 4; d++)
+                    {
+                        int next = Neighbour(cell, d, cols, rows);
+                        if (next < 0 || connected[next] || (!nodes[next] && !filled[next])) continue;
+                        connected[next] = true;
+                        queue[tail++] = next;
+                    }
+                }
+                bool remaining = false;
+                for (int i = 0; i < n; i++)
+                    if (nodes[i] && !connected[i]) remaining = true;
+                if (!remaining) return filled;
+
+                var cost = new long[n];
+                var previous = new int[n];
+                var visited = new bool[n];
+                for (int i = 0; i < n; i++)
+                {
+                    cost[i] = connected[i] ? 0 : long.MaxValue;
+                    previous[i] = -1;
+                }
+                int target = -1;
+                for (int step = 0; step < n; step++)
+                {
+                    int cell = -1;
+                    // Ascending scan gives equal-cost cells the same tie rule as Derive.
+                    for (int i = 0; i < n; i++)
+                        if (!visited[i] && cost[i] != long.MaxValue
+                            && (cell < 0 || cost[i] < cost[cell])) cell = i;
+                    if (cell < 0) break;
+                    visited[cell] = true;
+                    if (nodes[cell] && !connected[cell]) { target = cell; break; }
+                    for (int d = 0; d < 4; d++)
+                    {
+                        int next = Neighbour(cell, d, cols, rows);
+                        if (next < 0 || visited[next] || connected[next]) continue;
+                        if (!nodes[next] && (resolvedAfterShoals[next] != TerrainType.Lake || drafted[next])) continue;
+                        int sides = 0;
+                        if (!nodes[next])
+                            for (int side = 0; side < 4; side++)
+                            {
+                                int neighbour = Neighbour(next, side, cols, rows);
+                                if (neighbour >= 0 && (nodes[neighbour] || filled[neighbour])) sides++;
+                            }
+                        int weight = nodes[next] ? 0 : 10 + 20 * (sides > 1 ? sides - 1 : 0);
+                        long candidate = cost[cell] + weight;
+                        if (candidate < cost[next] || (candidate == cost[next]
+                            && (previous[next] < 0 || cell < previous[next])))
+                        {
+                            cost[next] = candidate;
+                            previous[next] = cell;
+                        }
+                    }
+                }
+                // Sealed components remain unchanged; reachable ones have already been joined.
+                if (target < 0) return filled;
+                for (int cell = target; cell >= 0; cell = previous[cell])
+                    if (!nodes[cell] && !connected[cell]) filled[cell] = true;
+            }
+        }
+
         private static int Neighbour(int cell, int direction, int cols, int rows)
         {
             int x = cell % cols, z = cell / cols;

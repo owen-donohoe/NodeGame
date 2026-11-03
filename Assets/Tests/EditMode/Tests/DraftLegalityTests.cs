@@ -311,7 +311,7 @@ namespace NodeWar.Tests
             SimulationState built = null;
             Assert.DoesNotThrow(() => built = MatchFactory.Build(balance, board,
                 state.confirmedPlacements.ToArray(), new[] { new PlayerSetup(), new PlayerSetup() }));
-            Assert.AreEqual(8, built.nodes.Length, "five resolved nodes plus three districts");
+            Assert.AreEqual(14, built.nodes.Length, "five starting nodes, three districts and six connecting nodes");
         }
     }
 }

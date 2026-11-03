@@ -20,6 +20,39 @@ namespace NodeWar.Cloud.Tests
     [NonParallelizable]
     public class RefereeTests
     {
+        [Test]
+        public void DraftEndFiller_RoundTripsReplaysAndVerifiesOnShippedCatalog()
+        {
+            var balance = GameBalanceData.Default();
+            var board = PremadeMaps.Hourglass01();
+            var draft = new[]
+            {
+                new DraftPlacement { playerID = 0, districtType = DistrictType.Farm, gridX = 1, gridZ = 2 },
+                new DraftPlacement { playerID = 1, districtType = DistrictType.Pier, gridX = 1, gridZ = 4 }
+            };
+            var before = MatchFactory.ResolveTerrain(board, draft, false);
+            var after = MatchFactory.ResolveTerrain(board, draft, true);
+            var shoals = ShoalPath.Derive(board);
+            int filler = 0;
+            for (int cell = 0; cell < after.Length; cell++)
+                if (!shoals[cell] && before[cell] == TerrainType.Lake && after[cell] == TerrainType.Land) filler++;
+            Assert.Greater(filler, 0, "The recorded draft requires connecting filler beyond the starting shoals.");
+            Assert.AreEqual(TerrainType.Lake, after[29], "Pier remains Lake.");
+            int destination = MatchFactory.CellToNode(board, draft)[29];
+            Log recorded = Record(balance, 100, state => state.tickCount == 0
+                ? new[] { Move(0, 0, destination) } : null, board,
+                MatchSetup.ForShippedMap(PremadeMaps.Hourglass01Id, BalanceHasher.Hash(balance)), draft);
+            byte[] bytes = MatchLogFormat.Write(recorded);
+            Assert.IsTrue(MatchLogFormat.TryRead(bytes, out Log read, out string error), error);
+            var replay = MatchReplay.Run(read, balance);
+            Assert.IsTrue(replay.ok, replay.error);
+            Assert.AreEqual(recorded.result.finalHash, replay.finalHash);
+            var verdict = new Referee(Catalog(balance)).Verify(bytes);
+            Assert.IsTrue(verdict.ok, verdict.error);
+            Assert.AreEqual(recorded.result.finalHash, verdict.finalHash);
+            Assert.AreEqual(100, verdict.ticksReplayed);
+        }
+
         [TestCase(0)]
         [TestCase(1)]
         public void MixedArenaResolvedLog_ReplaysSameCheckpoints(int highSeat)

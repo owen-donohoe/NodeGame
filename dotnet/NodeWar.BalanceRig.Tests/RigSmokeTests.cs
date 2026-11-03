@@ -126,7 +126,14 @@ namespace NodeWar.BalanceRig
 
                         MatchFactory.Configure(match.setup.balance, match.setup.board);
                         SimulationState built = MatchFactory.Build(match.setup.balance, match.setup.board, match.draft, match.players);
-                        Assert.AreEqual(5 + match.draft.Length, built.nodes.Length, "five resolved nodes plus one per drafted lake slot");
+                        Assert.GreaterOrEqual(built.nodes.Length, 5 + match.draft.Length,
+                            "Starting nodes and drafted slots remain alongside any connecting filler.");
+                        var reached = new HashSet<int> { built.players[0].coreNodeID };
+                        var pending = new Queue<int>(reached);
+                        while (pending.Count > 0)
+                            foreach (var link in built.nodes[pending.Dequeue()].links)
+                                if (reached.Add(link.toNodeID)) pending.Enqueue(link.toNodeID);
+                        Assert.AreEqual(built.nodes.Length, reached.Count, "Every drafted node reaches the Core.");
 
                         MatchResult r = MatchRunner.Run(match, 600, 0, null, new RunHooks { timeline = true });
                         Assert.IsNotNull(r.timeline);
