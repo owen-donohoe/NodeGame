@@ -15,7 +15,7 @@ attester:
 generated: { by: claude-opus-5, at: 2026-08-31T00:00:00Z }
 verified:
   - { by: claude-opus-5-5, at: 2026-10-22T04:45:00Z }
-verified_at_commit: b2a42caf
+verified_at_commit: d0fa993c
 status: stable
 sources:
   - id: tests
@@ -89,9 +89,13 @@ villager crosses one link at `travelWeight (1) × baseMoveSpeedTicks (4)` = 4 ti
 node 1 simultaneously, and `TickCombat` puts both into `Fighting`.
 
 The baselines live as `const int` in `DeterminismBaselineTests.cs`, alongside
-`BaselinesPinnedAtSimVersion = 5`. `SimVersion_MatchesPinnedBaselines` checks that this version
+`BaselinesPinnedAtSimVersion = 6`. `SimVersion_MatchesPinnedBaselines` checks that this version
 matches `SimulationVersion.Current`. It checks version equality, not whether someone edited only
 the hash constants. That file is the computation; this document is its contract.
+
+Version 6 adds deterministic draft-end Lake filler in `MatchFactory.ResolveTerrain`.
+The sanctioned three-node fixtures contain no stranded drafted nodes, so both
+hash constants remain unchanged; only their pinned simulation version advances.
 
 Era fields enter `SimulationStateHasher` only when non-zero. Both fixtures remain era 0 and
 never breach, so the v2 re-pin in `d84cb1d` kept both numeric hashes unchanged while updating

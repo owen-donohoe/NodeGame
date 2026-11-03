@@ -119,6 +119,10 @@ namespace NodeWar.Simulation
                 if (shoal != null)
                     for (int i = 0; i < resolved.Length; i++)
                         if (shoal[i]) resolved[i] = TerrainType.Land;
+                bool[] filler = ShoalPath.Connect(board, resolved, placed);
+                if (filler != null)
+                    for (int i = 0; i < resolved.Length; i++)
+                        if (filler[i]) resolved[i] = TerrainType.Land;
             }
             return resolved;
         }
